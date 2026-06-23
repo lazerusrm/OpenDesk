@@ -22,6 +22,7 @@ required_docs=(
   docs/engineering-standards.md
   docs/traceability.md
   docs/research-roadmap.md
+  docs/research-findings.md
   docs/research/client-deployment.md
   docs/research/operations-security.md
 )

@@ -87,3 +87,34 @@ Consequences:
 
 - Validation evidence matters as much as implementation.
 - Feature parity map and requirements must stay current.
+
+## ADR-007: Keep RustDesk Code At The Boundary
+
+Decision: OpenDesk will remain a clean-room control plane unless a future requirement explicitly justifies fork/link/vendor work.
+
+Rationale:
+
+- RustDesk client/server upstream code is AGPL-licensed.
+- OpenDesk can satisfy most replacement workflows through its own database, API, generated configuration, endpoint registration, monitoring, and official client commands.
+- Keeping RustDesk code at the boundary avoids coupling OpenDesk internals to upstream implementation details.
+
+Allowed by default:
+
+- Run upstream RustDesk binaries/images unchanged.
+- Read official documentation.
+- Inspect ignored local upstream clones as reference.
+- Generate configuration/scripts for official clients.
+- Monitor `hbbs`/`hbbr` services and logs.
+
+Requires an ADR update before implementation:
+
+- Forking RustDesk client or server.
+- Copying RustDesk source into OpenDesk.
+- Linking OpenDesk directly against RustDesk AGPL libraries.
+- Vendoring RustDesk code.
+- Redistributing modified RustDesk binaries.
+
+Consequences:
+
+- Native-client parity features may take longer if they require a fork.
+- License obligations stay explicit instead of accidentally creeping into core OpenDesk code.

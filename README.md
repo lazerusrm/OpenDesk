@@ -28,6 +28,7 @@ Production target:
 - [Traceability](docs/traceability.md)
 - [Engineering Standards](docs/engineering-standards.md)
 - [Research Roadmap](docs/research-roadmap.md)
+- [Research Findings](docs/research-findings.md)
 
 ## Current Decision
 
