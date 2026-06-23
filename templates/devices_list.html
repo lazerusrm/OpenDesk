@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Devices</h1>
+  <form method="get" action="/devices">
+    <label for="term">Search</label>
+    <input id="term" name="term" value="{{ search_term }}">
+    <button type="submit">Search</button>
+    <a class="button" href="/devices/new">New device</a>
+  </form>
+</section>
+<section class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Alias</th>
+        <th>RustDesk ID</th>
+        <th>Hostname</th>
+        <th>Archived</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for device in devices %}
+      <tr>
+        <td>{{ device.alias }}</td>
+        <td>{{ device.rustdesk_id_display }}</td>
+        <td>{{ device.hostname_display }}</td>
+        <td>{{ device.archived_display }}</td>
+        <td><a href="/devices/{{ device.device_uuid }}">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

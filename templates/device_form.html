@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>{{ heading }}</h1>
+  {% if error_message.is_some() %}
+  <p class="error">{{ error_message.as_ref().unwrap() }}</p>
+  {% endif %}
+  <form method="post" action="{{ form_action }}">
+    <label for="alias">Alias</label>
+    <input id="alias" name="alias" value="{{ alias }}" required>
+
+    <label for="rustdesk_id">RustDesk ID</label>
+    <input id="rustdesk_id" name="rustdesk_id" value="{{ rustdesk_id }}">
+
+    <label for="hostname">Hostname</label>
+    <input id="hostname" name="hostname" value="{{ hostname }}">
+
+    <label for="owner">Owner</label>
+    <input id="owner" name="owner" value="{{ owner }}">
+
+    <label for="notes">Notes</label>
+    <textarea id="notes" name="notes" rows="4">{{ notes }}</textarea>
+
+    <button type="submit">Save</button>
+    <a class="button" href="/devices">Back</a>
+  </form>
+  {% if show_archive_actions %}
+  <form method="post" action="/devices/{{ device_uuid }}/archive">
+    <button type="submit">Archive</button>
+  </form>
+  {% endif %}
+  {% if show_unarchive_actions %}
+  <form method="post" action="/devices/{{ device_uuid }}/unarchive">
+    <button type="submit">Unarchive</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}
