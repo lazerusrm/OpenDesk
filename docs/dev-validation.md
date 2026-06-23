@@ -16,6 +16,7 @@ Use this target for:
 
 Current validated use:
 
+- Authenticated export of the generated Linux deployment script via `GET /deployment/linux.sh` (session cookie required; the dev LXC runner logs in before download).
 - Current RustDesk Linux Debian package install.
 - Root service creation and restart.
 - Command-line config application with test-only values.
