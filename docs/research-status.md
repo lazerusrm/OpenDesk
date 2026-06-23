@@ -16,9 +16,9 @@ Status values:
 | R-004 | Partial | Address-book entries contain hashed secret material; plaintext storage is rejected; ADR-008 defines external secret-manager path if managed access is required. | Owner decision on passwordless/managed-password requirement. |
 | R-005 | Partial | Current settings do not require login for RustDesk access; dashboard RBAC is documented as non-enforcing for sessions. | Owner decision on lookup-only vs real session enforcement. |
 | R-006 | Partial | Linux `.deb` validates deploy request shape and response cases against a controlled dev endpoint. | Validation lab evidence for Windows/macOS deploy behavior and future adapter tests. |
-| R-007 | Partial | Audit database/log evidence proves useful connection, console, relay, and rendezvous visibility; recent console activity is present; ADR-009 defines audit tiers. | Owner decision on required audit tier, numeric console action mapping, and validation of ingestion if selected. |
+| R-007 | Partial | Audit database/log evidence proves useful connection, console, relay, and rendezvous visibility; recent console activity is present; local RustDesk source provides console action mappings; ADR-009 defines audit tiers. | Owner decision on required audit tier and validation of ingestion/labels if selected. |
 | R-008 | Partial | Official docs support Android manual/QR config and identify iOS as not remotely controllable. Mobile RustDesk operator apps are required for cutover. | Manual validation of Android and iOS operator workflows with OpenDesk-generated config/instructions. |
-| R-009 | Partial | Service ports, logs, and inside-LAN TCP reachability are validated. | Validation lab evidence for WAN/NAT/split-DNS/direct-vs-relay behavior from real clients. |
+| R-009 | Partial | Service ports, logs, inside-LAN TCP reachability, split public/local DNS shape, and local-resolution TCP reachability are validated. | Validation lab evidence for WAN/mobile-network/NAT/direct-vs-relay behavior from real clients. |
 | R-010 | Accepted | ADR records clean-room control plane default and fork/link/vendor rules. | None unless fork/vendor work is proposed. |
 
 ## Closure Rule

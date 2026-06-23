@@ -163,7 +163,7 @@ Most connection audit rows include end times. Connection audit metadata includes
 
 Console audit detail:
 
-Console audit activity is grouped by numeric object/action types in the Pro database. The inspected metadata keys identify changed object names, name lists, and object IDs, but the numeric action mapping still needs either source mapping or UI observation before OpenDesk can present friendly labels with confidence.
+Console audit activity is grouped by numeric object/action types in the Pro database. The inspected metadata keys identify changed object names, name lists, and object IDs. Local RustDesk source inspection found helper mappings for console object types and operation codes, covering group, user, device, and address-book management operations. OpenDesk can use those mappings as a starting point for ingestion labels, but ingestion tests should still verify them against observed Pro console rows before cutover.
 
 Decision:
 
@@ -204,7 +204,7 @@ The server exposes the expected RustDesk service ports for ID, relay, API, and w
 
 Network detail:
 
-Inside-LAN TCP reachability from the dev LXC to the expected RustDesk service ports is confirmed. This does not prove WAN, NAT loopback, split-DNS, or mobile-network behavior.
+Inside-LAN TCP reachability from the dev LXC to the expected RustDesk service ports is confirmed. Additional DNS probing shows public DNS resolves the service host to a public address while local resolution returns a private LAN address, matching a split-DNS or hairpin-avoidance topology. TCP probes from this environment reached the expected RustDesk service ports through local resolution; HTTPS on the default TLS port was not reachable in that probe. This still does not prove real WAN, mobile-network, or direct-vs-relay behavior from official clients.
 
 Decision:
 

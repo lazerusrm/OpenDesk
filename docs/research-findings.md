@@ -22,7 +22,9 @@ The current production-style deployment was inspected read-only. Evidence confir
 - Role/user-role mappings and third-party auth rows were empty in the inspected database, and no populated OIDC/LDAP/SMTP/API-token style integration tables were identified.
 - Console audit rows include recent activity, so web-console workflows remain in scope until owner review retires or replaces them.
 - Connection audit rows include end-time and IP/name metadata often enough to support an ingestion design, but not enough to replace first-party OpenDesk audit.
+- Local RustDesk source inspection provides mappings for console audit object and operation codes; these should be validated against observed Pro rows before user-facing labels are treated as final.
 - Inside-LAN TCP reachability from the dev LXC to the required RustDesk ports is confirmed.
+- DNS probing confirms a split public/local resolution shape for the service hostname, and TCP probes from this environment reached the expected RustDesk service ports through local resolution.
 - Current server service commands, data paths, public-key fingerprint, database path, settings, and runtime paths are recorded in ignored private evidence.
 
 ## Current Decisions
@@ -35,9 +37,9 @@ The current production-style deployment was inspected read-only. Evidence confir
 | R-004 | Address-book entries include hashed secret material. OpenDesk must not store plaintext unattended passwords, and any managed-password parity needs a dedicated secret-management design. | Owner must decide whether passwordless/managed-password workflow is required for cutover. |
 | R-005 | Current settings do not require login for access, so dashboard RBAC alone cannot be treated as RustDesk session enforcement. | Decide whether session-level enforcement is required and how to implement it. |
 | R-006 | Released Linux `.deb` validated `--deploy --token` against a controlled dev endpoint. The client posts bearer-auth JSON to `/api/devices/deploy`, accepts `OK`, and returns distinct CLI messages/exit codes for `NOT_ENABLED`, `INVALID_INPUT`, and `ID_TAKEN`. | Test Windows/macOS clients and implement isolated compatibility adapter tests. |
-| R-007 | Database audit tables and server logs provide useful visibility; OpenDesk can provide native admin/enrollment audit plus optional RustDesk log/database ingestion. Console audit rows also prove recent admin-console activity, though numeric action labels still need mapping. | Define exact audit tiers and avoid claiming full session enforcement from launch-intent events alone. |
+| R-007 | Database audit tables and server logs provide useful visibility; OpenDesk can provide native admin/enrollment audit plus optional RustDesk log/database ingestion. Console audit rows also prove recent admin-console activity, and local RustDesk source provides numeric action mappings. | Define exact audit tiers and avoid claiming full session enforcement from launch-intent events alone. Validate labels against observed rows before cutover. |
 | R-008 | Mobile RustDesk apps must work with OpenDesk for operator workflows. Official docs support manual mobile configuration and Android QR config. iOS is operator-only for OpenDesk purposes because official docs state it cannot be controlled remotely. | Validate Android and iOS operator workflows with OpenDesk-generated config/instructions. |
-| R-009 | Standard RustDesk ports, service state, direct-address lookup, punch-hole behavior, relay pairing events, and inside-LAN TCP reachability are confirmed. | Add WAN/NAT/split-DNS validation evidence from real clients. |
+| R-009 | Standard RustDesk ports, service state, direct-address lookup, punch-hole behavior, relay pairing events, inside-LAN TCP reachability, split public/local DNS shape, and local-resolution TCP reachability are confirmed. | Add WAN/NAT/mobile-network/direct-vs-relay validation evidence from real clients. |
 | R-010 | Clean-room control plane remains the license posture. | ADR-007 records fork/link/vendor rules. |
 
 ## Sources
