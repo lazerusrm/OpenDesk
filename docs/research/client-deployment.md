@@ -40,6 +40,10 @@ Current finding:
 
 Official documentation and local source inspection both support command-line configuration. The config command parses the same custom-server string used by filename configuration and writes server key, ID server, API server, and relay server options.
 
+Preferred validation environment:
+
+Use a separate dev LXC or VM for endpoint/package validation before touching production. The dev environment should be disposable, have known snapshots, and run only test RustDesk IDs/keys.
+
 Decision:
 
 Use generated scripts as the primary path and filename configuration only as a fallback/convenience path until each required released client proves reliable behavior.
@@ -80,6 +84,10 @@ Service-context finding:
 
 Windows service creation imports a config file into the service path. macOS privileged install copies user preference files into the root preference location before loading the service. Validation must prove both interactive user context and service/system context are configured.
 
+Preferred validation environment:
+
+Use disposable dev LXC/VM targets for Linux package tests and separate Windows/macOS VMs for service-context tests. Record install, configure, restart, upgrade, uninstall, and reinstall results before cutover.
+
 ## R-006 Deployment Endpoint Compatibility
 
 Question:
@@ -109,6 +117,10 @@ Related validation:
 Current finding:
 
 Local source inspection confirms a scriptable deploy command that posts to the configured API server with a bearer token and can return deployment-specific errors. This supports prototyping an isolated compatibility adapter, but not coupling the main domain model to that API shape.
+
+Preferred validation environment:
+
+Stand up the compatibility adapter in a dev LXC first. Test stock clients against the dev API server, record request/response shape, and only then decide whether production OpenDesk should expose the endpoint.
 
 ## R-008 Mobile Workflow
 

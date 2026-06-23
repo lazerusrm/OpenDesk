@@ -9,12 +9,13 @@ Status legend:
 ## Phase 0: Discovery
 
 - [ ] Snapshot current RustDesk LXC.
-- [ ] Record current RustDesk server type: OSS vs Pro.
-- [ ] Record current Docker Compose/systemd files.
-- [ ] Record current server key/public key location.
-- [ ] Record exposed ports and router/firewall rules.
+- [x] Record current RustDesk server type: OSS vs Pro.
+- [x] Record current Docker Compose/systemd files.
+- [x] Record current server key/public key location.
+- [~] Record exposed ports and router/firewall rules.
+- [x] Provision disposable dev LXC for validation.
 - [ ] Export current Pro address book/device list if available.
-- [ ] Identify which Pro features are actually used today.
+- [~] Identify which Pro features are actually used today.
 - [x] Clone upstream RustDesk client locally as ignored reference.
 - [x] Clone upstream RustDesk server locally as ignored reference.
 - [x] Record upstream commit hashes in docs.

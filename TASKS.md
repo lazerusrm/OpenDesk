@@ -4,8 +4,8 @@
 
 - [ ] Create Git repository and remote.
 - [ ] Decide first implementation stack: Go server-rendered UI vs FastAPI + React.
-- [ ] Inventory current RustDesk LXC configuration.
-- [ ] Export current RustDesk public key and document client config.
+- [~] Inventory current RustDesk LXC configuration.
+- [~] Export current RustDesk public key and document client config.
 - [ ] Define required day-one OS targets.
 - [ ] Decide whether the first deployment runs in the existing LXC or a new LXC.
 - [x] Clone upstream RustDesk client/server locally for reference.

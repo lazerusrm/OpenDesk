@@ -45,6 +45,8 @@ Status categories:
 
 ## Production Usage Inventory
 
+Read-only production-style evidence currently proves these populated Pro areas exist: users, groups, device assignments, address books, strategies, custom clients, sessions, and audit logs. No current user rows had 2FA enabled in the inspected database, and third-party auth rows were absent.
+
 Before cutover, the owner must inventory current RustDesk Server Pro usage from operator interviews and any available Pro exports/screenshots. For every capability above, record:
 
 | Field | Required Meaning |

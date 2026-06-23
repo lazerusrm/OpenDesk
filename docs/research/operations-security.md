@@ -33,6 +33,21 @@ Related validation:
 - CR-001.
 - RS-003.
 
+Current finding:
+
+Read-only database inspection confirms populated production-style usage of users, groups, assigned devices, address books, strategies, custom clients, sessions, and audit logs. This makes those features replacement-scope unless the owner explicitly retires the workflow.
+
+Not currently proven:
+
+- Which populated features are used weekly.
+- Whether custom clients are still needed after generated install/config flows exist.
+- Whether native RustDesk address books are required if the OpenDesk web address book is complete.
+- Whether strategies are historical configuration or active policy.
+
+Decision:
+
+Treat every populated Pro feature as required until owner review marks it replaced, equivalent, or retired.
+
 ## R-004 Address Book And Password Model
 
 Question:
@@ -58,6 +73,14 @@ Related validation:
 - SEC-005.
 - SR-005.
 - RS-004.
+
+Current finding:
+
+Address-book entry metadata includes hashed secret material. It does not expose plaintext passwords in the inspected evidence, but it is enough to classify passwordless/managed-password parity as security-sensitive.
+
+Decision:
+
+OpenDesk must not store plaintext unattended passwords. If native passwordless or managed-password workflow is required for cutover, design it around an external secret manager or another explicit secret-management model before implementation.
 
 ## R-005 Access Control Reality
 
@@ -86,6 +109,14 @@ Related validation:
 - R-005.
 - RS-005.
 
+Current finding:
+
+Current server settings do not require login for access, while device records are assigned to users. This means web-console ownership/visibility and actual RustDesk connection authorization are separate concerns.
+
+Decision:
+
+OpenDesk may claim dashboard access control only for OpenDesk UI/API workflows. It must not claim RustDesk session-level enforcement unless endpoint settings, password rotation, network controls, or future client/server integration actually enforce it.
+
 ## R-007 Session And Audit Log Sources
 
 Question:
@@ -111,6 +142,14 @@ Related validation:
 - C-007.
 - PR-009.
 - RS-007.
+
+Current finding:
+
+The inspected database has connection, console, file, and alarm audit history. Server logs expose startup settings, direct-address lookup, punch-hole attempts, relay pairing/closure, and wrong-key events.
+
+Decision:
+
+OpenDesk should implement first-party audit for admin actions, deployment artifacts, enrollment, auth, and settings changes. RustDesk session visibility can be added as an ingestion layer, but launch-intent audit must remain clearly labeled if it does not prove a session completed.
 
 ## R-009 Relay Scaling, NAT, LAN, And DNS Behavior
 
@@ -141,6 +180,14 @@ Related validation:
 - R-003.
 - RS-009.
 
+Current finding:
+
+The server exposes the expected RustDesk service ports for ID, relay, API, and websocket traffic. Logs show direct-address lookup, TCP/UDP punch-hole behavior, relay pairing, and relay closure events.
+
+Decision:
+
+OpenDesk health checks should cover DNS, TCP listeners, UDP where feasible, public key fingerprint, service state, log freshness, and disk/database health. Real LAN/WAN/NAT/split-DNS behavior still needs client-side validation before cutover.
+
 ## R-010 Legal And License Posture
 
 Question:
@@ -165,4 +212,3 @@ Related validation:
 - CI-009 public content hygiene.
 - ADR updates before fork/vendor work.
 - RS-010.
-

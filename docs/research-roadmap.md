@@ -21,6 +21,7 @@ Research notes with site-specific values must live under ignored `local/`.
 - [Client And Deployment Research](research/client-deployment.md)
 - [Operations And Security Research](research/operations-security.md)
 - [Current Research Findings](research-findings.md)
+- [Dev Validation Environment](dev-validation.md)
 
 ## Required Items
 
