@@ -1,0 +1,15 @@
+.env
+*.env
+data/
+dist/
+build/
+node_modules/
+tmp/
+upstream/
+*.sqlite
+*.sqlite3
+*.db
+*.log
+local/
+PRIVATE.md
+*.private.md
