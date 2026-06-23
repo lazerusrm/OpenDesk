@@ -21,6 +21,7 @@ The requirement IDs are stable and should be referenced from implementation task
 | PR-011 | OpenDesk must clearly distinguish dashboard authorization from RustDesk session authorization. | Docs and UI copy avoid false claims; enforcement tests cover only implemented controls. |
 | PR-012 | OpenDesk must preserve official RustDesk clients as the default delivery path. | Client delivery tests verify official signatures/checksums where applicable. |
 | PR-013 | OpenDesk must not require RustDesk Server Pro infrastructure at cutover. | Cutover checklist shows no required workflow calls Pro-only services. |
+| PR-014 | OpenDesk must support Android and iOS RustDesk app operator workflows. | Mobile validation proves operators can configure the official mobile apps and connect to test endpoints through the expected server. |
 
 ## Security Requirements
 

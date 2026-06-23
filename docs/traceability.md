@@ -19,6 +19,7 @@ This document maps replacement requirements to validation coverage. It should be
 | PR-011 Access boundary clarity | SEC-007 | Docs currently state boundary; implementation must avoid misleading UI. |
 | PR-012 Official clients | D-006, D-010 | Signature/checksum and update behavior. |
 | PR-013 No Pro dependency | CUT-003 | Pro usage inventory from CR-001 remains required for signoff. |
+| PR-014 Mobile operator apps | D-011, D-012, R-002 | Required mobile RustDesk app operator workflow. |
 | SR-001 Public repo privacy | SEC-006, CI-002 | Bootstrap privacy scan exists. |
 | SR-002 Runtime secrets outside Git | SEC-006, CI-002 | Add config review once app exists. |
 | SR-003 Enrollment token protection | E-001, E-005, SEC-004 | Add storage/hash tests with implementation. |

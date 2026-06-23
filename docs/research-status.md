@@ -17,7 +17,7 @@ Status values:
 | R-005 | Partial | Current settings do not require login for RustDesk access; dashboard RBAC is documented as non-enforcing for sessions. | Owner decision on lookup-only vs real session enforcement. |
 | R-006 | Partial | Linux `.deb` validates deploy request shape and response cases against a controlled dev endpoint. | Windows/macOS deploy behavior and future adapter tests. |
 | R-007 | Partial | Audit database/log evidence proves useful connection, console, relay, and rendezvous visibility; ADR-009 defines audit tiers. | Owner decision on required audit tier and validation of ingestion if selected. |
-| R-008 | Partial | Official docs support Android manual/QR config and identify iOS as not remotely controllable. | Owner decision on whether mobile operators are required for cutover, plus manual validation if yes. |
+| R-008 | Partial | Official docs support Android manual/QR config and identify iOS as not remotely controllable. Mobile RustDesk operator apps are required for cutover. | Manual validation of Android and iOS operator workflows with OpenDesk-generated config/instructions. |
 | R-009 | Partial | Service ports, logs, and inside-LAN TCP reachability are validated. | WAN/NAT/split-DNS/direct-vs-relay validation from real clients. |
 | R-010 | Accepted | ADR records clean-room control plane default and fork/link/vendor rules. | None unless fork/vendor work is proposed. |
 

@@ -16,7 +16,7 @@ This worksheet turns the remaining research gaps into explicit owner decisions. 
 | Windows custom clients | Populated and Windows-only in inspected database. | Required, equivalent, or retired. | Required: generated Windows install/config flow. |
 | Strategies/policies | Strategy rows include config options. | Required, equivalent, or retired. | Required: OpenDesk policy model. |
 | Personal address books | Mostly personal address books with linked devices. | Required, equivalent, or retired. | Required: OpenDesk address book/device list. |
-| Native RustDesk address book | Native app parity is not yet proven necessary. | Required, equivalent, or retired. | Equivalent: OpenDesk web address book. |
+| Native RustDesk address book | Native app parity is not yet proven necessary. | Required, equivalent, or retired. | Equivalent: OpenDesk web address book, including mobile browser/operator workflow. |
 | Managed/passwordless address-book access | Hashed secret material exists in address-book entries. | Required, equivalent, or retired. | Unknown; blocks cutover until owner decides. |
 | Device/user assignments | Device records are assigned to users. | Required, equivalent, or retired. | Required: OpenDesk ownership metadata. |
 | Control roles | Rows exist, but inspected mappings were empty. | Required, equivalent, or retired. | Equivalent: OpenDesk role model. |
@@ -52,7 +52,7 @@ Passkeys do not replace:
 - Use OpenDesk web device list/address book first.
 - Do not store plaintext unattended passwords.
 - Treat session-level enforcement as out of scope until a real enforcement mechanism exists.
-- Treat mobile as manual/operator configuration unless the owner requires managed mobile endpoints.
+- Require mobile RustDesk app operator workflows before cutover; treat managed mobile endpoints as separate future scope unless later required.
 - Support passkeys as optional OpenDesk login hardening, separate from RustDesk unattended/session passwords.
 
 ## Signoff

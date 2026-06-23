@@ -175,4 +175,4 @@ Official client documentation lists Android and iOS support, but iOS cannot be c
 
 Decision:
 
-Treat mobile as an operator/manual-config workflow unless the owner explicitly requires managed mobile endpoints. OpenDesk should generate mobile config instructions and QR payloads only after confirming mobile is required for cutover.
+Mobile RustDesk apps are required for OpenDesk operator workflows before cutover. OpenDesk should generate mobile config instructions and Android QR payloads. iOS should be treated as operator-only unless official capability changes.

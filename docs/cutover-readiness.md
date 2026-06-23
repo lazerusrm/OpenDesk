@@ -35,6 +35,7 @@ Production cutover is blocked until this checklist passes. Development can proce
 - [ ] Admin auth and RBAC pass.
 - [ ] Device inventory and address book workflows pass.
 - [ ] Client delivery passes for required OSes.
+- [ ] Android and iOS RustDesk app operator workflows pass.
 - [ ] Endpoint enrollment and check-in pass.
 - [ ] Health checks pass.
 - [ ] Backup and restore drill passes.

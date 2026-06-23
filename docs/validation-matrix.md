@@ -68,6 +68,8 @@ Research rows count as complete only when `docs/research-roadmap.md` contains th
 | D-008 | Duplicate filename handling | Test filename config with browser-added `(1)` suffix | Behavior is documented and does not corrupt server/key settings |
 | D-009 | Config persistence | Restart RustDesk after scripted config | Server settings persist and connection still uses expected server |
 | D-010 | Official release update | Update official client after OpenDesk install | Config remains valid or update limitations are documented |
+| D-011 | Android operator app | Configure official Android app with OpenDesk-generated instructions/QR | App uses expected server config and connects to a test endpoint |
+| D-012 | iOS operator app | Configure official iOS app with OpenDesk-generated instructions | App uses expected server config and connects to a test endpoint |
 
 ## Endpoint Registration Validation
 

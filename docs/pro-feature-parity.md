@@ -40,7 +40,7 @@ Status categories:
 | Branding | OpenDesk web UI branding | Core | RustDesk client branding deferred. |
 | Native RustDesk address book | Client fork or compatible API | Research | Required only if the external OpenDesk address book does not satisfy production workflow. |
 | Browser/web remote client | Do not build initially | Deferred | Large separate project. |
-| Mobile app management | Document manual config | Deferred | Official app distribution stays RustDesk-owned. |
+| Mobile app operator workflow | Generated manual/QR config instructions | Core | Android and iOS RustDesk apps must work for operators before cutover. Official app distribution stays RustDesk-owned. |
 | Backups | OpenDesk backup/restore | Core | Include database/config, exclude runtime junk/secrets where possible. |
 | Health checks | DNS/port/service/key fingerprint checks | Core | Start with external reachability checks. |
 
