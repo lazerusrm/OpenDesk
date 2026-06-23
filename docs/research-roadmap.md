@@ -24,6 +24,7 @@ Research notes with site-specific values must live under ignored `local/`.
 - [Client Validation Procedures](research/client-validation-procedures.md)
 - [Research Evidence Templates](research/evidence-templates.md)
 - [Research Status](research-status.md)
+- [Research Closure Packets](research-closure-packets.md)
 - [Current Research Findings](research-findings.md)
 - [Dev Validation Environment](dev-validation.md)
 - [Validation Lab](validation-lab.md)

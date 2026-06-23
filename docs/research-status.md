@@ -25,6 +25,8 @@ Status values:
 
 An item moves to `accepted` only when its blocking gap is resolved by evidence or explicit owner retirement. If a workflow is retired, record who accepted the retirement and which validation rows no longer apply.
 
+The exact evidence packet required for each research row is defined in [Research Closure Packets](research-closure-packets.md).
+
 ## Implementation Handoff
 
 Implementation may proceed while research rows are partial, but production cutover must wait until every row is accepted or explicitly retired. The current implementation handoff is recorded in [Implementation Handoff](implementation-handoff.md).
