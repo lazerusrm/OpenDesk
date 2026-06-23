@@ -69,6 +69,8 @@ Review matches manually. Some words like `token` may be legitimate in docs, but 
 - Keep generated installers/scripts auditable and avoid embedding long-lived secrets.
 - Default to SQLite for early local work unless requirements justify Postgres.
 - Keep deployment simple: one app service, one database, one reverse proxy path.
+- Follow `docs/engineering-standards.md`: reject internal shims, compatibility creep, vague naming, and monolithic files.
+- Keep producer-to-consumer contracts canonical. If RustDesk or another external system uses different names, isolate that mapping at the boundary.
 
 ## Security Model Reminder
 

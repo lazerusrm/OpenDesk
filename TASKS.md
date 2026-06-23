@@ -11,6 +11,13 @@
 - [x] Clone upstream RustDesk client/server locally for reference.
 - [x] Document upstream hooks relevant to OpenDesk.
 - [x] Create Pro feature parity map.
+- [x] Add replacement requirements.
+- [x] Add architecture and threat model docs.
+- [x] Add cutover readiness gate.
+- [x] Add CI plan and CI validation requirements.
+- [x] Add bootstrap docs/security workflows.
+- [x] Add requirements-to-validation traceability.
+- [x] Add engineering standards for canonical contracts, anti-shim policy, naming, and file size limits.
 
 ## First Build Slice
 

@@ -14,11 +14,19 @@ Production target:
 ## Documents
 
 - [Initial Tape-Out](docs/initial-tapeout.md)
+- [Requirements](docs/requirements.md)
+- [Architecture](docs/architecture.md)
 - [Feature Checklist](docs/feature-checklist.md)
 - [Validation Matrix](docs/validation-matrix.md)
 - [Client Delivery Plan](docs/client-delivery.md)
 - [Upstream Findings](docs/upstream-findings.md)
 - [Pro Feature Parity Map](docs/pro-feature-parity.md)
+- [Threat Model](docs/threat-model.md)
+- [Architecture Decisions](docs/adr.md)
+- [Cutover Readiness](docs/cutover-readiness.md)
+- [CI Plan](docs/ci-plan.md)
+- [Traceability](docs/traceability.md)
+- [Engineering Standards](docs/engineering-standards.md)
 
 ## Current Decision
 

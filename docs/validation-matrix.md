@@ -81,6 +81,21 @@ Target test environments:
 | SEC-003 | Auth required | Access device list unauthenticated | Request denied |
 | SEC-004 | Token scope | Use enrollment token for admin API | Request denied |
 | SEC-005 | Backup sensitivity | Inspect backup | Known sensitive values encrypted or explicitly documented |
+| SEC-006 | CI secret scan | Run configured CI secret/privacy scan | No production secrets or site-specific values are detected outside ignored paths |
+| SEC-007 | Misleading access-control claims | Review UI/API/docs for session enforcement wording | No UI or docs claim RustDesk session enforcement unless enforcement tests exist |
+
+## CI Validation
+
+| ID | Function | Test | Passing Criteria |
+|---|---|---|---|
+| CI-001 | Docs workflow | Run Markdown/link/docs checks | Workflow passes on PR and `main` |
+| CI-002 | Security workflow | Run secret and project-specific privacy scans | Workflow fails on seeded fake secret and passes on clean tree |
+| CI-003 | Ignore boundary | Assert `local/` and `upstream/` are ignored | CI proves private/reference folders are excluded |
+| CI-004 | Script validation | Run shellcheck/PowerShell validation for generated templates | Script templates pass static validation |
+| CI-005 | Application tests | Run unit/integration tests once app exists | Required test suite passes |
+| CI-006 | Container build | Build application container once app exists | Image builds reproducibly without production secrets |
+| CI-007 | File size limits | Run source/document size report | Files over soft limits are absent or have documented justification |
+| CI-008 | Canonical naming | Run naming/contract review check | No internal synonym/shim creep is introduced without boundary documentation |
 
 ## Cutover Validation
 
