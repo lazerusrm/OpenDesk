@@ -81,7 +81,7 @@ Soft limits exist to prevent monoliths. Exceeding them requires a short note in 
 
 | File Type | Soft Limit | Action When Exceeded |
 |---|---:|---|
-| Go/Rust/Python source file | 400 lines | Split by domain responsibility. |
+| Rust source file | 400 lines | Split by domain responsibility. |
 | TypeScript/JavaScript source file | 350 lines | Split UI components/services. |
 | HTML/template file | 300 lines | Split partials/components. |
 | CSS file | 400 lines | Split by layout/component/theme. |

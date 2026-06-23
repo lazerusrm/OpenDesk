@@ -16,6 +16,7 @@ Production target:
 - [Initial Tape-Out](docs/initial-tapeout.md)
 - [Requirements](docs/requirements.md)
 - [Architecture](docs/architecture.md)
+- [Software Stack](docs/software-stack.md)
 - [Feature Checklist](docs/feature-checklist.md)
 - [Validation Matrix](docs/validation-matrix.md)
 - [Client Delivery Plan](docs/client-delivery.md)

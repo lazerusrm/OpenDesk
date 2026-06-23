@@ -10,6 +10,7 @@ required_docs=(
   docs/initial-tapeout.md
   docs/requirements.md
   docs/architecture.md
+  docs/software-stack.md
   docs/feature-checklist.md
   docs/pro-feature-parity.md
   docs/validation-matrix.md

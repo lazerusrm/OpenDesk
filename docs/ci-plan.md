@@ -39,7 +39,7 @@ Once the app is scaffolded, CI should add:
 
 | Check | Purpose |
 |---|---|
-| Go/Rust/Python/Node formatting | Enforce consistent code format based on chosen stack |
+| Rust formatting/linting | Enforce `rustfmt`, `clippy`, and test checks for the chosen backend |
 | Unit tests | Validate core models, token handling, RBAC, config generation |
 | Integration tests | Validate API workflows against test database |
 | Migration tests | Apply migrations up/down or forward-only on fresh and fixture databases |
@@ -100,7 +100,7 @@ Before a release or cutover candidate:
 - [x] Add initial docs checking script.
 - [ ] Add markdown/link checking config.
 - [ ] Add generated script tests once templates exist.
-- [ ] Add application test workflow once stack is scaffolded.
+- [ ] Add Rust application test workflow once stack is scaffolded.
 - [x] Add source file size warning check.
 - [x] Add canonical naming/anti-shim review check.
 - [x] Add public content scan.

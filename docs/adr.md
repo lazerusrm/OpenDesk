@@ -173,3 +173,28 @@ Consequences:
 - Tier 1 is required for OpenDesk implementation.
 - Tier 2 is optional but recommended for Pro audit parity.
 - Tier 3 requires a later design and must not be implied by Tier 1 or Tier 2 evidence.
+
+## ADR-010: Rust Control Plane By Default
+
+Decision: OpenDesk will use Rust as the default backend/API/control-plane implementation language. The detailed stack is locked in `docs/software-stack.md`.
+
+Rationale:
+
+- OpenDesk is security-sensitive remote-access management software.
+- Rust gives strong type boundaries for generated scripts, endpoint enrollment, auth, audit, and config rendering.
+- A single service binary is operationally attractive for LXC/Compose deployment.
+- Rust aligns with the surrounding RustDesk ecosystem while ADR-007 keeps RustDesk source code at the boundary.
+
+Default implementation shape:
+
+- Rust HTTP service.
+- SQLite first with a clear Postgres migration path.
+- Server-rendered UI first.
+- TypeScript only for UI workflows that genuinely need richer client behavior.
+- Compatibility endpoints isolated from the OpenDesk-native domain model.
+
+Consequences:
+
+- Build and CI should use Rust tooling by default.
+- Any non-Rust backend needs a new ADR.
+- Using Rust does not permit copying, linking, or vendoring RustDesk AGPL code without an ADR update.

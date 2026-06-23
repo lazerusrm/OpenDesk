@@ -33,6 +33,22 @@ RustDesk OSS
 
 ## Components
 
+## Implementation Stack
+
+OpenDesk should be implemented as a Rust service by default.
+
+The locked stack is recorded in [Software Stack](software-stack.md).
+
+Default choices:
+
+- Rust backend/API/control-plane service.
+- Server-rendered HTML for the initial operational UI.
+- SQLite for early development and small deployments.
+- Postgres migration path if concurrency or reporting needs justify it.
+- TypeScript frontend only when a workflow cannot stay clean as server-rendered UI.
+
+RustDesk code remains at the boundary. Using Rust for OpenDesk does not imply linking to, vendoring, or copying RustDesk AGPL source.
+
 ### Web UI
 
 Responsibilities:

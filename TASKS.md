@@ -3,7 +3,7 @@
 ## Immediate Next Steps
 
 - [ ] Create Git repository and remote.
-- [ ] Decide first implementation stack: Go server-rendered UI vs FastAPI + React.
+- [x] Decide first implementation stack: Rust backend with server-rendered UI first.
 - [x] Inventory current RustDesk LXC configuration.
 - [x] Export current RustDesk public key and document client config privately.
 - [ ] Define required day-one OS targets.

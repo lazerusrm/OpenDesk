@@ -20,26 +20,33 @@ The intended product is a full operational replacement for Pro, not merely a thi
 
 Recommended initial stack:
 
-- Backend: Go
-- Frontend: server-rendered HTML with HTMX, or React/Vite if the UI grows beyond CRUD/dashboard workflows
+- Backend: Rust
+- HTTP: Axum on Tokio
+- Templates: Askama server-rendered HTML first
+- Frontend enhancement: htmx or TypeScript only if the UI grows beyond CRUD/dashboard workflows
 - Database: SQLite for early local development, Postgres once multi-user/concurrency/backup requirements justify it
 - Auth: local admin user for early development; later Authelia, Authentik, or OIDC behind reverse proxy
 - Deployment: Docker Compose
 - Reverse proxy: Caddy or Traefik, depending on what is already standard on the server
 - Endpoint bootstrap: PowerShell for Windows, shell script for Linux, shell/profile script for macOS
 
-Why Go:
+Why Rust:
 
-- Produces a single static-ish binary.
-- Good fit for small control-plane services.
-- Strong standard library for HTTP, templates, crypto, and OS tooling.
-- Easier operational footprint than a Python/Node stack.
-- Still leaves room for a richer frontend later.
+- Strong fit for a security-sensitive control plane.
+- Produces a single deployable service binary.
+- Good ecosystem for HTTP services, SQL, templates, crypto, and typed data boundaries.
+- Matches the broader RustDesk ecosystem without linking to or vendoring RustDesk AGPL code.
+- Keeps canonical producer-to-consumer types practical.
 
-Alternative acceptable stack:
+Default implementation shape:
 
-- FastAPI + React/Vite if we want faster API prototyping and are comfortable with Python packaging.
-- Rust backend if we later decide tight RustDesk server integration is necessary.
+- Rust HTTP service.
+- SQLite first, with Postgres-compatible query discipline where practical.
+- Server-rendered templates for the operational UI.
+- Small isolated compatibility handlers for RustDesk-shaped endpoints.
+- Generated PowerShell/shell artifacts rendered from typed Rust config structs.
+
+The detailed stack is locked in `docs/software-stack.md`.
 
 ## System Shape
 
