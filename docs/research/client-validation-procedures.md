@@ -115,6 +115,12 @@ Steps:
 3. Connect from mobile to a test endpoint.
 4. Decide whether mobile is operator-only or managed endpoint.
 
+Evidence helper:
+
+```bash
+scripts/research-mobile-config-record.sh --case android-operator --host '<test-host>' --key '<test-public-key>'
+```
+
 Passing criteria:
 
 - Manual/QR setup is documented well enough for operators.

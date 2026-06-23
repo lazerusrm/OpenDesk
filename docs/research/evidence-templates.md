@@ -10,6 +10,7 @@ Use these scripts to create ignored evidence files:
 - `scripts/research-network-probe.sh`
 - `scripts/research-windows-client-record.ps1`
 - `scripts/research-macos-client-record.sh`
+- `scripts/research-mobile-config-record.sh`
 
 Both scripts write under `local/research/manual/`, which is intentionally ignored.
 
@@ -64,6 +65,23 @@ Direct connection result:
 Relay connection result:
 NAT/hairpin finding:
 Artifacts:
+Final status: pass | fail | accepted-exception
+Follow-up:
+```
+
+## Mobile Config Record
+
+```text
+Date:
+Tester:
+Mobile OS/version:
+RustDesk app version:
+Config method: manual | QR
+QR payload artifact:
+Manual setup result:
+Connect-to-endpoint result:
+Operator-only decision:
+Managed endpoint decision:
 Final status: pass | fail | accepted-exception
 Follow-up:
 ```
