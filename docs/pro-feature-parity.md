@@ -45,7 +45,14 @@ Status categories:
 
 ## Production Usage Inventory
 
-Read-only production-style evidence currently proves these populated Pro areas exist: users, groups, device assignments, address books, strategies, custom clients, sessions, and audit logs. No current user rows had 2FA enabled in the inspected database, and third-party auth rows were absent.
+Read-only production-style evidence currently proves these populated Pro areas exist: users, groups, device assignments, personal address books, strategies with config options, Windows custom clients, sessions, and audit logs. No current user rows had 2FA enabled in the inspected database, and third-party auth rows were absent.
+
+Current replacement assumptions until owner review:
+
+- Windows generated install/config flow is required because current custom clients are Windows-only.
+- Strategy/policy replacement is required because active strategy config exists.
+- Native passwordless address-book parity remains undecided because address-book entries contain hashed secret material.
+- SSO/third-party auth and 2FA are not currently proven production dependencies, but may still be added as hardening features.
 
 Before cutover, the owner must inventory current RustDesk Server Pro usage from operator interviews and any available Pro exports/screenshots. For every capability above, record:
 

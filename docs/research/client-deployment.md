@@ -132,11 +132,13 @@ RustDesk `1.4.8` Debian package validation in the dev LXC confirmed `--deploy --
 
 Endpoint response contract:
 
-- `OK`: successful deployment.
-- `NOT_ENABLED`: deployment not required.
-- `INVALID_INPUT`: rejected input.
-- `ID_TAKEN`: requested ID already exists.
-- Any other non-empty response: displayed as an error.
+- `OK`: successful deployment when no ID change is requested.
+- `OK` with a requested new ID: attempts local ID persistence; validation still needs a desktop/service context where the client IPC path is fully available.
+- `NOT_ENABLED`: deployment not required; released Linux client exits with code `3`.
+- `INVALID_INPUT`: rejected input; released Linux client exits with code `5`.
+- `ID_TAKEN`: requested ID already exists; released Linux client exits with code `6`.
+- Empty or unknown response: released Linux client exits with code `1`.
+- Other non-empty response: displayed as an error and exits with code `1`.
 
 Preferred validation environment:
 
@@ -166,3 +168,11 @@ Related validation:
 - D-series client delivery tests.
 - R-series connection workflow tests.
 - RS-008.
+
+Current finding:
+
+Official client documentation lists Android and iOS support, but iOS cannot be controlled remotely. Android documentation supports manual ID/relay/key setup and QR-based config using a JSON config payload with host/key fields.
+
+Decision:
+
+Treat mobile as an operator/manual-config workflow unless the owner explicitly requires managed mobile endpoints. OpenDesk should generate mobile config instructions and QR payloads only after confirming mobile is required for cutover.

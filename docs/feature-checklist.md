@@ -29,7 +29,7 @@ Status legend:
 - [~] Complete R-005 access control reality research.
 - [~] Complete R-006 deployment endpoint compatibility research.
 - [~] Complete R-007 session/audit log sources research.
-- [ ] Complete R-008 mobile workflow research.
+- [~] Complete R-008 mobile workflow research.
 - [~] Complete R-009 relay/NAT/LAN/DNS behavior research.
 - [x] Complete R-010 legal/license posture research.
 

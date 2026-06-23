@@ -37,6 +37,13 @@ Current finding:
 
 Read-only database inspection confirms populated production-style usage of users, groups, assigned devices, address books, strategies, custom clients, sessions, and audit logs. This makes those features replacement-scope unless the owner explicitly retires the workflow.
 
+Deeper inventory:
+
+- Custom-client rows are Windows-only in the inspected database.
+- Strategy rows include config options and are not empty placeholders.
+- Address books are mostly personal, with entries linked to known devices.
+- Control-role rows exist, but inspected mappings were empty.
+
 Not currently proven:
 
 - Which populated features are used weekly.
@@ -147,6 +154,10 @@ Current finding:
 
 The inspected database has connection, console, file, and alarm audit history. Server logs expose startup settings, direct-address lookup, punch-hole attempts, relay pairing/closure, and wrong-key events.
 
+Audit detail:
+
+Most connection audit rows include end times. Connection audit metadata includes IP/name fields, while console audit metadata includes changed object identifiers and names. This is enough to design useful ingestion, but OpenDesk still needs first-party audit for actions it performs itself.
+
 Decision:
 
 OpenDesk should implement first-party audit for admin actions, deployment artifacts, enrollment, auth, and settings changes. RustDesk session visibility can be added as an ingestion layer, but launch-intent audit must remain clearly labeled if it does not prove a session completed.
@@ -183,6 +194,10 @@ Related validation:
 Current finding:
 
 The server exposes the expected RustDesk service ports for ID, relay, API, and websocket traffic. Logs show direct-address lookup, TCP/UDP punch-hole behavior, relay pairing, and relay closure events.
+
+Network detail:
+
+Inside-LAN TCP reachability from the dev LXC to the expected RustDesk service ports is confirmed. This does not prove WAN, NAT loopback, split-DNS, or mobile-network behavior.
 
 Decision:
 
