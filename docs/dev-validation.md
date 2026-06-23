@@ -14,6 +14,14 @@ Use this target for:
 - Testing failure behavior without touching production services.
 - Recording package/config persistence behavior before production rollout.
 
+Current validated use:
+
+- Current RustDesk Linux Debian package install.
+- Root service creation and restart.
+- Command-line config application with test-only values.
+- Config option readback.
+- Same-version package reinstall persistence.
+
 Do not use this target for:
 
 - Production RustDesk database copies.

@@ -40,6 +40,10 @@ Current finding:
 
 Official documentation and local source inspection both support command-line configuration. The config command parses the same custom-server string used by filename configuration and writes server key, ID server, API server, and relay server options.
 
+Released Linux package finding:
+
+RustDesk `1.4.8` Debian package validation in the dev LXC confirmed `--config` writes ID server, relay server, API server, and key values into the root RustDesk config used by the service. Option readback returned the expected test values.
+
 Preferred validation environment:
 
 Use a separate dev LXC or VM for endpoint/package validation before touching production. The dev environment should be disposable, have known snapshots, and run only test RustDesk IDs/keys.
@@ -80,6 +84,10 @@ Current finding:
 
 Local source inspection confirms official commands for silent install, service install, config import, config string application, ID readout, ID set, password set, assignment, and deployment. These commands generally require an installed client and admin/root permissions when changing local service settings.
 
+Released Linux package finding:
+
+RustDesk `1.4.8` Debian package validation in the dev LXC confirmed package install creates and starts a root `rustdesk.service`, `--get-id` returns an ID, configured values survive service restart, and configured values survive same-version package reinstall.
+
 Service-context finding:
 
 Windows service creation imports a config file into the service path. macOS privileged install copies user preference files into the root preference location before loading the service. Validation must prove both interactive user context and service/system context are configured.
@@ -117,6 +125,10 @@ Related validation:
 Current finding:
 
 Local source inspection confirms a scriptable deploy command that posts to the configured API server with a bearer token and can return deployment-specific errors. This supports prototyping an isolated compatibility adapter, but not coupling the main domain model to that API shape.
+
+Released Linux package finding:
+
+The dev LXC now has a configured released client suitable for testing a RustDesk-shaped deploy endpoint against a non-production API server.
 
 Preferred validation environment:
 

@@ -15,15 +15,15 @@ The current production-style deployment was inspected read-only. Evidence confir
 - Current production-style usage includes users, groups, assigned devices, address-book entries, strategies, custom clients, sessions, and audit history.
 - No current users have 2FA enabled in the inspected database, and third-party auth rows were absent.
 - Address-book entries include hashed secret material, so passwordless/managed-password parity must be treated as a security-sensitive requirement until owner signoff retires it.
-- Released client metadata confirms a current Linux AppImage target can report its version without install, but install/config persistence still needs real endpoint testing.
+- Released Linux client evidence now covers current AppImage version readout and current Debian package install/config/restart/reinstall persistence in a dev LXC.
 - A separate dev LXC/VM is the preferred place to validate package installs, deploy compatibility, config persistence, and failure modes.
 
 ## Current Decisions
 
 | Research ID | Decision | Remaining Work |
 |---|---|---|
-| R-001 | Official docs and source support manual config, import/export, command-line config, automatic config, and filename config. Command-line config uses the same parser as filename config and sets ID server, key, API server, and relay server values. | Run Windows/Linux/macOS/mobile released-client validation matrix. |
-| R-002 | Generated scripts using official client commands are the primary deployment path. Source confirms install, service install, config import, config string, ID readout, ID set, password set, assignment, and deploy commands exist. | Confirm silent flags, config persistence, service/user config, and upgrade behavior on real released clients. |
+| R-001 | Official docs/source support multiple config paths. Current released Linux `.deb` validates command-line config writing ID server, key, API server, and relay server values into root service config. | Run Windows/macOS/mobile released-client validation matrix and Linux GUI/operator workflow tests. |
+| R-002 | Generated scripts using official client commands are the primary deployment path. Current released Linux `.deb` validates package install, root service creation, ID readout, service restart persistence, and same-version reinstall persistence. | Confirm Windows/macOS silent flags, config persistence, service/user config, and upgrade behavior on real released clients. |
 | R-003 | Pro features are actively present and several are populated: users, groups, assigned devices, address books, strategies, custom clients, sessions, and audit logs. | Owner must confirm which populated features are actually used weekly and which may be retired. |
 | R-004 | Address-book entries include hashed secret material. OpenDesk must not store plaintext unattended passwords, and any managed-password parity needs a dedicated secret-management design. | Owner must decide whether passwordless/managed-password workflow is required for cutover. |
 | R-005 | Current settings do not require login for access, so dashboard RBAC alone cannot be treated as RustDesk session enforcement. | Decide whether session-level enforcement is required and how to implement it. |
