@@ -36,15 +36,15 @@
 
 ## First Build Slice
 
-- [ ] Scaffold backend service.
-- [ ] Add SQLite migrations.
-- [ ] Add admin login.
-- [ ] Add device CRUD.
-- [ ] Add server config settings page.
-- [ ] Add Windows install/config script generator.
-- [ ] Add Linux install/config script generator.
-- [ ] Add endpoint enrollment token model.
-- [ ] Add endpoint registration endpoint.
+- [x] Scaffold backend service.
+- [x] Add SQLite migrations.
+- [x] Add admin login.
+- [x] Add device CRUD.
+- [x] Add server config settings page.
+- [x] Add Windows install/config script generator.
+- [x] Add Linux install/config script generator.
+- [x] Add endpoint enrollment token model.
+- [x] Add endpoint registration endpoint.
 
 ## Questions For Owner
 

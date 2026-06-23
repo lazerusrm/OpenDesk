@@ -43,3 +43,20 @@ Use the official signed RustDesk apps wherever possible. Do not fork the RustDes
 Forking or vendoring RustDesk OSS server/client code is deferred until a specific full-replacement requirement cannot be met through the external control plane, deployment automation, endpoint registration service, or compatible APIs.
 
 Local upstream reference clones may exist in `upstream/`, which is intentionally ignored by Git.
+
+## Development
+
+The first build slice is a Rust control plane service (Axum, Askama, sqlx/SQLite).
+
+```bash
+cargo test
+OPENDESK_LISTEN_ADDR=127.0.0.1:8080 cargo run
+```
+
+Default bootstrap admin credentials come from `OPENDESK_BOOTSTRAP_ADMIN_USERNAME` and `OPENDESK_BOOTSTRAP_ADMIN_PASSWORD` (change before any real deployment).
+
+Compose deployment:
+
+```bash
+docker compose up --build
+```

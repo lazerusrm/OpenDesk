@@ -35,10 +35,10 @@ Status legend:
 
 ## Phase 1: Core Control Plane
 
-- [ ] Admin login.
-- [ ] Device CRUD.
-- [ ] Device archive/unarchive.
-- [ ] Device search by alias, hostname, RustDesk ID, site, tag.
+- [x] Admin login.
+- [x] Device CRUD.
+- [x] Device archive/unarchive.
+- [x] Device search by alias, hostname, RustDesk ID, site, tag.
 - [ ] Site/location management.
 - [ ] Tags.
 - [ ] Notes.
@@ -50,15 +50,15 @@ Status legend:
 
 ## Phase 2: Client Configuration and Downloads
 
-- [ ] Store canonical RustDesk server config:
+- [x] Store canonical RustDesk server config:
   - ID server: `rd.example.com`
   - Relay server: `rd.example.com`
   - API server: blank for OSS path
   - Public key: imported from current server
 - [ ] Generate RustDesk import string if supported by current client.
 - [ ] Generate filename-based custom server download name as fallback.
-- [ ] Generate Windows PowerShell installer/config script.
-- [ ] Generate Linux installer/config script.
+- [x] Generate Windows PowerShell installer/config script.
+- [x] Generate Linux installer/config script.
 - [ ] Generate macOS installer/config script if required.
 - [ ] Provide official-client download links or cached installer packages.
 - [ ] Provide a single frontend page per OS with install command/download.
@@ -70,9 +70,9 @@ Status legend:
 
 ## Phase 3: Endpoint Self-Registration
 
-- [ ] Enrollment token model.
-- [ ] Enrollment token creation/rotation/revocation.
-- [ ] Endpoint registration API.
+- [x] Enrollment token model.
+- [x] Enrollment token creation/rotation/revocation.
+- [x] Endpoint registration API.
 - [ ] Windows self-registration script.
 - [ ] Linux self-registration script.
 - [ ] macOS self-registration script if required.

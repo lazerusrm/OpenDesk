@@ -1,0 +1,15 @@
+services:
+  opendesk:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      OPENDESK_LISTEN_ADDR: "0.0.0.0:8080"
+      OPENDESK_DATA_DIR: "/data"
+      OPENDESK_BOOTSTRAP_ADMIN_USERNAME: "admin"
+      OPENDESK_BOOTSTRAP_ADMIN_PASSWORD: "change-me"
+    volumes:
+      - opendesk-data:/data
+
+volumes:
+  opendesk-data:

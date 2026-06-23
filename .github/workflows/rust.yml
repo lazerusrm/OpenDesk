@@ -1,0 +1,32 @@
+name: Rust
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Cargo test
+        run: cargo test
+
+      - name: Check docs
+        run: bash scripts/docs-check.sh
+
+      - name: Privacy scan
+        run: bash scripts/privacy-scan.sh
+
+      - name: Public content scan
+        run: bash scripts/public-content-scan.sh

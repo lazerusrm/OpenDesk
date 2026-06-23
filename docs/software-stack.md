@@ -66,6 +66,8 @@ This document locks the default implementation stack for OpenDesk. Changes requi
 | Dependency audit | cargo-audit or cargo-deny | Add before implementation depends on external crates. |
 | Container build | Docker/BuildKit | Compose remains first deployment path. |
 
+The first implementation scaffold should add a CI workflow for `cargo fmt --check`, `cargo test`, and fresh SQLite migration validation. `clippy -D warnings` should become required as soon as the scaffold compiles cleanly enough to make warning failures actionable.
+
 ## Non-Choices
 
 - Do not build a SPA first.

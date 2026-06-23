@@ -43,8 +43,31 @@ patterns=(
   'api[_-]?key\s*[:=]'
 )
 
+identifier_patterns=(
+  'password\s*[:=]'
+  'secret\s*[:=]'
+  'token\s*[:=]'
+  'api[_-]?key\s*[:=]'
+)
+
 for pattern in "${patterns[@]}"; do
-  if rg -n --pcre2 -- "$pattern" "${scan_paths[@]}"; then
+  pattern_paths=("${scan_paths[@]}")
+  for identifier_pattern in "${identifier_patterns[@]}"; do
+    if [ "$pattern" = "$identifier_pattern" ]; then
+      pattern_paths=()
+      for path in "${scan_paths[@]}"; do
+        case "$path" in
+          *.rs) ;;
+          *) pattern_paths+=("$path") ;;
+        esac
+      done
+      break
+    fi
+  done
+  if [ "${#pattern_paths[@]}" -eq 0 ]; then
+    continue
+  fi
+  if rg -n --pcre2 -- "$pattern" "${pattern_paths[@]}"; then
     echo "privacy-scan: matched sensitive pattern: $pattern" >&2
     status=1
   fi

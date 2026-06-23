@@ -16,6 +16,7 @@
 data/
 dist/
 build/
+target/
 node_modules/
 tmp/
 upstream/

@@ -48,6 +48,14 @@ Once the app is scaffolded, CI should add:
 | Container build | Ensure deployable image builds |
 | Compose smoke test | Start app and run health checks in CI |
 
+Minimum first application gate:
+
+- `cargo fmt --check`.
+- `cargo test`.
+- `cargo clippy --all-targets --all-features -- -D warnings` once the scaffold compiles cleanly.
+- Fresh SQLite migration application.
+- `target/` and other build output must remain untracked.
+
 ## Client Delivery CI
 
 Generated installer/config scripts are security-sensitive and must be tested.
@@ -100,7 +108,7 @@ Before a release or cutover candidate:
 - [x] Add initial docs checking script.
 - [ ] Add markdown/link checking config.
 - [ ] Add generated script tests once templates exist.
-- [ ] Add Rust application test workflow once stack is scaffolded.
+- [ ] Add Rust application test workflow now that the implementation scaffold has started.
 - [x] Add source file size warning check.
 - [x] Add canonical naming/anti-shim review check.
 - [x] Add public content scan.

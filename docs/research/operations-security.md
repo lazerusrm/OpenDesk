@@ -43,6 +43,9 @@ Deeper inventory:
 - Strategy rows include config options and are not empty placeholders.
 - Address books are mostly personal, with entries linked to known devices.
 - Control-role rows exist, but inspected mappings were empty.
+- Role, user-role, and role-scope rows were empty in the inspected database.
+- Third-party auth rows were empty, and no inspected table names indicated populated OIDC, LDAP, SMTP, API-token, or token-integration state.
+- Console audit rows show recent web console activity within the last 180 days, so web-console workflows are not purely historical.
 
 Not currently proven:
 
@@ -157,6 +160,10 @@ The inspected database has connection, console, file, and alarm audit history. S
 Audit detail:
 
 Most connection audit rows include end times. Connection audit metadata includes IP/name fields, while console audit metadata includes changed object identifiers and names. This is enough to design useful ingestion, but OpenDesk still needs first-party audit for actions it performs itself.
+
+Console audit detail:
+
+Console audit activity is grouped by numeric object/action types in the Pro database. The inspected metadata keys identify changed object names, name lists, and object IDs, but the numeric action mapping still needs either source mapping or UI observation before OpenDesk can present friendly labels with confidence.
 
 Decision:
 
