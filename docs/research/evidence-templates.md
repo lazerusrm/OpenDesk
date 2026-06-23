@@ -8,6 +8,8 @@ Use these scripts to create ignored evidence files:
 
 - `scripts/research-client-record.sh`
 - `scripts/research-network-probe.sh`
+- `scripts/research-windows-client-record.ps1`
+- `scripts/research-macos-client-record.sh`
 
 Both scripts write under `local/research/manual/`, which is intentionally ignored.
 

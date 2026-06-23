@@ -16,7 +16,10 @@ For each run, record:
 - Pass/fail for each step.
 - Artifact path under ignored `local/research/`.
 
-Use `scripts/research-client-record.sh` to create the starting evidence file for a client run.
+Use `scripts/research-client-record.sh` to create the starting evidence file for a client run. On Windows or macOS, prefer the platform capture scripts:
+
+- `scripts/research-windows-client-record.ps1`
+- `scripts/research-macos-client-record.sh`
 
 ## Windows Installer
 
@@ -44,6 +47,12 @@ Passing criteria:
 - Config values persist for the service context.
 - ID readout works.
 - Deploy request shape matches the Linux evidence or differences are documented.
+
+Evidence helper:
+
+```powershell
+./scripts/research-windows-client-record.ps1 -RustDeskPath "C:\Program Files\RustDesk\rustdesk.exe" -ConfigString "<test-config>" -DeployToken "<test-token>"
+```
 
 ## Windows Portable
 
@@ -86,6 +95,12 @@ Passing criteria:
 - Required permissions are documented.
 - Config persistence is proven for the context that accepts incoming sessions.
 - Any manual-only step is marked as a cutover constraint.
+
+Evidence helper:
+
+```bash
+scripts/research-macos-client-record.sh --rustdesk /Applications/RustDesk.app/Contents/MacOS/RustDesk --config '<test-config>' --deploy-token '<test-token>'
+```
 
 ## Android
 
