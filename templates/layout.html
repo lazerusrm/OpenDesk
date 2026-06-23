@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · OpenDesk</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">OpenDesk</div>
+    {% if show_nav %}
+    <nav>
+      <a href="/devices">Devices</a>
+      <a href="/settings/server-config">Server Config</a>
+      <a href="/deployment">Deployment</a>
+      <a href="/enrollment-tokens">Enrollment Tokens</a>
+      <form method="post" action="/logout" class="inline-form">
+        <button type="submit">Logout</button>
+      </form>
+    </nav>
+    {% endif %}
+  </header>
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
