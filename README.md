@@ -19,6 +19,7 @@ Production target:
 - [Software Stack](docs/software-stack.md)
 - [Feature Checklist](docs/feature-checklist.md)
 - [Validation Matrix](docs/validation-matrix.md)
+- [Validation Lab](docs/validation-lab.md)
 - [Client Delivery Plan](docs/client-delivery.md)
 - [Upstream Findings](docs/upstream-findings.md)
 - [Pro Feature Parity Map](docs/pro-feature-parity.md)

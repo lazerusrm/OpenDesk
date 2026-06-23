@@ -26,6 +26,7 @@ Research notes with site-specific values must live under ignored `local/`.
 - [Research Status](research-status.md)
 - [Current Research Findings](research-findings.md)
 - [Dev Validation Environment](dev-validation.md)
+- [Validation Lab](validation-lab.md)
 
 ## Required Items
 

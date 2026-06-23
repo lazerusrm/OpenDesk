@@ -14,6 +14,7 @@ required_docs=(
   docs/feature-checklist.md
   docs/pro-feature-parity.md
   docs/validation-matrix.md
+  docs/validation-lab.md
   docs/client-delivery.md
   docs/upstream-findings.md
   docs/threat-model.md

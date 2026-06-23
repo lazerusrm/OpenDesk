@@ -20,6 +20,7 @@ Production cutover is blocked until this checklist passes. Development can proce
 - [ ] Every Core requirement in `docs/requirements.md` has validation evidence.
 - [ ] Required endpoint OSes are identified.
 - [ ] Required operator workflows are identified.
+- [ ] Required validation lab targets in `docs/validation-lab.md` have accepted evidence or retired scope.
 - [ ] Real deployment details remain in ignored local/runtime config only.
 
 ## Parallel Run
