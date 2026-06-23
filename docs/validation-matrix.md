@@ -34,6 +34,8 @@ Cutover validation cannot pass from design intent alone. Each Core replacement w
 | S-005 | Public key | Compare dashboard key fingerprint to server key | Fingerprint matches known server public key |
 | S-006 | Backup | Create backup archive | Backup contains database/config without runtime junk |
 | S-007 | Restore | Restore backup into fresh instance | App starts and data matches source |
+| S-008 | Compose deployment | Deploy clean instance from documented Compose config | App starts with persistent data/config and no production secrets |
+| S-009 | Upgrade | Apply documented upgrade over populated test instance | Database/config survive and health checks pass |
 
 ## Control Plane Validation
 
@@ -47,6 +49,8 @@ Cutover validation cannot pass from design intent alone. Each Core replacement w
 | C-006 | Export CSV | Export device list | CSV opens and includes expected fields |
 | C-007 | Audit | Modify a device | Audit event records actor/action/object/time |
 | C-008 | Health page | Open health dashboard | Shows DNS, ports, service status, and timestamp |
+| C-009 | User administration | Create, disable, and role-assign test users | Login and permissions change according to the selected role |
+| C-010 | Deployment page | Generate deployment artifact from UI | Artifact matches selected OS/site/tags/scope and records an audit event |
 
 ## Client Delivery Validation
 
@@ -84,6 +88,7 @@ Cutover validation cannot pass from design intent alone. Each Core replacement w
 | R-003 | Direct vs relay | Test LAN and WAN scenarios | Direct connection or relay behavior is documented and acceptable |
 | R-004 | File transfer | Transfer small file | File arrives intact |
 | R-005 | Unattended access | Connect to unattended test endpoint | Works according to endpoint password/security policy |
+| R-006 | Connection helper | Generate default-server and explicit-server helpers | Helper output launches successfully or unsupported behavior is documented for the target OS/client version |
 
 ## Security Validation
 
@@ -96,6 +101,7 @@ Cutover validation cannot pass from design intent alone. Each Core replacement w
 | SEC-005 | Backup sensitivity | Inspect backup | Known sensitive values encrypted or explicitly documented |
 | SEC-006 | CI secret scan | Run configured CI secret/privacy scan | No production secrets or site-specific values are detected outside ignored paths |
 | SEC-007 | Misleading access-control claims | Review UI/API/docs for session enforcement wording | No UI or docs claim RustDesk session enforcement unless enforcement tests exist |
+| SEC-008 | Role permission matrix | Attempt each role/action/site/tag case | Allowed and denied results match policy, with audit coverage for sensitive denials |
 
 ## CI Validation
 
@@ -109,7 +115,7 @@ Cutover validation cannot pass from design intent alone. Each Core replacement w
 | CI-006 | Container build | Build application container once app exists | Image builds reproducibly without production secrets |
 | CI-007 | File size limits | Run source/document size report | Files over soft limits are absent or have documented justification |
 | CI-008 | Canonical naming | Run naming/contract review check | No internal synonym/shim creep is introduced without boundary documentation |
-| CI-009 | Public attribution scan | Run public content scan | Committed project content does not mention assistant/tool/vendor attribution terms |
+| CI-009 | Public content hygiene | Run public content scan | Committed project content is free of private-workflow markers |
 
 ## Cutover Validation
 

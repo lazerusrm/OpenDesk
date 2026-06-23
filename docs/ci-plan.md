@@ -24,7 +24,7 @@ Before application code exists, CI should cover:
 | Requirements reference check | Ensure validation docs reference requirement IDs over time | Before implementation starts |
 | File size check | Fail on files exceeding soft limits unless the script is intentionally updated with a justified exception | Before implementation starts |
 | Canonical naming check | Catch banned vague filenames and obvious internal shim/legacy terms | Before implementation starts |
-| Public attribution check | Prevent tool/vendor attribution terms in committed project content | Immediately |
+| Public content hygiene check | Prevent private-workflow markers in committed project content | Immediately |
 
 Suggested tools:
 
@@ -103,13 +103,13 @@ Before a release or cutover candidate:
 - [ ] Add application test workflow once stack is scaffolded.
 - [x] Add source file size warning check.
 - [x] Add canonical naming/anti-shim review check.
-- [x] Add public attribution scan.
+- [x] Add public content scan.
 
 ## Current Workflows
 
 - `.github/workflows/docs.yml` runs `scripts/docs-check.sh`.
 - `.github/workflows/security.yml` runs `scripts/privacy-scan.sh` and `scripts/public-content-scan.sh`.
 
-The current docs check validates required docs, local Markdown links, requirement-to-validation traceability, ignored private/reference boundaries, soft file-size limits, shell syntax, and obvious anti-shim filename drift. The current security workflow runs the project-specific privacy scan across tracked and unignored files, leaves ignored private/reference paths unread, and rejects public tool-origin attribution terms.
+The current docs check validates required docs, local Markdown links, requirement-to-validation traceability, ignored private/reference boundaries, soft file-size limits, shell syntax, and obvious anti-shim filename drift. The current security workflow runs the project-specific privacy scan across tracked and unignored files, leaves ignored private/reference paths unread, and rejects private-workflow markers in public content.
 
 These remain bootstrap checks. They should be expanded with dedicated Markdown linting, release-grade secret scanning, dependency scanning, generated-script tests, and application test workflows as soon as the project has its first implementation slice.

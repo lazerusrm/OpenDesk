@@ -35,6 +35,7 @@ Production cutover is blocked until this checklist passes. Development can proce
 - [ ] Endpoint enrollment and check-in pass.
 - [ ] Health checks pass.
 - [ ] Backup and restore drill passes.
+- [ ] Repeatable deployment and upgrade procedure pass.
 - [ ] Audit logs capture required events.
 - [ ] Privacy scan passes outside ignored paths.
 - [ ] Required CI workflows are green on the cutover candidate commit.

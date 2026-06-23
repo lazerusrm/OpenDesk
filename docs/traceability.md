@@ -6,19 +6,19 @@ This document maps replacement requirements to validation coverage. It should be
 
 | Requirement | Validation Coverage | Notes |
 |---|---|---|
-| PR-001 Web admin console | C-001, C-002, C-003, C-004, C-005 | Expand when UI implementation begins. |
+| PR-001 Web admin console | C-001 through C-010 | Covers auth, device workflows, export, audit, health, user admin, and deployment UI. |
 | PR-002 Device inventory | C-002, C-003, C-004, C-005, C-006 | Inventory export included. |
-| PR-003 Address-book workflow | R-001, R-002, CUT-003 | Requires pilot workflow evidence. |
+| PR-003 Address-book workflow | R-001 through R-006, CUT-003 | Requires pilot workflow evidence. |
 | PR-004 Sites/tags/notes/archive | C-003, C-004, C-005 | Add site/tag-specific UI tests when implemented. |
 | PR-005 Client delivery | D-001 through D-010 | Must pass for required OSes before cutover. |
 | PR-006 Endpoint self-registration | E-001 through E-007 | Covers token lifecycle and deploy compatibility research. |
 | PR-007 Server health | S-001 through S-005, C-008 | UDP reachability may need documented exception. |
 | PR-008 Backup/restore | S-006, S-007, SEC-005, CUT-004 | Restore drill required. |
 | PR-009 Audit logs | C-007, E-004, SEC-002 | Add event-specific tests with implementation. |
-| PR-010 RBAC | SEC-003, SEC-004 | Needs expanded role matrix tests once RBAC exists. |
+| PR-010 RBAC | C-009, SEC-003, SEC-004, SEC-008 | Role matrix must cover admin/operator/read-only behavior before cutover. |
 | PR-011 Access boundary clarity | SEC-007 | Docs currently state boundary; implementation must avoid misleading UI. |
 | PR-012 Official clients | D-006, D-010 | Signature/checksum and update behavior. |
-| PR-013 No Pro dependency | CUT-003, CR-001 | Pro usage inventory required. |
+| PR-013 No Pro dependency | CUT-003 | Pro usage inventory from CR-001 remains required for signoff. |
 | SR-001 Public repo privacy | SEC-006, CI-002 | Bootstrap privacy scan exists. |
 | SR-002 Runtime secrets outside Git | SEC-006, CI-002 | Add config review once app exists. |
 | SR-003 Enrollment token protection | E-001, E-005, SEC-004 | Add storage/hash tests with implementation. |
@@ -29,19 +29,19 @@ This document maps replacement requirements to validation coverage. It should be
 | SR-008 HTTPS | SEC-001 | Production deploy validation. |
 | SR-009 Backup sensitivity | SEC-005 | Backup classification required. |
 | SR-010 Session enforcement claims | R-005, SEC-007 | Must remain non-enforcing unless proven. |
-| OR-001 Repeatable deployment | CI-006, CUT-001 | Compose smoke test once app exists. |
+| OR-001 Repeatable deployment | S-008, CI-006, CUT-001 | Compose smoke test once app exists. |
 | OR-002 Dashboard failure does not break RustDesk | CUT-001, CUT-004 | Failure-mode test required. |
 | OR-003 LXC/Proxmox diagnostics | C-008, S-001 through S-007 | Runbook coverage needed later. |
 | OR-004 Parallel run | CUT-001, CUT-002 | Pilot group evidence. |
 | OR-005 Rollback | CUT-004 | Rollback drill or documented no-op. |
-| OR-006 Upgrade | CI-005, CI-006 | Add migration/upgrade tests with implementation. |
+| OR-006 Upgrade | S-009, CI-005, CI-006 | Add migration/upgrade tests with implementation. |
 | OR-007 Upstream versions recorded | D-005, D-010 | Validation evidence must record versions. |
 | OR-008 CI checks | CI-001 through CI-009 | Bootstrap docs/security checks exist; app-specific checks arrive with implementation. |
 | OR-009 Canonical contracts and anti-shim discipline | CI-008 plus engineering review | Needs automated and human review once implementation begins. |
 | OR-010 Source file size limits | CI-007 plus code review | Needs automated report once implementation begins. |
 | IR-001 Monitor OSS services | S-002, S-003, C-008 | Do not modify `hbbs`/`hbbr` initially. |
 | IR-002 Public key/fingerprint handling | S-005, SEC-006 | Real key material remains ignored/private. |
-| IR-003 Connection helpers | R-001, R-002 | Validate copy/open behavior. |
+| IR-003 Connection helpers | R-001, R-002, R-006 | Validate copy/open behavior for default and explicit server cases. |
 | IR-004 Client config per OS/version | D-001 through D-010 | Matrix must record OS/package/version. |
 | IR-005 Compatibility endpoints | E-006, E-007 | Only if implemented. |
 | CR-001 Pro feature mapping | CUT-003 | Owner/reviewer signoff. |
@@ -55,7 +55,7 @@ This document maps replacement requirements to validation coverage. It should be
 ## Known Coverage Gaps
 
 - Expand SEC-007 into UI-copy snapshot tests once UI exists.
-- Expand RBAC cases into a role/action/site/tag permission matrix.
+- Expand SEC-008 into a full role/action/site/tag permission matrix once RBAC exists.
 - Add generated script fixture tests once templates exist.
 - Add migration/backup/restore automation once the app exists.
 - Add release evidence format for client versions and checksums.

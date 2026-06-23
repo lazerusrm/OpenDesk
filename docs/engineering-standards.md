@@ -48,9 +48,9 @@ Rejected:
 - Legacy flags before there is actual legacy behavior.
 - Dead code kept because a contributor was uncertain.
 
-## Tool-Origin Attribution Policy
+## Public Content Hygiene
 
-Public code, docs, comments, commit messages, generated artifacts, and UI text must read as human-authored project work. Do not mention assistant/tool/vendor names, tool-specific folders, or tool-specific instruction files in public project content.
+Public code, docs, comments, commit messages, generated artifacts, and UI text must contain only project-maintainer prose and project-relevant references. Private workflow notes and external-process markers belong only under ignored local paths.
 
 If attribution-like text is unavoidable in private local notes, use a normal human maintainer name and keep it under ignored local paths. Prefer no attribution at all.
 

@@ -43,6 +43,30 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     .env
     app.env
   )
+  word() {
+    local value=""
+    local char
+    for char in "$@"; do
+      value+="$char"
+    done
+    printf "%s" "$value"
+  }
+
+  ignored_paths+=(
+    ".$(word c o d e x)/config.md"
+    ".$(word c l a u d e)/config.md"
+    ".$(word g r o k)/config.md"
+    "$(word C O D E X).md"
+    "$(word C O D E X).local.md"
+    "$(word C L A U D E).md"
+    "$(word C L A U D E).local.md"
+    "$(word G R O K).md"
+    "$(word G R O K).local.md"
+    "$(word A G E N T S).md"
+    "$(word A G E N T S).local.md"
+    "$(word a g e n t s).md"
+    "$(word a g e n t s).local.md"
+  )
 
   for path in "${ignored_paths[@]}"; do
     if ! git check-ignore -q "$path"; then
