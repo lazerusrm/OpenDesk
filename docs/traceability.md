@@ -39,11 +39,13 @@ This document maps replacement requirements to validation coverage. It should be
 | OR-008 CI checks | CI-001 through CI-009 | Bootstrap docs/security checks exist; app-specific checks arrive with implementation. |
 | OR-009 Canonical contracts and anti-shim discipline | CI-008 plus engineering review | Needs automated and human review once implementation begins. |
 | OR-010 Source file size limits | CI-007 plus code review | Needs automated report once implementation begins. |
+| OR-011 Research roadmap completion | RS-001 through RS-010 | Required before production cutover. |
 | IR-001 Monitor OSS services | S-002, S-003, C-008 | Do not modify `hbbs`/`hbbr` initially. |
 | IR-002 Public key/fingerprint handling | S-005, SEC-006 | Real key material remains ignored/private. |
 | IR-003 Connection helpers | R-001, R-002, R-006 | Validate copy/open behavior for default and explicit server cases. |
 | IR-004 Client config per OS/version | D-001 through D-010 | Matrix must record OS/package/version. |
 | IR-005 Compatibility endpoints | E-006, E-007 | Only if implemented. |
+| IR-006 Released client behavior validation | RS-001, RS-002, D-001 through D-010 | Do not rely on source hooks without package validation. |
 | CR-001 Pro feature mapping | CUT-003 | Owner/reviewer signoff. |
 | CR-002 Core validation evidence | Entire validation matrix | Required before cutover. |
 | CR-003 Backup/restore drill | S-006, S-007 | Required before cutover. |
@@ -51,6 +53,7 @@ This document maps replacement requirements to validation coverage. It should be
 | CR-005 Rollback | CUT-004 | Required before cutover. |
 | CR-006 Privacy scan | SEC-006, CI-002 | Required before release/cutover. |
 | CR-007 CI green | CI-001 through CI-009 | Required on cutover candidate commit. |
+| CR-008 Research roadmap complete | RS-001 through RS-010 | Required on cutover candidate. |
 
 ## Known Coverage Gaps
 

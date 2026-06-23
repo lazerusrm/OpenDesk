@@ -21,6 +21,9 @@ required_docs=(
   docs/cutover-readiness.md
   docs/engineering-standards.md
   docs/traceability.md
+  docs/research-roadmap.md
+  docs/research/client-deployment.md
+  docs/research/operations-security.md
 )
 
 for doc in "${required_docs[@]}"; do
@@ -246,7 +249,7 @@ if status:
     sys.exit(status)
 PY
 
-for id in PR-001 SR-001 OR-001 OR-009 IR-001 CR-001 CI-001 CI-008 CI-009; do
+for id in PR-001 SR-001 OR-001 OR-009 OR-011 IR-001 IR-006 CR-001 CR-008 CI-001 CI-008 CI-009 RS-001; do
   if ! rg -q "$id" docs; then
     echo "docs-check: expected requirement/validation id missing: $id" >&2
     exit 1

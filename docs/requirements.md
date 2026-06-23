@@ -51,6 +51,7 @@ The requirement IDs are stable and should be referenced from implementation task
 | OR-008 | OpenDesk must run CI checks for privacy, docs consistency, generated scripts, and application tests as the project matures. | GitHub Actions workflows pass on pull requests and `main`. |
 | OR-009 | OpenDesk implementation must maintain canonical producer-to-consumer contracts and reject internal shim/legacy/compatibility creep. | Engineering standards review and tests prove canonical field names and boundary-only adapters. |
 | OR-010 | OpenDesk implementation must keep source files under documented soft size limits or justify exceptions. | Code review and CI/reporting enforce or warn on size thresholds. |
+| OR-011 | OpenDesk must complete the documented research roadmap before production cutover. | Every item in `docs/research-roadmap.md` has evidence, decision, and linked follow-up tasks or validation IDs. |
 
 ## Integration Requirements
 
@@ -61,6 +62,7 @@ The requirement IDs are stable and should be referenced from implementation task
 | IR-003 | OpenDesk must support generated connection helper strings for default-server and explicit-server cases. | Validation covers copy/open behavior. |
 | IR-004 | OpenDesk must validate official client config behavior per OS and version. | Client delivery matrix records pass/fail by OS/package/version. |
 | IR-005 | OpenDesk may implement RustDesk-shaped compatibility endpoints only after documenting the client behavior they satisfy. | Upstream findings and compatibility tests link to implementation. |
+| IR-006 | OpenDesk must validate official RustDesk client behavior per OS/package/version rather than assuming source-level hooks work in released clients. | Research and D-series validation evidence cover required platforms. |
 
 ## Cutover Requirements
 
@@ -73,3 +75,4 @@ The requirement IDs are stable and should be referenced from implementation task
 | CR-005 | Rollback must be documented and tested where applicable. | Rollback validation. |
 | CR-006 | Public repo privacy scan must pass immediately before release/cutover. | Scan output reviewed and recorded. |
 | CR-007 | Required CI workflows must be green for the cutover candidate commit. | GitHub Actions status checks pass. |
+| CR-008 | All research roadmap items must have accepted evidence and decisions. | Research roadmap is complete and linked from cutover readiness. |

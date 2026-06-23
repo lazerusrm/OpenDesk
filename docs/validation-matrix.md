@@ -23,6 +23,8 @@ No validation row counts as passing until evidence is recorded with:
 
 Cutover validation cannot pass from design intent alone. Each Core replacement workflow needs executed evidence for the required endpoint OSes and operator workflows.
 
+Research rows count as complete only when `docs/research-roadmap.md` contains the decision and the local/public evidence path.
+
 ## Server Validation
 
 | ID | Function | Test | Passing Criteria |
@@ -116,6 +118,21 @@ Cutover validation cannot pass from design intent alone. Each Core replacement w
 | CI-007 | File size limits | Run source/document size report | Files over soft limits are absent or have documented justification |
 | CI-008 | Canonical naming | Run naming/contract review check | No internal synonym/shim creep is introduced without boundary documentation |
 | CI-009 | Public content hygiene | Run public content scan | Committed project content is free of private-workflow markers |
+
+## Research Validation
+
+| ID | Function | Test | Passing Criteria |
+|---|---|---|---|
+| RS-001 | Client config behavior | Complete R-001 research matrix | Required OS/package/version config paths have supported/unsupported decisions and evidence |
+| RS-002 | Deployment mechanics | Complete R-002 deployment research | Silent install, config location, service/user config, upgrade persistence, and ID/version readout are documented |
+| RS-003 | Pro usage inventory | Complete R-003 inventory | Every Pro capability has Used Today, Replacement Path, Validation IDs, Evidence, and Blocker fields |
+| RS-004 | Address book/password model | Complete R-004 research | Passwordless/managed-password dependency is known and secret-management decision is recorded |
+| RS-005 | Access enforcement | Complete R-005 research | Dashboard RBAC vs session enforcement boundary has accepted implementation decision |
+| RS-006 | Deploy endpoint compatibility | Complete R-006 research | Implement/defer/reject decision is backed by client behavior evidence |
+| RS-007 | Session/audit log sources | Complete R-007 research | Audit capability matrix decides launch-intent, log ingestion, or deeper integration |
+| RS-008 | Mobile workflow | Complete R-008 research | Mobile support level and validation scope are decided |
+| RS-009 | Network behavior | Complete R-009 research | Ports, NAT, LAN, DNS, direct/relay behavior, and relay scaling decisions are documented |
+| RS-010 | License posture | Complete R-010 research | Clean-room/fork/link/redistribution rules are recorded in an ADR |
 
 ## Cutover Validation
 

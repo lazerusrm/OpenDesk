@@ -19,6 +19,20 @@
 - [x] Add requirements-to-validation traceability.
 - [x] Add engineering standards for canonical contracts, anti-shim policy, naming, and file size limits.
 - [x] Add public content hygiene scan and ignore rules for private local files/folders.
+- [x] Add explicit research roadmap for remaining RustDesk replacement unknowns.
+
+## Research Sprint
+
+- [ ] Fill R-001 client configuration behavior matrix.
+- [ ] Fill R-002 official client deployment mechanics.
+- [ ] Fill R-003 production Pro usage inventory.
+- [ ] Fill R-004 address book/password model.
+- [ ] Fill R-005 access control reality.
+- [ ] Fill R-006 deployment endpoint compatibility.
+- [ ] Fill R-007 session/audit log sources.
+- [ ] Fill R-008 mobile workflow.
+- [ ] Fill R-009 relay/NAT/LAN/DNS behavior.
+- [ ] Fill R-010 legal/license posture.
 
 ## First Build Slice
 

@@ -27,6 +27,7 @@ Production target:
 - [CI Plan](docs/ci-plan.md)
 - [Traceability](docs/traceability.md)
 - [Engineering Standards](docs/engineering-standards.md)
+- [Research Roadmap](docs/research-roadmap.md)
 
 ## Current Decision
 

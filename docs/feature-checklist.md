@@ -21,6 +21,16 @@ Status legend:
 - [x] Confirm upstream server role: OSS `hbbs`/`hbbr` rendezvous/relay.
 - [x] Identify current client custom-server filename parser.
 - [x] Identify current client `/api/devices/deploy` compatibility hook.
+- [ ] Complete R-001 client configuration behavior research.
+- [ ] Complete R-002 official client deployment mechanics research.
+- [ ] Complete R-003 current RustDesk Pro usage inventory.
+- [ ] Complete R-004 address book/password model research.
+- [ ] Complete R-005 access control reality research.
+- [ ] Complete R-006 deployment endpoint compatibility research.
+- [ ] Complete R-007 session/audit log sources research.
+- [ ] Complete R-008 mobile workflow research.
+- [ ] Complete R-009 relay/NAT/LAN/DNS behavior research.
+- [ ] Complete R-010 legal/license posture research.
 
 ## Phase 1: Core Control Plane
 
