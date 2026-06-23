@@ -184,6 +184,65 @@ PY
 
 python3 - <<'PY'
 import pathlib
+import re
+import sys
+
+roadmap = pathlib.Path("docs/research-roadmap.md").read_text()
+status_doc = pathlib.Path("docs/research-status.md").read_text()
+
+roadmap_ids = re.findall(r"^\|\s*(R-\d{3})\s*\|", roadmap, re.M)
+status_rows = re.findall(r"^\|\s*(R-\d{3})\s*\|\s*([^|]+?)\s*\|", status_doc, re.M)
+status_ids = [row[0] for row in status_rows]
+
+expected_ids = [f"R-{number:03d}" for number in range(1, 11)]
+if sorted(roadmap_ids) != expected_ids:
+    print(
+        "docs-check: research roadmap IDs must be exactly R-001 through R-010",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if sorted(status_ids) != expected_ids:
+    print(
+        "docs-check: research status IDs must be exactly R-001 through R-010",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if len(status_ids) != len(set(status_ids)):
+    print("docs-check: duplicate research status IDs", file=sys.stderr)
+    sys.exit(1)
+
+allowed_statuses = {"accepted", "partial", "blocked"}
+bad_statuses = [
+    f"{research_id}={status.strip()}"
+    for research_id, status in status_rows
+    if status.strip().lower() not in allowed_statuses
+]
+if bad_statuses:
+    print(
+        "docs-check: invalid research statuses: " + ", ".join(bad_statuses),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+status_map = {research_id: status.strip().lower() for research_id, status in status_rows}
+if status_map.get("R-010") != "accepted":
+    print("docs-check: R-010 license posture must remain accepted", file=sys.stderr)
+    sys.exit(1)
+
+if "Every item in `docs/research-status.md` is `accepted`." not in pathlib.Path(
+    "docs/cutover-readiness.md"
+).read_text():
+    print(
+        "docs-check: cutover readiness must require accepted research status",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+PY
+
+python3 - <<'PY'
+import pathlib
 import sys
 
 excluded_roots = {".git", "local", "upstream", "node_modules", "dist", "build", "data", "tmp"}
