@@ -158,6 +158,72 @@ async fn device_update_via_handler_preserves_enrollment_metadata() {
 }
 
 #[tokio::test]
+async fn linux_script_export_returns_generated_script() {
+    let app = build_router(test_state().await);
+    let session_cookie = login_and_get_session_cookie(&app).await;
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/deployment/linux.sh?enrollment_token_value=test-export-token")
+                .header("cookie", session_cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("linux script export");
+    assert_eq!(response.status(), StatusCode::OK);
+    let content_type = response
+        .headers()
+        .get("content-type")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    assert!(content_type.contains("text/plain"));
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let script = String::from_utf8(body.to_vec()).expect("utf8");
+    assert!(script.contains("#!/usr/bin/env bash"));
+    assert!(script.contains("test-export-token"));
+    assert!(script.contains("rd.example.com"));
+    assert!(script.contains("/api/enrollments/check-in"));
+}
+
+#[tokio::test]
+async fn archived_device_validation_error_shows_unarchive_action() {
+    let state = test_state().await;
+    let device = opendesk::repository::devices::create_device(
+        &state.db,
+        &opendesk::domain::device::DeviceDraft {
+            alias: "Archive test".to_string(),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("create device");
+    opendesk::repository::devices::set_device_archived(&state.db, device.device_uuid, true)
+        .await
+        .expect("archive");
+
+    let app = build_router(state);
+    let session_cookie = login_and_get_session_cookie(&app).await;
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/devices/{}", device.device_uuid))
+                .header("content-type", "application/x-www-form-urlencoded")
+                .header("cookie", session_cookie)
+                .body(Body::from("alias=+&rustdesk_id=&hostname=&owner=&notes="))
+                .unwrap(),
+        )
+        .await
+        .expect("validation error response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let html = String::from_utf8(body.to_vec()).expect("utf8");
+    assert!(html.contains("Unarchive"));
+    assert!(!html.contains("/archive\">\n    <button type=\"submit\">Archive</button>"));
+}
+
+#[tokio::test]
 async fn enrollment_checkin_creates_device_with_valid_token() {
     let state = test_state().await;
     let created = opendesk::repository::enrollment_tokens::create_enrollment_token(

@@ -15,6 +15,9 @@
     <label for="enrollment_token_value">Enrollment token value (shown once at creation)</label>
     <input id="enrollment_token_value" name="enrollment_token_value" value="{{ enrollment_token_value }}">
     <button type="submit">Generate scripts</button>
+    {% if enrollment_token_value != "" %}
+    <a class="button" href="/deployment/linux.sh?enrollment_token_value={{ enrollment_token_value }}">Download Linux script</a>
+    {% endif %}
   </form>
 </section>
 <section class="card">
