@@ -128,7 +128,15 @@ Local source inspection confirms a scriptable deploy command that posts to the c
 
 Released Linux package finding:
 
-The dev LXC now has a configured released client suitable for testing a RustDesk-shaped deploy endpoint against a non-production API server.
+RustDesk `1.4.8` Debian package validation in the dev LXC confirmed `--deploy --token` posts to `/api/devices/deploy` on the configured API server. The request uses bearer authorization and JSON containing device ID, UUID, and public key. A JSON response with `result` set to `OK` returns successful CLI output.
+
+Endpoint response contract:
+
+- `OK`: successful deployment.
+- `NOT_ENABLED`: deployment not required.
+- `INVALID_INPUT`: rejected input.
+- `ID_TAKEN`: requested ID already exists.
+- Any other non-empty response: displayed as an error.
 
 Preferred validation environment:
 

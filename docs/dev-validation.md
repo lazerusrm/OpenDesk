@@ -21,6 +21,7 @@ Current validated use:
 - Command-line config application with test-only values.
 - Config option readback.
 - Same-version package reinstall persistence.
+- RustDesk-shaped deploy request capture with test-only token and local API endpoint.
 
 Do not use this target for:
 
