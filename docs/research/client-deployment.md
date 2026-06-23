@@ -144,6 +144,10 @@ Preferred validation environment:
 
 Stand up the compatibility adapter in a dev LXC first. Test stock clients against the dev API server, record request/response shape, and only then decide whether production OpenDesk should expose the endpoint.
 
+Evidence helper:
+
+Use `scripts/research-deploy-capture-server.py` to run a controlled local endpoint for released-client tests. It captures redacted request shape under ignored `local/research/manual/` and can return each known deploy response case.
+
 ## R-008 Mobile Workflow
 
 Question:

@@ -54,6 +54,12 @@ Evidence helper:
 ./scripts/research-windows-client-record.ps1 -RustDeskPath "C:\Program Files\RustDesk\rustdesk.exe" -ConfigString "<test-config>" -DeployToken "<test-token>"
 ```
 
+Deploy capture helper:
+
+```bash
+scripts/research-deploy-capture-server.py --bind 0.0.0.0 --port 18080 --result OK --output local/research/manual/windows-deploy-capture.jsonl
+```
+
 ## Windows Portable
 
 Target:
@@ -100,6 +106,12 @@ Evidence helper:
 
 ```bash
 scripts/research-macos-client-record.sh --rustdesk /Applications/RustDesk.app/Contents/MacOS/RustDesk --config '<test-config>' --deploy-token '<test-token>'
+```
+
+Deploy capture helper:
+
+```bash
+scripts/research-deploy-capture-server.py --bind 0.0.0.0 --port 18080 --result OK --output local/research/manual/macos-deploy-capture.jsonl
 ```
 
 ## Android

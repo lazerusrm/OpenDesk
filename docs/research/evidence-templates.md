@@ -11,6 +11,7 @@ Use these scripts to create ignored evidence files:
 - `scripts/research-windows-client-record.ps1`
 - `scripts/research-macos-client-record.sh`
 - `scripts/research-mobile-config-record.sh`
+- `scripts/research-deploy-capture-server.py`
 
 Both scripts write under `local/research/manual/`, which is intentionally ignored.
 
