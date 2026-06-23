@@ -11,7 +11,7 @@ This document maps replacement requirements to validation coverage. It should be
 | PR-003 Address-book workflow | R-001 through R-006, CUT-003 | Requires pilot workflow evidence. |
 | PR-004 Sites/tags/notes/archive | C-003, C-004, C-005 | Add site/tag-specific UI tests when implemented. |
 | PR-005 Client delivery | D-001 through D-010 | Must pass for required OSes before cutover. |
-| PR-006 Endpoint self-registration | E-001 through E-007 | Covers token lifecycle and deploy compatibility research. |
+| PR-006 Endpoint self-registration | E-001 through E-007 | E-002/E-003/E-004 covered by enrollment API, generated Linux script, and integration tests. |
 | PR-007 Server health | S-001 through S-005, C-008 | UDP reachability may need documented exception. |
 | PR-008 Backup/restore | S-006, S-007, SEC-005, CUT-004 | Restore drill required. |
 | PR-009 Audit logs | C-007, E-004, SEC-002 | Add event-specific tests with implementation. |

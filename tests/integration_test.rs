@@ -1,3 +1,5 @@
+mod common;
+
 use std::process::Command;
 use std::{fs, time::Duration};
 
@@ -7,59 +9,11 @@ use std::os::unix::fs::PermissionsExt;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
-use opendesk::{build_router, AppState};
+use common::{login_and_get_session_cookie, test_state};
+use opendesk::build_router;
 use serde_json::json;
-use sqlx::sqlite::SqlitePoolOptions;
 use tokio::net::TcpListener;
 use tower::ServiceExt;
-
-async fn test_state() -> AppState {
-    let db = SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
-        .await
-        .expect("connect");
-    sqlx::migrate!("./migrations").run(&db).await.expect("migrate");
-    opendesk::repository::users::create_user(&db, "admin", "test-password", "admin")
-        .await
-        .expect("bootstrap user");
-    AppState {
-        db,
-        cookie_secure: false,
-        public_base_url: "http://127.0.0.1:8080".to_string(),
-    }
-}
-
-fn session_cookie_from_response(response: &axum::http::Response<Body>) -> String {
-    let set_cookie = response
-        .headers()
-        .get_all("set-cookie")
-        .iter()
-        .map(|value| value.to_str().expect("cookie header"))
-        .find(|value| value.starts_with("opendesk_session="))
-        .expect("session cookie");
-    set_cookie
-        .split(';')
-        .next()
-        .expect("cookie pair")
-        .to_string()
-}
-
-async fn login_and_get_session_cookie(app: &axum::Router) -> String {
-    let response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/login")
-                .header("content-type", "application/x-www-form-urlencoded")
-                .body(Body::from("username=admin&password=test-password"))
-                .unwrap(),
-        )
-        .await
-        .expect("login response");
-    assert_eq!(response.status(), StatusCode::SEE_OTHER);
-    session_cookie_from_response(&response)
-}
 
 #[tokio::test]
 async fn health_endpoint_returns_ok() {
@@ -318,45 +272,3 @@ async fn archived_device_validation_error_shows_unarchive_action() {
     assert!(!html.contains("/archive\">\n    <button type=\"submit\">Archive</button>"));
 }
 
-#[tokio::test]
-async fn enrollment_checkin_creates_device_with_valid_token() {
-    let state = test_state().await;
-    let created = opendesk::repository::enrollment_tokens::create_enrollment_token(
-        &state.db,
-        "integration-token",
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("create token");
-
-    let db = state.db.clone();
-    let app = build_router(state);
-    let response = app
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/api/enrollments/check-in")
-                .header("content-type", "application/json")
-                .body(Body::from(
-                    json!({
-                        "enrollment_token": created.token_value,
-                        "rustdesk_id": "998877665",
-                        "hostname": "dev-host",
-                        "os_family": "linux",
-                        "architecture": "x86_64"
-                    })
-                    .to_string(),
-                ))
-                .unwrap(),
-        )
-        .await
-        .expect("response");
-    assert_eq!(response.status(), StatusCode::NO_CONTENT);
-
-    let device = opendesk::repository::devices::find_device_by_rustdesk_id(&db, "998877665")
-        .await
-        .expect("lookup");
-    assert!(device.is_some());
-}

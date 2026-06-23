@@ -16,6 +16,7 @@ pub struct Device {
     pub owner: Option<String>,
     pub notes: Option<String>,
     pub archived: bool,
+    pub last_checkin_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -125,6 +126,7 @@ mod tests {
             owner: Some("ops".to_string()),
             notes: Some("lab device".to_string()),
             archived: false,
+            last_checkin_at: None,
         }
     }
 

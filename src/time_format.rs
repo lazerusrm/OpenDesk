@@ -10,6 +10,13 @@ pub fn parse_timestamp(value: &str) -> Option<OffsetDateTime> {
     OffsetDateTime::parse(value, &Rfc3339).ok()
 }
 
+pub fn format_last_checkin_display(value: Option<&str>) -> String {
+    match value.and_then(parse_timestamp) {
+        Some(timestamp) => format_timestamp(timestamp),
+        None => "-".to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

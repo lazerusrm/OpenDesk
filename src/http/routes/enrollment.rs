@@ -13,6 +13,9 @@ use uuid::Uuid;
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::device::{validate_device_draft, DeviceDraft};
+use crate::domain::enrollment_checkin::{
+    hostname_lookup_key, select_existing_device_for_checkin, EnrollmentDeviceLookup,
+};
 use crate::domain::enrollment_token::{
     hash_enrollment_token_value, validate_enrollment_token_label, verify_enrollment_token_value,
 };
@@ -20,7 +23,7 @@ use crate::http::routes::render::render_enrollment_tokens;
 use crate::http::session::require_user;
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::devices::{
-    create_device, find_device_by_rustdesk_id, touch_device_checkin,
+    create_device, find_device_by_hostname, find_device_by_rustdesk_id, touch_device_checkin,
 };
 use crate::repository::enrollment_tokens::{
     create_enrollment_token, find_enrollment_token_by_hash, record_endpoint_checkin,
@@ -157,21 +160,34 @@ async fn enrollment_checkin(
         notes: None,
     };
     validate_device_draft(&draft).map_err(|_| StatusCode::BAD_REQUEST)?;
-    let device = if let Some(rustdesk_id) = body.rustdesk_id.as_deref() {
-        if let Some(existing) = find_device_by_rustdesk_id(&state.db, rustdesk_id)
+    let by_rustdesk_id = if let Some(rustdesk_id) = body.rustdesk_id.as_deref() {
+        find_device_by_rustdesk_id(&state.db, rustdesk_id)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        {
-            touch_device_checkin(&state.db, existing.device_uuid, &draft)
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        } else {
-            create_device(&state.db, &draft)
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        }
     } else {
-        create_device(&state.db, &draft)
+        None
+    };
+    let by_hostname = if let Some(hostname) = hostname_lookup_key(body.hostname.as_deref()) {
+        find_device_by_hostname(&state.db, &hostname)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    } else {
+        None
+    };
+    let device = if let Some(device_uuid) = select_existing_device_for_checkin(
+        &EnrollmentDeviceLookup {
+            by_rustdesk_id,
+            by_hostname,
+        },
+    ) {
+        touch_device_checkin(&state.db, device_uuid, &draft)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    } else {
+        let created = create_device(&state.db, &draft)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        touch_device_checkin(&state.db, created.device_uuid, &draft)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     };
