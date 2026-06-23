@@ -25,6 +25,14 @@ else
     -type f -print0)
 fi
 
+existing_scan_paths=()
+for path in "${scan_paths[@]}"; do
+  if [ -f "$path" ]; then
+    existing_scan_paths+=("$path")
+  fi
+done
+scan_paths=("${existing_scan_paths[@]}")
+
 if [ "${#scan_paths[@]}" -eq 0 ]; then
   exit 0
 fi

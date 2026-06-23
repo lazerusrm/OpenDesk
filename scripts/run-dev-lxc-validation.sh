@@ -11,6 +11,7 @@ log_file="${scratch}/dev-lxc-remote-transcript.log"
 
 mkdir -p "$scratch"
 : >"$log_file"
+rm -f "${scratch}/dev-lxc-validation.log"
 
 log() {
   printf '%s\n' "$*" | tee -a "$log_file"
@@ -25,27 +26,27 @@ cd "$repo_root"
 cargo build --release 2>&1 | tee -a "$log_file" | tail -3
 
 tar czf "${scratch}/opendesk-bundle.tar.gz" \
-  target/release/opendesk migrations templates static scripts/dev-lxc-validate.sh
+  target/release/opendesk migrations templates static
 
 log "=== pct push bundle to VMID ${vmid} ==="
 scp -i "$proxmox_key" "${scratch}/opendesk-bundle.tar.gz" "root@${proxmox_host}:/tmp/opendesk-bundle.tar.gz"
 ssh -i "$proxmox_key" "root@${proxmox_host}" "pct push ${vmid} /tmp/opendesk-bundle.tar.gz /tmp/opendesk-bundle.tar.gz"
 
-log "=== pct exec ${vmid}: deploy, start, validate ==="
+log "=== pct exec ${vmid}: deploy, fetch generated script, execute ==="
 ssh -i "$proxmox_key" "root@${proxmox_host}" "pct exec ${vmid} -- bash -s" <<REMOTE | tee -a "$log_file"
 set -euo pipefail
 echo "remote: host=\$(hostname)"
 echo "remote: pwd=\$(pwd)"
+rm -rf /opt/opendesk-dev/data
 mkdir -p /opt/opendesk-dev/data
 cd /opt/opendesk-dev
 tar xzf /tmp/opendesk-bundle.tar.gz
-chmod +x target/release/opendesk scripts/dev-lxc-validate.sh
+chmod +x target/release/opendesk
 pkill -x opendesk 2>/dev/null || true
 OPENDESK_LISTEN_ADDR=0.0.0.0:18080 \\
 OPENDESK_DATA_DIR=/opt/opendesk-dev/data \\
 OPENDESK_PUBLIC_BASE_URL=http://127.0.0.1:18080 \\
 OPENDESK_BOOTSTRAP_ADMIN_PASSWORD='${dev_admin_password}' \\
-OPENDESK_DEPLOY_ROOT=/opt/opendesk-dev \\
 nohup ./target/release/opendesk > /tmp/opendesk.log 2>&1 &
 sleep 2
 COOKIE=/tmp/opendesk-cookies.txt
@@ -62,7 +63,23 @@ if [ -z "\$TOKEN_VALUE" ]; then
   exit 1
 fi
 echo "remote: enrollment_token_created=yes"
-./scripts/dev-lxc-validate.sh http://127.0.0.1:18080 "\$TOKEN_VALUE"
+curl -fsS -c "\$COOKIE" -b "\$COOKIE" \\
+  "http://127.0.0.1:18080/deployment/linux.sh?enrollment_token_value=\${TOKEN_VALUE}" \\
+  -o /tmp/opendesk-deploy.sh
+chmod +x /tmp/opendesk-deploy.sh
+head -5 /tmp/opendesk-deploy.sh
+echo "remote: executing generated deployment script"
+bash /tmp/opendesk-deploy.sh
+if command -v rustdesk >/dev/null 2>&1; then
+  rendezvous="\$(rustdesk --get-option custom-rendezvous-server 2>/dev/null || true)"
+  rustdesk_id="\$(rustdesk --get-id 2>/dev/null || true)"
+  echo "remote: rustdesk_rendezvous=\${rendezvous:-unset}"
+  echo "remote: rustdesk_id=\${rustdesk_id:-unknown}"
+else
+  echo "remote: rustdesk client not installed" >&2
+  exit 1
+fi
+echo "remote: generated script execution completed on \$(hostname)"
 REMOTE
 
 log "=== dev LXC validation complete; transcript=${log_file} ==="
