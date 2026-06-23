@@ -118,3 +118,58 @@ Consequences:
 
 - Native-client parity features may take longer if they require a fork.
 - License obligations stay explicit instead of accidentally creeping into core OpenDesk code.
+
+## ADR-008: Externalize Managed Access Secrets
+
+Decision: If passwordless or managed-password RustDesk access is required, OpenDesk will store references to an external secret manager, not the unattended passwords themselves.
+
+Rationale:
+
+- Current evidence shows address-book entries contain hashed secret material.
+- OpenDesk is a public control-plane project and should not become the primary vault for unattended remote-access secrets.
+- Secret rotation, recovery, access audit, and encryption-at-rest are specialized responsibilities.
+
+Allowed by default:
+
+- Store vault item references, labels, and non-secret metadata.
+- Record audit events for secret reference creation, update, use intent, and removal.
+- Generate scripts that rotate endpoint passwords when backed by a reviewed secret-management flow.
+
+Not allowed by default:
+
+- Store plaintext unattended RustDesk passwords in OpenDesk tables.
+- Log full passwords, full vault tokens, or full recovery material.
+- Embed long-lived privileged vault tokens in generated scripts.
+
+Acceptable secret managers:
+
+- A dedicated vault service with API access controls.
+- A password manager with auditable item access.
+- A deployment-specific secret store approved before implementation.
+
+Consequences:
+
+- Native passwordless parity remains blocked until the owner decides it is required.
+- If required, implementation needs a separate secret-manager integration design and validation rows before cutover.
+
+## ADR-009: Audit Tiers Must Be Explicit
+
+Decision: OpenDesk audit will be split into explicit tiers so UI and reports do not overclaim RustDesk session proof.
+
+Rationale:
+
+- OpenDesk can prove actions it performs itself.
+- RustDesk database/log evidence can show useful session and relay events.
+- A dashboard launch event is not proof that a remote session started or ended.
+
+Audit tiers:
+
+- Tier 1: OpenDesk first-party audit for login, device edits, enrollment, generated artifacts, settings, and owner decisions.
+- Tier 2: RustDesk server database/log ingestion for connection, relay, rendezvous, and console events where available.
+- Tier 3: Client-side or deeper client/server integration if stronger session proof is required.
+
+Consequences:
+
+- Tier 1 is required for OpenDesk implementation.
+- Tier 2 is optional but recommended for Pro audit parity.
+- Tier 3 requires a later design and must not be implied by Tier 1 or Tier 2 evidence.

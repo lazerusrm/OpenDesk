@@ -31,7 +31,7 @@ Status categories:
 | RustDesk session ACLs | Endpoint/network/client integration | Research | Must not be claimed until actually enforced. |
 | Central settings/policies | Generated config + endpoint registration service | Core | Use scripts/service first; native client policy later if required. |
 | Disable public server fallback | Scripted config where supported | Core | Hard enforcement may require client policy/fork. |
-| Managed unattended passwords | External secret manager integration | Research | Do not store plaintext passwords in OpenDesk. |
+| Managed unattended passwords | External secret manager integration | Research | ADR-008 applies if this becomes required. |
 | SSO/OIDC | Reverse proxy or app-native OIDC | Stage 2 | Required before cutover only if used today. |
 | LDAP | External IdP integration | Deferred | Prefer OIDC via Authentik/Authelia/etc. |
 | 2FA | Reverse proxy/IdP first | Stage 2 | Required before cutover only if used today. |

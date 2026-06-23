@@ -41,6 +41,7 @@ OpenDesk manages remote access metadata and deployment flows. A compromise can m
 | T-009 | Official RustDesk installer supply-chain issue. | Version pinning, signature/checksum validation, cached known-good packages where appropriate. |
 | T-010 | Admin account compromise. | Strong passwords, optional reverse-proxy SSO/2FA, audit logs, session expiration. |
 | T-011 | Passkey recovery bypass weakens admin auth. | Optional passkeys, documented recovery flow, audit registration/removal, and phishing-resistant defaults where supported. |
+| T-012 | External secret-manager integration leaks unattended access secrets. | Store only references, use scoped short-lived access, redact logs, audit secret-use intent, and validate backup contents. |
 
 ## Required Security Decisions
 
@@ -50,6 +51,7 @@ OpenDesk manages remote access metadata and deployment flows. A compromise can m
 - Production site context belongs only under ignored local paths or runtime configuration.
 - OpenDesk should not store unattended passwords unless there is a dedicated design using external secret management.
 - Passkeys protect OpenDesk login only. They do not prove or enforce RustDesk session authorization.
+- Managed/passwordless access requires ADR-008 and must use externalized secret storage.
 
 ## Security Validation
 

@@ -87,7 +87,7 @@ Address-book entry metadata includes hashed secret material. It does not expose 
 
 Decision:
 
-OpenDesk must not store plaintext unattended passwords. If native passwordless or managed-password workflow is required for cutover, design it around an external secret manager or another explicit secret-management model before implementation.
+OpenDesk must not store plaintext unattended passwords. ADR-008 requires externalizing managed access secrets if native passwordless or managed-password workflow is required for cutover.
 
 ## R-005 Access Control Reality
 
@@ -160,7 +160,7 @@ Most connection audit rows include end times. Connection audit metadata includes
 
 Decision:
 
-OpenDesk should implement first-party audit for admin actions, deployment artifacts, enrollment, auth, and settings changes. RustDesk session visibility can be added as an ingestion layer, but launch-intent audit must remain clearly labeled if it does not prove a session completed.
+OpenDesk should implement first-party audit for admin actions, deployment artifacts, enrollment, auth, and settings changes. ADR-009 defines separate audit tiers for OpenDesk actions, RustDesk log/database ingestion, and any future deeper session proof.
 
 ## R-009 Relay Scaling, NAT, LAN, And DNS Behavior
 

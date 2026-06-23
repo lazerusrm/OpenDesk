@@ -23,7 +23,7 @@ This document maps replacement requirements to validation coverage. It should be
 | SR-002 Runtime secrets outside Git | SEC-006, CI-002 | Add config review once app exists. |
 | SR-003 Enrollment token protection | E-001, E-005, SEC-004 | Add storage/hash tests with implementation. |
 | SR-004 Secure API sessions | C-001, SEC-001, SEC-003 | Add CSRF/session tests with implementation. |
-| SR-005 No plaintext unattended passwords | SEC-002, SEC-005 | Add schema/code checks with implementation. |
+| SR-005 No plaintext unattended passwords | SEC-002, SEC-005 | Add schema/code checks with implementation; ADR-008 governs managed access secrets. |
 | SR-006 Generated scripts no long-lived secrets | D-001, D-003, SEC-002, CI-004 | Script templates must be statically checked. |
 | SR-007 Audit/log redaction | SEC-002 | Add seeded secret redaction tests. |
 | SR-008 HTTPS | SEC-001 | Production deploy validation. |

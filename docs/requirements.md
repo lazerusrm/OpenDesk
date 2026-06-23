@@ -30,7 +30,7 @@ The requirement IDs are stable and should be referenced from implementation task
 | SR-002 | Runtime secrets must live outside Git in environment/config/secret manager storage. | Config review shows no committed secrets and documented secret locations. |
 | SR-003 | Enrollment tokens must be scoped, expiring, revocable, and stored hashed or otherwise protected. | Token lifecycle tests and schema review. |
 | SR-004 | API sessions must use secure cookies or bearer tokens with expiration and CSRF protection where applicable. | Auth tests and security review. |
-| SR-005 | OpenDesk must not store unattended access passwords in plaintext. | Schema and code review prove no plaintext storage path. |
+| SR-005 | OpenDesk must not store unattended access passwords in plaintext. | Schema and code review prove no plaintext storage path; managed access uses ADR-008 if required. |
 | SR-006 | Generated installer/config scripts must not embed long-lived privileged secrets. | Script inspection tests and audit events. |
 | SR-007 | Audit logs must avoid recording full secrets, passwords, private keys, or full enrollment tokens. | Log redaction tests. |
 | SR-008 | Production admin UI/API must require HTTPS. | Deployment validation proves HTTP redirects/refuses plaintext. |
