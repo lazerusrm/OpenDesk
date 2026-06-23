@@ -4,8 +4,8 @@
 
 - [ ] Create Git repository and remote.
 - [ ] Decide first implementation stack: Go server-rendered UI vs FastAPI + React.
-- [~] Inventory current RustDesk LXC configuration.
-- [~] Export current RustDesk public key and document client config.
+- [x] Inventory current RustDesk LXC configuration.
+- [x] Export current RustDesk public key and document client config privately.
 - [ ] Define required day-one OS targets.
 - [ ] Decide whether the first deployment runs in the existing LXC or a new LXC.
 - [x] Clone upstream RustDesk client/server locally for reference.
@@ -30,7 +30,7 @@
 - [~] Fill R-005 access control reality.
 - [~] Fill R-006 deployment endpoint compatibility.
 - [~] Fill R-007 session/audit log sources.
-- [ ] Fill R-008 mobile workflow.
+- [~] Fill R-008 mobile workflow.
 - [~] Fill R-009 relay/NAT/LAN/DNS behavior.
 - [x] Fill R-010 legal/license posture.
 

@@ -21,6 +21,7 @@ The current production-style deployment was inspected read-only. Evidence confir
 - Strategy rows include active config options, so strategies/policies remain replacement scope unless explicitly retired.
 - Connection audit rows include end-time and IP/name metadata often enough to support an ingestion design, but not enough to replace first-party OpenDesk audit.
 - Inside-LAN TCP reachability from the dev LXC to the required RustDesk ports is confirmed.
+- Current server service commands, data paths, public-key fingerprint, database path, settings, and runtime paths are recorded in ignored private evidence.
 
 ## Current Decisions
 

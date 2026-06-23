@@ -8,7 +8,7 @@ Status legend:
 
 ## Phase 0: Discovery
 
-- [ ] Snapshot current RustDesk LXC.
+- [~] Snapshot current RustDesk LXC.
 - [x] Record current RustDesk server type: OSS vs Pro.
 - [x] Record current Docker Compose/systemd files.
 - [x] Record current server key/public key location.
