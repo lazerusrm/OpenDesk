@@ -36,6 +36,14 @@ Related validation:
 - R-006.
 - RS-001.
 
+Current finding:
+
+Official documentation and local source inspection both support command-line configuration. The config command parses the same custom-server string used by filename configuration and writes server key, ID server, API server, and relay server options.
+
+Decision:
+
+Use generated scripts as the primary path and filename configuration only as a fallback/convenience path until each required released client proves reliable behavior.
+
 ## R-002 Official Client Deployment Mechanics
 
 Question:
@@ -64,6 +72,14 @@ Related validation:
 - S-009.
 - RS-002.
 
+Current finding:
+
+Local source inspection confirms official commands for silent install, service install, config import, config string application, ID readout, ID set, password set, assignment, and deployment. These commands generally require an installed client and admin/root permissions when changing local service settings.
+
+Service-context finding:
+
+Windows service creation imports a config file into the service path. macOS privileged install copies user preference files into the root preference location before loading the service. Validation must prove both interactive user context and service/system context are configured.
+
 ## R-006 Deployment Endpoint Compatibility
 
 Question:
@@ -90,6 +106,10 @@ Related validation:
 - E-007.
 - RS-006.
 
+Current finding:
+
+Local source inspection confirms a scriptable deploy command that posts to the configured API server with a bearer token and can return deployment-specific errors. This supports prototyping an isolated compatibility adapter, but not coupling the main domain model to that API shape.
+
 ## R-008 Mobile Workflow
 
 Question:
@@ -114,4 +134,3 @@ Related validation:
 - D-series client delivery tests.
 - R-series connection workflow tests.
 - RS-008.
-
