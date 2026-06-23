@@ -23,7 +23,7 @@ No validation row counts as passing until evidence is recorded with:
 
 Cutover validation cannot pass from design intent alone. Each Core replacement workflow needs executed evidence for the required endpoint OSes and operator workflows.
 
-Research rows count as complete only when `docs/research-roadmap.md` contains the decision and the local/public evidence path.
+Research rows count as complete only when `docs/research-roadmap.md` contains the decision, `docs/research-status.md` marks the item `accepted`, and the local/public evidence path exists.
 
 ## Server Validation
 

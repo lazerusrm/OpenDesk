@@ -22,6 +22,8 @@ Research notes with site-specific values must live under ignored `local/`.
 - [Operations And Security Research](research/operations-security.md)
 - [Owner Decision Worksheet](research/owner-decisions.md)
 - [Client Validation Procedures](research/client-validation-procedures.md)
+- [Research Evidence Templates](research/evidence-templates.md)
+- [Research Status](research-status.md)
 - [Current Research Findings](research-findings.md)
 - [Dev Validation Environment](dev-validation.md)
 
