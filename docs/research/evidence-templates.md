@@ -2,6 +2,15 @@
 
 Use these templates for future validation notes. Site-specific values, screenshots, raw logs, tokens, IDs, keys, hostnames, and IP addresses belong only under ignored `local/research/`.
 
+## Scripted Templates
+
+Use these scripts to create ignored evidence files:
+
+- `scripts/research-client-record.sh`
+- `scripts/research-network-probe.sh`
+
+Both scripts write under `local/research/manual/`, which is intentionally ignored.
+
 ## Owner Decision Record
 
 ```text

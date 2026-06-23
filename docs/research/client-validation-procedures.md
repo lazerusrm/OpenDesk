@@ -16,6 +16,8 @@ For each run, record:
 - Pass/fail for each step.
 - Artifact path under ignored `local/research/`.
 
+Use `scripts/research-client-record.sh` to create the starting evidence file for a client run.
+
 ## Windows Installer
 
 Target:
