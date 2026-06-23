@@ -1,6 +1,6 @@
 # Engineering Standards
 
-OpenDesk should be built as a clean, canonical system. Agentic iteration often introduces compatibility layers, vague names, oversized files, and "temporary" shims that become permanent. This document sets the default standard against that drift.
+OpenDesk should be built as a clean, canonical system. Fast iterative development often introduces compatibility layers, vague names, oversized files, and "temporary" shims that become permanent. This document sets the default standard against that drift.
 
 ## Canonical Contracts
 
@@ -46,7 +46,13 @@ Rejected:
 - Fallback behavior that hides broken producer/consumer contracts.
 - Compatibility layers between two OpenDesk modules that should share one canonical contract.
 - Legacy flags before there is actual legacy behavior.
-- Dead code kept because an agent was uncertain.
+- Dead code kept because a contributor was uncertain.
+
+## Tool-Origin Attribution Policy
+
+Public code, docs, comments, commit messages, generated artifacts, and UI text must read as human-authored project work. Do not mention assistant/tool/vendor names, tool-specific folders, or tool-specific instruction files in public project content.
+
+If attribution-like text is unavoidable in private local notes, use a normal human maintainer name and keep it under ignored local paths. Prefer no attribution at all.
 
 Any compatibility behavior must document:
 
@@ -116,4 +122,3 @@ Before merging implementation work, check:
 - Are functions named after domain actions?
 - Are security-sensitive defaults explicit?
 - Are tests validating the canonical contract rather than implementation quirks?
-

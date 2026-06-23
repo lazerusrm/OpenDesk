@@ -30,7 +30,7 @@ OpenDesk manages remote access metadata and deployment flows. A compromise can m
 
 | ID | Threat | Mitigation |
 |---|---|---|
-| T-001 | Production secrets committed to public Git. | `.gitignore`, `CODEX.md`, local context folder, sensitive-string scan before commits. |
+| T-001 | Production secrets committed to public Git. | `.gitignore`, ignored local context folder, sensitive-string scan before commits. |
 | T-002 | Enrollment token used after intended deployment. | Expiring scoped tokens, revocation, hashed storage, audit events. |
 | T-003 | Generated script modified in transit. | HTTPS, checksums for cached installers, visible script preview, short-lived tokens. |
 | T-004 | OpenDesk user sees unauthorized device metadata. | RBAC and site/tag scoping tests. |
@@ -61,4 +61,3 @@ Security validation must cover:
 - Public repo sensitive scan.
 - Generated script secret scan.
 - Permission matrix by role/site/tag.
-

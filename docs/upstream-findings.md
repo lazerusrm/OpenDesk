@@ -87,4 +87,4 @@ Prioritize these delivery paths in order:
 4. Implement OpenDesk's own endpoint registration API.
 5. Optionally implement a compatibility endpoint for `/api/devices/deploy` if official clients can use it without a fork.
 
-Do not build a RustDesk Pro API clone first. Add compatible API behavior only when it directly satisfies a full-replacement requirement that cannot be covered more cleanly through OpenDesk's own API, endpoint agent, or generated configuration.
+Do not build a RustDesk Pro API clone first. Add compatible API behavior only when it directly satisfies a full-replacement requirement that cannot be covered more cleanly through OpenDesk's own API, endpoint registration service, or generated configuration.

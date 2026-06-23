@@ -25,7 +25,7 @@ Rationale:
 
 - The owner is comfortable with public code.
 - Public docs must not leak site-specific details.
-- Local agents still need private context for accurate work.
+- Local contributors and automation still need private context for accurate work.
 
 Consequences:
 
@@ -87,4 +87,3 @@ Consequences:
 
 - Validation evidence matters as much as implementation.
 - Feature parity map and requirements must stay current.
-

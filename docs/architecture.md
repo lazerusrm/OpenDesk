@@ -22,7 +22,7 @@ OpenDesk
         v
 Managed endpoints
   official RustDesk client
-  optional OpenDesk registration script/agent
+  optional OpenDesk registration script/service
         |
         | RustDesk rendezvous/relay/session traffic
         v
@@ -95,7 +95,7 @@ The first endpoint registration mechanism should be script-based:
 5. POST to OpenDesk using a scoped enrollment token.
 6. Repeat periodically or on demand for check-in.
 
-The script/agent must not send unattended passwords or private keys.
+The registration script/service must not send unattended passwords or private keys.
 
 ### Client Delivery
 
@@ -201,10 +201,9 @@ Order of preference:
 
 1. Official documented/supported client configuration behavior.
 2. Existing official client behavior validated from source and real packages.
-3. OpenDesk endpoint script/agent behavior.
+3. OpenDesk endpoint registration script/service behavior.
 4. Isolated compatibility endpoint for RustDesk-shaped calls.
 5. Light client fork.
 6. Deep client/server fork.
 
 The project should document why it moved down this list before doing so.
-

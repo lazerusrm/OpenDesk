@@ -2,6 +2,14 @@
 
 Production cutover is blocked until this checklist passes. Development can proceed in stages, but this gate defines replacement completeness.
 
+## Documentation Baseline
+
+- [ ] Requirements, architecture, parity map, validation matrix, traceability, threat model, CI plan, and engineering standards have been reviewed together.
+- [ ] Traceability has no missing or stale requirement/validation references.
+- [ ] The Pro usage inventory in `docs/pro-feature-parity.md` has no `unknown` entries.
+- [ ] Validation evidence rules in `docs/validation-matrix.md` are understood before implementation tasks are opened.
+- [ ] An independent high-rigor reviewer signs off the documentation baseline before implementation starts.
+
 ## Prerequisites
 
 - [ ] Current production Pro usage has been inventoried.
@@ -55,6 +63,7 @@ Production cutover is blocked until this checklist passes. Development can proce
 Required signoffs:
 
 - [ ] Owner accepts feature parity mapping.
+- [ ] Independent high-rigor reviewer accepts all public planning, architecture, parity, validation, threat-model, CI, traceability, and standards docs.
 - [ ] Technical reviewer accepts architecture and validation evidence.
 - [ ] Security/privacy scan is clean.
 - [ ] Pilot operator workflow is accepted.

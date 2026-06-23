@@ -10,6 +10,19 @@ Target test environments:
 - Optional macOS endpoint
 - Optional Android/iOS operator client, configuration-only
 
+## Evidence Rules
+
+No validation row counts as passing until evidence is recorded with:
+
+- Status: `not-run`, `pass`, `fail`, or `accepted-exception`.
+- Commit SHA and validation date.
+- Environment, OS/version, RustDesk client version, and RustDesk server version where applicable.
+- Test operator or reviewer.
+- Artifact path or link: screenshot, log excerpt, test output, backup/restore transcript, or signed owner decision.
+- Exception owner and expiry/review date for any `accepted-exception`.
+
+Cutover validation cannot pass from design intent alone. Each Core replacement workflow needs executed evidence for the required endpoint OSes and operator workflows.
+
 ## Server Validation
 
 | ID | Function | Test | Passing Criteria |
@@ -96,6 +109,7 @@ Target test environments:
 | CI-006 | Container build | Build application container once app exists | Image builds reproducibly without production secrets |
 | CI-007 | File size limits | Run source/document size report | Files over soft limits are absent or have documented justification |
 | CI-008 | Canonical naming | Run naming/contract review check | No internal synonym/shim creep is introduced without boundary documentation |
+| CI-009 | Public attribution scan | Run public content scan | Committed project content does not mention assistant/tool/vendor attribution terms |
 
 ## Cutover Validation
 

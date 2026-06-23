@@ -19,3 +19,5 @@ jobs:
       - name: Privacy scan
         run: bash scripts/privacy-scan.sh
 
+      - name: Public content attribution scan
+        run: bash scripts/public-content-scan.sh

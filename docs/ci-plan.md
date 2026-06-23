@@ -22,8 +22,9 @@ Before application code exists, CI should cover:
 | Sensitive-string scan | Prevent private details in public repo | Immediately |
 | Ignore boundary check | Ensure `local/` and `upstream/` stay ignored | Immediately |
 | Requirements reference check | Ensure validation docs reference requirement IDs over time | Before implementation starts |
-| File size check | Warn on source files exceeding soft limits | Before implementation starts |
-| Canonical naming check | Catch banned vague filenames and obvious duplicate contract terms | Before implementation starts |
+| File size check | Fail on files exceeding soft limits unless the script is intentionally updated with a justified exception | Before implementation starts |
+| Canonical naming check | Catch banned vague filenames and obvious internal shim/legacy terms | Before implementation starts |
+| Public attribution check | Prevent tool/vendor attribution terms in committed project content | Immediately |
 
 Suggested tools:
 
@@ -75,7 +76,7 @@ The project-specific scan should reject:
 
 - Real owner domain strings.
 - Private LAN IPs outside examples.
-- `BEGIN .*PRIVATE KEY`.
+- PEM private-key block markers.
 - Obvious token/password assignments.
 - RustDesk server private key filenames with included contents.
 
@@ -100,12 +101,15 @@ Before a release or cutover candidate:
 - [ ] Add markdown/link checking config.
 - [ ] Add generated script tests once templates exist.
 - [ ] Add application test workflow once stack is scaffolded.
-- [ ] Add source file size warning check.
-- [ ] Add canonical naming/anti-shim review check.
+- [x] Add source file size warning check.
+- [x] Add canonical naming/anti-shim review check.
+- [x] Add public attribution scan.
 
 ## Current Workflows
 
 - `.github/workflows/docs.yml` runs `scripts/docs-check.sh`.
-- `.github/workflows/security.yml` runs `scripts/privacy-scan.sh`.
+- `.github/workflows/security.yml` runs `scripts/privacy-scan.sh` and `scripts/public-content-scan.sh`.
 
-These are intentionally lightweight bootstrap checks. They should be expanded with dedicated lint/secret-scanning tools as soon as the project has its first implementation slice.
+The current docs check validates required docs, local Markdown links, requirement-to-validation traceability, ignored private/reference boundaries, soft file-size limits, shell syntax, and obvious anti-shim filename drift. The current security workflow runs the project-specific privacy scan across tracked and unignored files, leaves ignored private/reference paths unread, and rejects public tool-origin attribution terms.
+
+These remain bootstrap checks. They should be expanded with dedicated Markdown linting, release-grade secret scanning, dependency scanning, generated-script tests, and application test workflows as soon as the project has its first implementation slice.

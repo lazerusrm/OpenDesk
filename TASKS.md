@@ -18,6 +18,7 @@
 - [x] Add bootstrap docs/security workflows.
 - [x] Add requirements-to-validation traceability.
 - [x] Add engineering standards for canonical contracts, anti-shim policy, naming, and file size limits.
+- [x] Add public content attribution scan and ignore rules for tool-specific files/folders.
 
 ## First Build Slice
 

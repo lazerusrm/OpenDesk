@@ -32,6 +32,6 @@ Production target:
 
 Use the official signed RustDesk apps wherever possible. Do not fork the RustDesk client unless an important workflow cannot be solved through external management, install automation, or endpoint self-registration.
 
-Forking or vendoring RustDesk OSS server/client code is deferred until a specific full-replacement requirement cannot be met through the external control plane, deployment automation, endpoint agent, or compatible APIs.
+Forking or vendoring RustDesk OSS server/client code is deferred until a specific full-replacement requirement cannot be met through the external control plane, deployment automation, endpoint registration service, or compatible APIs.
 
 Local upstream reference clones may exist in `upstream/`, which is intentionally ignored by Git.

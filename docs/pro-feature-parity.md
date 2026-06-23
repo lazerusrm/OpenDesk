@@ -29,7 +29,7 @@ Status categories:
 | Session audit | Client/server log ingestion if available | Research | Requires reliable source of session events. |
 | Access control | OpenDesk UI/API roles | Core | Controls dashboard visibility/actions. Does not enforce RustDesk session auth by itself. |
 | RustDesk session ACLs | Endpoint/network/client integration | Research | Must not be claimed until actually enforced. |
-| Central settings/policies | Generated config + endpoint agent | Core | Use scripts/agent first; native client policy later if required. |
+| Central settings/policies | Generated config + endpoint registration service | Core | Use scripts/service first; native client policy later if required. |
 | Disable public server fallback | Scripted config where supported | Core | Hard enforcement may require client policy/fork. |
 | Managed unattended passwords | External secret manager integration | Research | Do not store plaintext passwords in OpenDesk. |
 | SSO/OIDC | Reverse proxy or app-native OIDC | Stage 2 | Required before cutover only if used today. |
@@ -42,6 +42,20 @@ Status categories:
 | Mobile app management | Document manual config | Deferred | Official app distribution stays RustDesk-owned. |
 | Backups | OpenDesk backup/restore | Core | Include database/config, exclude runtime junk/secrets where possible. |
 | Health checks | DNS/port/service/key fingerprint checks | Core | Start with external reachability checks. |
+
+## Production Usage Inventory
+
+Before cutover, the owner must inventory current RustDesk Server Pro usage from operator interviews and any available Pro exports/screenshots. For every capability above, record:
+
+| Field | Required Meaning |
+|---|---|
+| Used Today | `yes`, `no`, `unknown`, or `retired by owner decision`. |
+| Replacement Path | OpenDesk feature, equivalent workflow, or explicit retirement decision. |
+| Validation IDs | Validation cases proving the replacement path. |
+| Evidence | Link/path to test evidence, pilot notes, export comparison, or owner signoff. |
+| Blocker | Remaining gap, or `none`. |
+
+Any `unknown` Used Today value blocks cutover. Any `yes` value needs either passing validation evidence or a signed retirement decision before OpenDesk can be treated as a full Pro replacement.
 
 ## Replacement Acceptance
 
