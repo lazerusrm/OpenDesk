@@ -5,117 +5,81 @@ use uuid::Uuid;
 use crate::domain::device::{Device, DeviceDraft};
 use crate::time_format::format_timestamp;
 
-fn row_to_device(
-    device_uuid: String,
-    rustdesk_id: Option<String>,
-    alias: String,
-    hostname: Option<String>,
-    os_family: Option<String>,
-    os_version: Option<String>,
-    architecture: Option<String>,
-    rustdesk_version: Option<String>,
-    site_uuid: Option<String>,
-    owner: Option<String>,
-    notes: Option<String>,
-    archived: i64,
-) -> Device {
+type DeviceRow = (
+    String,
+    Option<String>,
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    i64,
+);
+
+const DEVICE_SELECT: &str = "SELECT device_uuid, rustdesk_id, alias, hostname, os_family, os_version, architecture,
+                rustdesk_version, site_uuid, owner, notes, last_checkin_at, archived";
+
+fn row_to_device(row: DeviceRow) -> Device {
     Device {
-        device_uuid: Uuid::parse_str(&device_uuid).expect("stored uuid"),
-        rustdesk_id,
-        alias,
-        hostname,
-        os_family,
-        os_version,
-        architecture,
-        rustdesk_version,
-        site_uuid: site_uuid.and_then(|value| Uuid::parse_str(&value).ok()),
-        owner,
-        notes,
-        archived: archived != 0,
+        device_uuid: Uuid::parse_str(&row.0).expect("stored uuid"),
+        rustdesk_id: row.1,
+        alias: row.2,
+        hostname: row.3,
+        os_family: row.4,
+        os_version: row.5,
+        architecture: row.6,
+        rustdesk_version: row.7,
+        site_uuid: row.8.and_then(|value| Uuid::parse_str(&value).ok()),
+        owner: row.9,
+        notes: row.10,
+        last_checkin_at: row.11,
+        archived: row.12 != 0,
     }
 }
 
 pub async fn list_devices(pool: &SqlitePool) -> Result<Vec<Device>, sqlx::Error> {
-    let rows = sqlx::query_as::<_, (
-        String,
-        Option<String>,
-        String,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        i64,
-    )>(
-        "SELECT device_uuid, rustdesk_id, alias, hostname, os_family, os_version, architecture,
-                rustdesk_version, site_uuid, owner, notes, archived
-         FROM devices ORDER BY alias ASC",
-    )
-    .fetch_all(pool)
-    .await?;
-    Ok(rows
-        .into_iter()
-        .map(|row| row_to_device(row.0, row.1, row.2, row.3, row.4, row.5, row.6, row.7, row.8, row.9, row.10, row.11))
-        .collect())
+    let rows = sqlx::query_as::<_, DeviceRow>(&format!("{DEVICE_SELECT} FROM devices ORDER BY alias ASC"))
+        .fetch_all(pool)
+        .await?;
+    Ok(rows.into_iter().map(row_to_device).collect())
 }
 
 pub async fn find_device_by_uuid(
     pool: &SqlitePool,
     device_uuid: Uuid,
 ) -> Result<Option<Device>, sqlx::Error> {
-    let row = sqlx::query_as::<_, (
-        String,
-        Option<String>,
-        String,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        i64,
-    )>(
-        "SELECT device_uuid, rustdesk_id, alias, hostname, os_family, os_version, architecture,
-                rustdesk_version, site_uuid, owner, notes, archived
-         FROM devices WHERE device_uuid = ?",
-    )
-    .bind(device_uuid.to_string())
-    .fetch_optional(pool)
-    .await?;
-    Ok(row.map(|row| row_to_device(row.0, row.1, row.2, row.3, row.4, row.5, row.6, row.7, row.8, row.9, row.10, row.11)))
+    let row = sqlx::query_as::<_, DeviceRow>(&format!("{DEVICE_SELECT} FROM devices WHERE device_uuid = ?"))
+        .bind(device_uuid.to_string())
+        .fetch_optional(pool)
+        .await?;
+    Ok(row.map(row_to_device))
 }
 
 pub async fn find_device_by_rustdesk_id(
     pool: &SqlitePool,
     rustdesk_id: &str,
 ) -> Result<Option<Device>, sqlx::Error> {
-    let row = sqlx::query_as::<_, (
-        String,
-        Option<String>,
-        String,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        i64,
-    )>(
-        "SELECT device_uuid, rustdesk_id, alias, hostname, os_family, os_version, architecture,
-                rustdesk_version, site_uuid, owner, notes, archived
-         FROM devices WHERE rustdesk_id = ?",
-    )
-    .bind(rustdesk_id)
-    .fetch_optional(pool)
-    .await?;
-    Ok(row.map(|row| row_to_device(row.0, row.1, row.2, row.3, row.4, row.5, row.6, row.7, row.8, row.9, row.10, row.11)))
+    let row = sqlx::query_as::<_, DeviceRow>(&format!("{DEVICE_SELECT} FROM devices WHERE rustdesk_id = ?"))
+        .bind(rustdesk_id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(row.map(row_to_device))
+}
+
+pub async fn find_device_by_hostname(
+    pool: &SqlitePool,
+    hostname: &str,
+) -> Result<Option<Device>, sqlx::Error> {
+    let row = sqlx::query_as::<_, DeviceRow>(&format!("{DEVICE_SELECT} FROM devices WHERE hostname = ?"))
+        .bind(hostname)
+        .fetch_optional(pool)
+        .await?;
+    Ok(row.map(row_to_device))
 }
 
 pub async fn create_device(pool: &SqlitePool, draft: &DeviceDraft) -> Result<Device, sqlx::Error> {

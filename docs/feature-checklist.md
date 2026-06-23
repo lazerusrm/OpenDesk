@@ -74,10 +74,10 @@ Status legend:
 - [x] Enrollment token creation/rotation/revocation.
 - [x] Endpoint registration API.
 - [ ] Windows self-registration script.
-- [ ] Linux self-registration script.
+- [x] Linux self-registration script.
 - [ ] macOS self-registration script if required.
-- [ ] Duplicate detection by RustDesk ID and hostname.
-- [ ] Last check-in timestamp.
+- [x] Duplicate detection by RustDesk ID and hostname.
+- [x] Last check-in timestamp.
 - [ ] Endpoint metadata update.
 - [ ] Endpoint registration audit events.
 

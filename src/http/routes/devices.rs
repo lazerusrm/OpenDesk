@@ -18,6 +18,7 @@ use crate::domain::device::{
 use crate::http::routes::render::render_device_form;
 use crate::http::session::{require_user, AuthenticatedUser};
 use crate::http::views::{DeviceRowView, DevicesListView};
+use crate::time_format::format_last_checkin_display;
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::devices::{
     create_device, find_device_by_uuid, list_devices, set_device_archived, update_device,
@@ -61,6 +62,7 @@ async fn devices_list(
             alias: device.alias,
             rustdesk_id_display: device.rustdesk_id.unwrap_or_else(|| "-".to_string()),
             hostname_display: device.hostname.unwrap_or_else(|| "-".to_string()),
+            last_checkin_display: format_last_checkin_display(device.last_checkin_at.as_deref()),
             archived_display: if device.archived { "yes" } else { "no" }.to_string(),
         })
         .collect();

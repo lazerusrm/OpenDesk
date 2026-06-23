@@ -16,6 +16,7 @@
         <th>Alias</th>
         <th>RustDesk ID</th>
         <th>Hostname</th>
+        <th>Last check-in</th>
         <th>Archived</th>
         <th></th>
       </tr>
@@ -26,6 +27,7 @@
         <td>{{ device.alias }}</td>
         <td>{{ device.rustdesk_id_display }}</td>
         <td>{{ device.hostname_display }}</td>
+        <td>{{ device.last_checkin_display }}</td>
         <td>{{ device.archived_display }}</td>
         <td><a href="/devices/{{ device.device_uuid }}">View</a></td>
       </tr>
