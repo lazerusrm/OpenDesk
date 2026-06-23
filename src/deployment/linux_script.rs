@@ -37,9 +37,14 @@ HOSTNAME_VALUE="$(hostname)"
 OS_FAMILY="linux"
 ARCH_VALUE="$(uname -m)"
 
-curl -fsS -X POST "${{OPENDESK_BASE_URL}}/api/enrollments/check-in" \
+CHECKIN_HTTP_CODE="$(curl -fsS -o /dev/null -w '%{{http_code}}' -X POST "${{OPENDESK_BASE_URL}}/api/enrollments/check-in" \
   -H "Content-Type: application/json" \
-  -d "{{\"enrollment_token\":\"${{ENROLLMENT_TOKEN}}\",\"rustdesk_id\":\"${{RUSTDESK_ID}}\",\"hostname\":\"${{HOSTNAME_VALUE}}\",\"os_family\":\"${{OS_FAMILY}}\",\"architecture\":\"${{ARCH_VALUE}}\"}}"
+  -d "{{\"enrollment_token\":\"${{ENROLLMENT_TOKEN}}\",\"rustdesk_id\":\"${{RUSTDESK_ID}}\",\"hostname\":\"${{HOSTNAME_VALUE}}\",\"os_family\":\"${{OS_FAMILY}}\",\"architecture\":\"${{ARCH_VALUE}}\"}}")"
+echo "opendesk enrollment check-in http_status=${{CHECKIN_HTTP_CODE}}"
+if [ "${{CHECKIN_HTTP_CODE}}" != "204" ]; then
+  echo "opendesk enrollment check-in failed" >&2
+  exit 1
+fi
 "#,
         opendesk_base_url = input.opendesk_base_url,
         enrollment_token = input.enrollment_token,
@@ -66,6 +71,7 @@ mod tests {
         assert!(script.contains("custom-rendezvous-server"));
         assert!(script.contains("rd.example.com"));
         assert!(script.contains("/api/enrollments/check-in"));
+        assert!(script.contains("opendesk enrollment check-in http_status="));
         assert!(script.contains("test-enrollment-token"));
     }
 }

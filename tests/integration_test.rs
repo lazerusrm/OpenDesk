@@ -1,9 +1,16 @@
+use std::process::Command;
+use std::{fs, time::Duration};
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
 use opendesk::{build_router, AppState};
 use serde_json::json;
 use sqlx::sqlite::SqlitePoolOptions;
+use tokio::net::TcpListener;
 use tower::ServiceExt;
 
 async fn test_state() -> AppState {
@@ -158,13 +165,39 @@ async fn device_update_via_handler_preserves_enrollment_metadata() {
 }
 
 #[tokio::test]
-async fn linux_script_export_returns_generated_script() {
-    let app = build_router(test_state().await);
-    let session_cookie = login_and_get_session_cookie(&app).await;
-    let response = app
+async fn linux_script_export_executes_check_in_against_running_server() {
+    let state = test_state().await;
+    let created = opendesk::repository::enrollment_tokens::create_enrollment_token(
+        &state.db,
+        "script-export-token",
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("create token");
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind listener");
+    let addr = listener.local_addr().expect("listener address");
+    let mut state = state;
+    state.public_base_url = format!("http://{addr}");
+    let app = build_router(state.clone());
+    tokio::spawn(async move {
+        axum::serve(listener, app)
+            .await
+            .expect("serve integration test app");
+    });
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    let session_cookie = login_and_get_session_cookie(&build_router(state.clone())).await;
+    let export_uri = format!(
+        "/deployment/linux.sh?enrollment_token_value={}",
+        created.token_value
+    );
+    let response = build_router(state.clone())
         .oneshot(
             Request::builder()
-                .uri("/deployment/linux.sh?enrollment_token_value=test-export-token")
+                .uri(export_uri)
                 .header("cookie", session_cookie)
                 .body(Body::empty())
                 .unwrap(),
@@ -172,18 +205,80 @@ async fn linux_script_export_returns_generated_script() {
         .await
         .expect("linux script export");
     assert_eq!(response.status(), StatusCode::OK);
-    let content_type = response
-        .headers()
-        .get("content-type")
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("");
-    assert!(content_type.contains("text/plain"));
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let script = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(script.contains("#!/usr/bin/env bash"));
-    assert!(script.contains("test-export-token"));
-    assert!(script.contains("rd.example.com"));
-    assert!(script.contains("/api/enrollments/check-in"));
+    assert!(script.contains(&created.token_value));
+    assert!(script.contains("opendesk enrollment check-in http_status="));
+
+    let temp_root = std::env::temp_dir().join(format!(
+        "opendesk-linux-script-test-{}",
+        uuid::Uuid::new_v4()
+    ));
+    fs::create_dir_all(&temp_root).expect("temp dir");
+    let fake_bin = temp_root.join("bin");
+    fs::create_dir_all(&fake_bin).expect("fake bin dir");
+    let fake_rustdesk = fake_bin.join("rustdesk");
+    fs::write(
+        &fake_rustdesk,
+        r#"#!/usr/bin/env bash
+set -euo pipefail
+case "${1:-}" in
+  --get-id)
+    echo "887766554"
+    ;;
+  --option)
+    exit 0
+    ;;
+  --get-option)
+    echo "rd.example.com"
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+"#,
+    )
+    .expect("write fake rustdesk");
+    #[cfg(unix)]
+    fs::set_permissions(&fake_rustdesk, fs::Permissions::from_mode(0o755))
+        .expect("chmod fake rustdesk");
+
+    let script_path = temp_root.join("deploy.sh");
+    fs::write(&script_path, &script).expect("write exported script");
+    #[cfg(unix)]
+    fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+        .expect("chmod exported script");
+
+    let path_for_script = script_path.clone();
+    let path_for_bin = fake_bin.clone();
+    let output = tokio::task::spawn_blocking(move || {
+        Command::new("bash")
+            .arg(path_for_script)
+            .env("PATH", format!("{}:/usr/bin:/bin", path_for_bin.display()))
+            .output()
+    })
+    .await
+    .expect("join script execution task")
+    .expect("execute exported script");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "script failed stdout={stdout} stderr={stderr}"
+    );
+    assert!(stdout.contains("opendesk enrollment check-in http_status=204"));
+
+    let device = opendesk::repository::devices::find_device_by_rustdesk_id(
+        &state.db,
+        "887766554",
+    )
+    .await
+    .expect("lookup enrolled device")
+    .expect("device created by exported script check-in");
+    assert_eq!(device.os_family.as_deref(), Some("linux"));
+
+    let _ = fs::remove_dir_all(&temp_root);
 }
 
 #[tokio::test]

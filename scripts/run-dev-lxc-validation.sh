@@ -51,9 +51,10 @@ nohup ./target/release/opendesk > /tmp/opendesk.log 2>&1 &
 sleep 2
 COOKIE=/tmp/opendesk-cookies.txt
 rm -f "\$COOKIE"
-curl -fsS -c "\$COOKIE" -b "\$COOKIE" -X POST http://127.0.0.1:18080/login \\
+LOGIN_STATUS="\$(curl -fsS -c "\$COOKIE" -b "\$COOKIE" -X POST http://127.0.0.1:18080/login \\
   -H 'Content-Type: application/x-www-form-urlencoded' \\
-  --data "username=admin&password=${dev_admin_password}" -o /dev/null
+  --data "username=admin&password=${dev_admin_password}" -o /dev/null -w '%{http_code}')"
+echo "remote: authenticated_session=yes login_http_status=\${LOGIN_STATUS}"
 html="\$(curl -fsS -c "\$COOKIE" -b "\$COOKIE" -X POST http://127.0.0.1:18080/enrollment-tokens \\
   -H 'Content-Type: application/x-www-form-urlencoded' \\
   --data 'label=dev-lxc-validation')"
@@ -69,14 +70,28 @@ curl -fsS -c "\$COOKIE" -b "\$COOKIE" \\
 chmod +x /tmp/opendesk-deploy.sh
 head -5 /tmp/opendesk-deploy.sh
 echo "remote: executing generated deployment script"
-bash /tmp/opendesk-deploy.sh
+bash /tmp/opendesk-deploy.sh 2>&1 | tee /tmp/opendesk-deploy-run.log
+SCRIPT_EXIT=\${PIPESTATUS[0]}
+echo "remote: script_exit=\${SCRIPT_EXIT}"
+cat /tmp/opendesk-deploy-run.log
+grep -q 'opendesk enrollment check-in http_status=204' /tmp/opendesk-deploy-run.log
 if command -v rustdesk >/dev/null 2>&1; then
   rendezvous="\$(rustdesk --get-option custom-rendezvous-server 2>/dev/null || true)"
   rustdesk_id="\$(rustdesk --get-id 2>/dev/null || true)"
   echo "remote: rustdesk_rendezvous=\${rendezvous:-unset}"
   echo "remote: rustdesk_id=\${rustdesk_id:-unknown}"
+  DEVICE_COUNT="\$(sqlite3 /opt/opendesk-dev/data/opendesk.sqlite "SELECT COUNT(*) FROM devices WHERE rustdesk_id='\${rustdesk_id}';" 2>/dev/null || echo 0)"
+  echo "remote: enrolled_device_count=\${DEVICE_COUNT}"
+  if [ "\${DEVICE_COUNT}" != "1" ]; then
+    echo "remote: expected enrolled device row for rustdesk_id" >&2
+    exit 1
+  fi
 else
   echo "remote: rustdesk client not installed" >&2
+  exit 1
+fi
+if [ "\${SCRIPT_EXIT}" -ne 0 ]; then
+  echo "remote: generated script exited non-zero" >&2
   exit 1
 fi
 echo "remote: generated script execution completed on \$(hostname)"
