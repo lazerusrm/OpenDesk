@@ -36,6 +36,7 @@ The requirement IDs are stable and should be referenced from implementation task
 | SR-008 | Production admin UI/API must require HTTPS. | Deployment validation proves HTTP redirects/refuses plaintext. |
 | SR-009 | Backups must document whether they contain sensitive material and how they are protected. | Backup metadata and restore documentation. |
 | SR-010 | Any claim of RustDesk session access enforcement must be backed by endpoint, network, client, or protocol evidence. | Enforcement evidence exists or feature remains explicitly non-enforcing. |
+| SR-011 | OpenDesk should support optional passkey login hardening for admin/operator accounts. | Passkey registration/login tests pass on supported browsers and password fallback/recovery policy is documented. |
 
 ## Operational Requirements
 

@@ -29,6 +29,7 @@ This document maps replacement requirements to validation coverage. It should be
 | SR-008 HTTPS | SEC-001 | Production deploy validation. |
 | SR-009 Backup sensitivity | SEC-005 | Backup classification required. |
 | SR-010 Session enforcement claims | R-005, SEC-007 | Must remain non-enforcing unless proven. |
+| SR-011 Optional passkeys | SEC-009 | OpenDesk auth hardening only; not session enforcement. |
 | OR-001 Repeatable deployment | S-008, CI-006, CUT-001 | Compose smoke test once app exists. |
 | OR-002 Dashboard failure does not break RustDesk | CUT-001, CUT-004 | Failure-mode test required. |
 | OR-003 LXC/Proxmox diagnostics | C-008, S-001 through S-007 | Runbook coverage needed later. |

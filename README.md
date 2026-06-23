@@ -29,6 +29,8 @@ Production target:
 - [Engineering Standards](docs/engineering-standards.md)
 - [Research Roadmap](docs/research-roadmap.md)
 - [Research Findings](docs/research-findings.md)
+- [Owner Decision Worksheet](docs/research/owner-decisions.md)
+- [Client Validation Procedures](docs/research/client-validation-procedures.md)
 - [Dev Validation Environment](docs/dev-validation.md)
 
 ## Current Decision

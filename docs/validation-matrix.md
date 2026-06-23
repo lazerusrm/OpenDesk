@@ -104,6 +104,7 @@ Research rows count as complete only when `docs/research-roadmap.md` contains th
 | SEC-006 | CI secret scan | Run configured CI secret/privacy scan | No production secrets or site-specific values are detected outside ignored paths |
 | SEC-007 | Misleading access-control claims | Review UI/API/docs for session enforcement wording | No UI or docs claim RustDesk session enforcement unless enforcement tests exist |
 | SEC-008 | Role permission matrix | Attempt each role/action/site/tag case | Allowed and denied results match policy, with audit coverage for sensitive denials |
+| SEC-009 | Optional passkeys | Register and use a phone passkey for OpenDesk login | Passkey login works, fallback/recovery is documented, and RustDesk session enforcement is not implied |
 
 ## CI Validation
 

@@ -35,6 +35,7 @@ Status categories:
 | SSO/OIDC | Reverse proxy or app-native OIDC | Stage 2 | Required before cutover only if used today. |
 | LDAP | External IdP integration | Deferred | Prefer OIDC via Authentik/Authelia/etc. |
 | 2FA | Reverse proxy/IdP first | Stage 2 | Required before cutover only if used today. |
+| Passkeys | App-native WebAuthn/passkey support | Stage 2 | Desired as soft opt-in OpenDesk auth hardening, especially phone passkeys. Not RustDesk session enforcement. |
 | Custom client builder | Generated scripts/wrapper | Research | Full custom client builds are deferred. |
 | Branding | OpenDesk web UI branding | Core | RustDesk client branding deferred. |
 | Native RustDesk address book | Client fork or compatible API | Research | Required only if the external OpenDesk address book does not satisfy production workflow. |
@@ -53,6 +54,7 @@ Current replacement assumptions until owner review:
 - Strategy/policy replacement is required because active strategy config exists.
 - Native passwordless address-book parity remains undecided because address-book entries contain hashed secret material.
 - SSO/third-party auth and 2FA are not currently proven production dependencies, but may still be added as hardening features.
+- Passkeys are desired as optional OpenDesk login hardening and should not be treated as a replacement for endpoint password or session enforcement.
 
 Before cutover, the owner must inventory current RustDesk Server Pro usage from operator interviews and any available Pro exports/screenshots. For every capability above, record:
 

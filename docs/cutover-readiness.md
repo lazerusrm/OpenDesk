@@ -13,6 +13,7 @@ Production cutover is blocked until this checklist passes. Development can proce
 ## Prerequisites
 
 - [ ] Current production Pro usage has been inventoried.
+- [ ] Owner decision worksheet has no `unknown` rows.
 - [ ] Every item in `docs/research-roadmap.md` has evidence and a decision.
 - [ ] Every used Pro feature is mapped in `docs/pro-feature-parity.md`.
 - [ ] Every Core requirement in `docs/requirements.md` has validation evidence.
