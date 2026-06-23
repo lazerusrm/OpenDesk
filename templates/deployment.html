@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Deployment Artifacts</h1>
+  <p>Generated scripts use canonical server config values and a selected enrollment token.</p>
+  <form method="get" action="/deployment">
+    <label for="enrollment_token_uuid">Enrollment token</label>
+    <select id="enrollment_token_uuid" name="enrollment_token_uuid">
+      {% for token in tokens %}
+      <option value="{{ token.enrollment_token_uuid }}" {% if token.selected %}selected{% endif %}>
+        {{ token.label }} ({{ token.status }})
+      </option>
+      {% endfor %}
+    </select>
+    <button type="submit">Refresh</button>
+  </form>
+</section>
+<section class="card">
+  <h2>Linux shell script</h2>
+  <pre>{{ linux_script }}</pre>
+</section>
+<section class="card">
+  <h2>Windows PowerShell script</h2>
+  <pre>{{ windows_script }}</pre>
+</section>
+{% endblock %}

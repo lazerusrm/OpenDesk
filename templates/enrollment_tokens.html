@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Enrollment Tokens</h1>
+  {% if created_token_value.is_some() %}
+  <p>New token (shown once): <code>{{ created_token_value.as_ref().unwrap() }}</code></p>
+  {% endif %}
+  <form method="post" action="/enrollment-tokens">
+    <label for="label">Label</label>
+    <input id="label" name="label" required>
+    <button type="submit">Create token</button>
+  </form>
+</section>
+<section class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Label</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for token in tokens %}
+      <tr>
+        <td>{{ token.label }}</td>
+        <td>{{ token.status }}</td>
+        <td>
+          {% if token.can_revoke %}
+          <form method="post" action="/enrollment-tokens/{{ token.enrollment_token_uuid }}/revoke" class="inline-form">
+            <button type="submit">Revoke</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
