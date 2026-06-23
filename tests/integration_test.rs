@@ -18,6 +18,7 @@ async fn test_state() -> AppState {
     AppState {
         db,
         cookie_secure: false,
+        public_base_url: "http://127.0.0.1:8080".to_string(),
     }
 }
 
@@ -43,6 +44,71 @@ async fn login_page_renders_opendesk_form() {
     let html = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(html.contains("OpenDesk"));
     assert!(html.contains("Admin Login"));
+}
+
+#[tokio::test]
+async fn device_update_preserves_enrollment_metadata() {
+    let state = test_state().await;
+    let created = opendesk::repository::enrollment_tokens::create_enrollment_token(
+        &state.db,
+        "metadata-token",
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("create token");
+
+    let app = build_router(state.clone());
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/enrollments/check-in")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({
+                        "enrollment_token": created.token_value,
+                        "rustdesk_id": "554433221",
+                        "hostname": "dev-host",
+                        "os_family": "linux",
+                        "os_version": "test-os",
+                        "architecture": "x86_64",
+                        "rustdesk_version": "1.4.8"
+                    })
+                    .to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .expect("checkin");
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+    let device = opendesk::repository::devices::find_device_by_rustdesk_id(
+        &state.db,
+        "554433221",
+    )
+    .await
+    .expect("lookup")
+    .expect("device");
+
+    let merged = opendesk::domain::device::merge_device_update(
+        opendesk::domain::device::DeviceDraft {
+            alias: "Renamed device".to_string(),
+            notes: Some("operator note".to_string()),
+            ..Default::default()
+        },
+        &device,
+    );
+    let updated =
+        opendesk::repository::devices::update_device(&state.db, device.device_uuid, &merged)
+            .await
+            .expect("update");
+
+    assert_eq!(updated.alias, "Renamed device");
+    assert_eq!(updated.os_family.as_deref(), Some("linux"));
+    assert_eq!(updated.architecture.as_deref(), Some("x86_64"));
+    assert_eq!(updated.rustdesk_version.as_deref(), Some("1.4.8"));
 }
 
 #[tokio::test]

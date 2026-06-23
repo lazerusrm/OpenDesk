@@ -2,7 +2,7 @@
 {% block content %}
 <section class="card">
   <h1>Deployment Artifacts</h1>
-  <p>Generated scripts use canonical server config values and a selected enrollment token.</p>
+  <p>Generated scripts use canonical server config values, the selected enrollment token, and the configured public base URL ({{ public_base_url }}).</p>
   <form method="get" action="/deployment">
     <label for="enrollment_token_uuid">Enrollment token</label>
     <select id="enrollment_token_uuid" name="enrollment_token_uuid">
@@ -12,7 +12,9 @@
       </option>
       {% endfor %}
     </select>
-    <button type="submit">Refresh</button>
+    <label for="enrollment_token_value">Enrollment token value (shown once at creation)</label>
+    <input id="enrollment_token_value" name="enrollment_token_value" value="{{ enrollment_token_value }}">
+    <button type="submit">Generate scripts</button>
   </form>
 </section>
 <section class="card">

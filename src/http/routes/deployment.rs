@@ -29,6 +29,14 @@ pub fn routes() -> Router<AppState> {
 #[derive(Deserialize)]
 struct DeploymentQuery {
     enrollment_token_uuid: Option<Uuid>,
+    enrollment_token_value: Option<String>,
+}
+
+fn enrollment_token_for_script(value: Option<String>) -> String {
+    value
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "PASTE_ENROLLMENT_TOKEN_VALUE".to_string())
 }
 
 async fn deployment_page(
@@ -47,6 +55,8 @@ async fn deployment_page(
     let selected_uuid = query
         .enrollment_token_uuid
         .or_else(|| tokens.first().map(|token| token.enrollment_token_uuid));
+    let token_value = query.enrollment_token_value.unwrap_or_default();
+    let script_token = enrollment_token_for_script(Some(token_value.clone()));
     let token_options: Vec<EnrollmentTokenOptionView> = tokens
         .iter()
         .map(|token| EnrollmentTokenOptionView {
@@ -56,21 +66,22 @@ async fn deployment_page(
             selected: Some(token.enrollment_token_uuid) == selected_uuid,
         })
         .collect();
-    let placeholder_token = "REPLACE_WITH_ENROLLMENT_TOKEN";
     let linux_script = render_linux_deployment_script(&LinuxDeploymentScriptInput {
         server_config: &config,
-        enrollment_token: placeholder_token,
-        opendesk_base_url: "https://rd-admin.example.com",
+        enrollment_token: &script_token,
+        opendesk_base_url: &state.public_base_url,
     });
     let windows_script = render_windows_deployment_script(&WindowsDeploymentScriptInput {
         server_config: &config,
-        enrollment_token: placeholder_token,
-        opendesk_base_url: "https://rd-admin.example.com",
+        enrollment_token: &script_token,
+        opendesk_base_url: &state.public_base_url,
     });
     let view = DeploymentView {
         title: "Deployment".to_string(),
         show_nav: true,
         tokens: token_options,
+        enrollment_token_value: token_value,
+        public_base_url: state.public_base_url.clone(),
         linux_script,
         windows_script,
     };
@@ -78,4 +89,25 @@ async fn deployment_page(
         .render()
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     Ok(Html(html).into_response())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn enrollment_token_for_script_uses_provided_value() {
+        assert_eq!(
+            enrollment_token_for_script(Some("abc123".to_string())),
+            "abc123"
+        );
+    }
+
+    #[test]
+    fn enrollment_token_for_script_falls_back_to_placeholder() {
+        assert_eq!(
+            enrollment_token_for_script(Some("  ".to_string())),
+            "PASTE_ENROLLMENT_TOKEN_VALUE"
+        );
+    }
 }

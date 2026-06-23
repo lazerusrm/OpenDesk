@@ -63,6 +63,8 @@ pub struct DeploymentView {
     pub title: String,
     pub show_nav: bool,
     pub tokens: Vec<EnrollmentTokenOptionView>,
+    pub enrollment_token_value: String,
+    pub public_base_url: String,
     pub linux_script: String,
     pub windows_script: String,
 }

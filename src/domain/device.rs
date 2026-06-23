@@ -91,6 +91,22 @@ pub fn unarchive_device(device: &Device) -> Device {
     updated
 }
 
+/// Preserve enrollment/check-in metadata when the edit form only exposes operator fields.
+pub fn merge_device_update(form: DeviceDraft, existing: &Device) -> DeviceDraft {
+    DeviceDraft {
+        alias: form.alias,
+        rustdesk_id: form.rustdesk_id.or_else(|| existing.rustdesk_id.clone()),
+        hostname: form.hostname.or_else(|| existing.hostname.clone()),
+        owner: form.owner.or_else(|| existing.owner.clone()),
+        notes: form.notes.or_else(|| existing.notes.clone()),
+        os_family: existing.os_family.clone(),
+        os_version: existing.os_version.clone(),
+        architecture: existing.architecture.clone(),
+        rustdesk_version: existing.rustdesk_version.clone(),
+        site_uuid: existing.site_uuid,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,5 +154,23 @@ mod tests {
         let device = sample_device();
         let archived = archive_device(&device);
         assert!(archived.archived);
+    }
+
+    #[test]
+    fn merge_device_update_preserves_enrollment_metadata() {
+        let existing = sample_device();
+        let form = DeviceDraft {
+            alias: "Renamed".to_string(),
+            rustdesk_id: None,
+            hostname: None,
+            owner: None,
+            notes: Some("updated note".to_string()),
+            ..Default::default()
+        };
+        let merged = merge_device_update(form, &existing);
+        assert_eq!(merged.alias, "Renamed");
+        assert_eq!(merged.os_family.as_deref(), Some("linux"));
+        assert_eq!(merged.rustdesk_id.as_deref(), Some("123456789"));
+        assert_eq!(merged.notes.as_deref(), Some("updated note"));
     }
 }

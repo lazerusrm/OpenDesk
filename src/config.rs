@@ -9,6 +9,7 @@ pub struct AppConfig {
     pub cookie_secure: bool,
     pub bootstrap_admin_username: String,
     pub bootstrap_admin_password: String,
+    pub public_base_url: String,
 }
 
 impl AppConfig {
@@ -30,6 +31,8 @@ impl AppConfig {
                 .unwrap_or_else(|_| "admin".to_string()),
             bootstrap_admin_password: env::var("OPENDESK_BOOTSTRAP_ADMIN_PASSWORD")
                 .unwrap_or_else(|_| "change-me".to_string()),
+            public_base_url: env::var("OPENDESK_PUBLIC_BASE_URL")
+                .unwrap_or_else(|_| "http://127.0.0.1:8080".to_string()),
         }
     }
 }

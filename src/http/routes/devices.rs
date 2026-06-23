@@ -12,7 +12,9 @@ use uuid::Uuid;
 
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
-use crate::domain::device::{device_matches_search, validate_device_draft, DeviceDraft, DeviceSearchQuery};
+use crate::domain::device::{
+    device_matches_search, merge_device_update, validate_device_draft, DeviceDraft, DeviceSearchQuery,
+};
 use crate::http::routes::render::render_device_form;
 use crate::http::session::{require_user, AuthenticatedUser};
 use crate::http::views::{DeviceRowView, DevicesListView};
@@ -175,7 +177,11 @@ async fn device_update_submit(
     Form(form): Form<DeviceForm>,
 ) -> Result<Response, Response> {
     let user = require_user(&state, &jar).await?;
-    let draft = device_form_to_draft(form);
+    let existing = find_device_by_uuid(&state.db, device_uuid)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+        .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
+    let draft = merge_device_update(device_form_to_draft(form), &existing);
     if let Err(error) = validate_device_draft(&draft) {
         return Ok(render_device_form(
             "Edit device",

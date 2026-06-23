@@ -25,6 +25,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         db,
         cookie_secure: config.cookie_secure,
+        public_base_url: config.public_base_url,
     };
     let app = build_router(state);
     let listener = tokio::net::TcpListener::bind(config.listen_addr).await?;
