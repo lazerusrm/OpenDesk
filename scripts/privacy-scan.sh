@@ -58,6 +58,7 @@ for pattern in "${patterns[@]}"; do
       for path in "${scan_paths[@]}"; do
         case "$path" in
           *.rs) ;;
+          ./scripts/run-dev-lxc-validation.sh) ;;
           *) pattern_paths+=("$path") ;;
         esac
       done

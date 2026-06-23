@@ -189,8 +189,8 @@ async fn device_update_submit(
             device_uuid,
             draft,
             Some(error.to_string()),
-            true,
-            false,
+            !existing.archived,
+            existing.archived,
         )
         .into_response());
     }

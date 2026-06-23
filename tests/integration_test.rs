@@ -22,6 +22,38 @@ async fn test_state() -> AppState {
     }
 }
 
+fn session_cookie_from_response(response: &axum::http::Response<Body>) -> String {
+    let set_cookie = response
+        .headers()
+        .get_all("set-cookie")
+        .iter()
+        .map(|value| value.to_str().expect("cookie header"))
+        .find(|value| value.starts_with("opendesk_session="))
+        .expect("session cookie");
+    set_cookie
+        .split(';')
+        .next()
+        .expect("cookie pair")
+        .to_string()
+}
+
+async fn login_and_get_session_cookie(app: &axum::Router) -> String {
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/login")
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from("username=admin&password=test-password"))
+                .unwrap(),
+        )
+        .await
+        .expect("login response");
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    session_cookie_from_response(&response)
+}
+
 #[tokio::test]
 async fn health_endpoint_returns_ok() {
     let app = build_router(test_state().await);
@@ -47,7 +79,7 @@ async fn login_page_renders_opendesk_form() {
 }
 
 #[tokio::test]
-async fn device_update_preserves_enrollment_metadata() {
+async fn device_update_via_handler_preserves_enrollment_metadata() {
     let state = test_state().await;
     let created = opendesk::repository::enrollment_tokens::create_enrollment_token(
         &state.db,
@@ -60,7 +92,8 @@ async fn device_update_preserves_enrollment_metadata() {
     .expect("create token");
 
     let app = build_router(state.clone());
-    let response = app
+    let checkin = app
+        .clone()
         .oneshot(
             Request::builder()
                 .method("POST")
@@ -82,7 +115,7 @@ async fn device_update_preserves_enrollment_metadata() {
         )
         .await
         .expect("checkin");
-    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert_eq!(checkin.status(), StatusCode::NO_CONTENT);
 
     let device = opendesk::repository::devices::find_device_by_rustdesk_id(
         &state.db,
@@ -92,23 +125,36 @@ async fn device_update_preserves_enrollment_metadata() {
     .expect("lookup")
     .expect("device");
 
-    let merged = opendesk::domain::device::merge_device_update(
-        opendesk::domain::device::DeviceDraft {
-            alias: "Renamed device".to_string(),
-            notes: Some("operator note".to_string()),
-            ..Default::default()
-        },
-        &device,
-    );
-    let updated =
-        opendesk::repository::devices::update_device(&state.db, device.device_uuid, &merged)
-            .await
-            .expect("update");
+    let session_cookie = login_and_get_session_cookie(&app).await;
+    let update = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/devices/{}", device.device_uuid))
+                .header("content-type", "application/x-www-form-urlencoded")
+                .header("cookie", session_cookie)
+                .body(Body::from(
+                    "alias=Renamed+device&notes=operator+note&rustdesk_id=&hostname=&owner=",
+                ))
+                .unwrap(),
+        )
+        .await
+        .expect("device update");
+    assert_eq!(update.status(), StatusCode::SEE_OTHER);
+
+    let updated = opendesk::repository::devices::find_device_by_uuid(
+        &state.db,
+        device.device_uuid,
+    )
+    .await
+    .expect("reload")
+    .expect("updated device");
 
     assert_eq!(updated.alias, "Renamed device");
     assert_eq!(updated.os_family.as_deref(), Some("linux"));
     assert_eq!(updated.architecture.as_deref(), Some("x86_64"));
     assert_eq!(updated.rustdesk_version.as_deref(), Some("1.4.8"));
+    assert_eq!(updated.notes.as_deref(), Some("operator note"));
 }
 
 #[tokio::test]
