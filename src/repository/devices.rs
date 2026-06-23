@@ -2,7 +2,7 @@ use sqlx::SqlitePool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::domain::device::{Device, DeviceDraft};
+use crate::domain::device::{normalize_device_draft, Device, DeviceDraft};
 use crate::time_format::format_timestamp;
 
 type DeviceRow = (
@@ -83,6 +83,7 @@ pub async fn find_device_by_hostname(
 }
 
 pub async fn create_device(pool: &SqlitePool, draft: &DeviceDraft) -> Result<Device, sqlx::Error> {
+    let draft = normalize_device_draft(draft.clone());
     let device_uuid = Uuid::new_v4();
     let now = format_timestamp(OffsetDateTime::now_utc());
     sqlx::query(
@@ -93,7 +94,7 @@ pub async fn create_device(pool: &SqlitePool, draft: &DeviceDraft) -> Result<Dev
     )
     .bind(device_uuid.to_string())
     .bind(draft.rustdesk_id.as_deref())
-    .bind(draft.alias.trim())
+    .bind(&draft.alias)
     .bind(draft.hostname.as_deref())
     .bind(draft.os_family.as_deref())
     .bind(draft.os_version.as_deref())
@@ -116,6 +117,7 @@ pub async fn update_device(
     device_uuid: Uuid,
     draft: &DeviceDraft,
 ) -> Result<Device, sqlx::Error> {
+    let draft = normalize_device_draft(draft.clone());
     let now = format_timestamp(OffsetDateTime::now_utc());
     sqlx::query(
         "UPDATE devices SET
@@ -125,7 +127,7 @@ pub async fn update_device(
          WHERE device_uuid = ?",
     )
     .bind(draft.rustdesk_id.as_deref())
-    .bind(draft.alias.trim())
+    .bind(&draft.alias)
     .bind(draft.hostname.as_deref())
     .bind(draft.os_family.as_deref())
     .bind(draft.os_version.as_deref())
@@ -165,6 +167,7 @@ pub async fn touch_device_checkin(
     device_uuid: Uuid,
     draft: &DeviceDraft,
 ) -> Result<Device, sqlx::Error> {
+    let draft = normalize_device_draft(draft.clone());
     let now = format_timestamp(OffsetDateTime::now_utc());
     sqlx::query(
         "UPDATE devices SET

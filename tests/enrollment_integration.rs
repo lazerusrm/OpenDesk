@@ -162,6 +162,66 @@ async fn enrollment_checkin_updates_existing_device_by_hostname() {
 }
 
 #[tokio::test]
+async fn enrollment_checkin_trims_hostname_whitespace_for_duplicate_detection() {
+    let state = test_state().await;
+    opendesk::repository::devices::create_device(
+        &state.db,
+        &opendesk::domain::device::DeviceDraft {
+            alias: "Whitespace host".to_string(),
+            hostname: Some("ws-trim-dup".to_string()),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("seed device");
+    let created = opendesk::repository::enrollment_tokens::create_enrollment_token(
+        &state.db,
+        "trim-hostname-token",
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("create token");
+    let app = build_router(state.clone());
+    for rustdesk_id in [" 778899001 ", "778899002"] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/enrollments/check-in")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        json!({
+                            "enrollment_token": created.token_value,
+                            "rustdesk_id": rustdesk_id,
+                            "hostname": " ws-trim-dup ",
+                            "os_family": "linux"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .expect("checkin");
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    }
+    let devices = opendesk::repository::devices::list_devices(&state.db)
+        .await
+        .expect("list devices");
+    let hostname_matches: Vec<_> = devices
+        .iter()
+        .filter(|device| device.hostname.as_deref() == Some("ws-trim-dup"))
+        .collect();
+    assert_eq!(hostname_matches.len(), 1);
+    assert_eq!(
+        hostname_matches[0].rustdesk_id.as_deref(),
+        Some("778899002")
+    );
+}
+
+#[tokio::test]
 async fn devices_list_shows_last_checkin_column() {
     let state = test_state().await;
     let created = opendesk::repository::enrollment_tokens::create_enrollment_token(
