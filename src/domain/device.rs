@@ -48,6 +48,28 @@ pub enum DeviceValidationError {
     RustdeskIdTooLong,
 }
 
+pub fn normalize_optional_trimmed(value: Option<String>) -> Option<String> {
+    value
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+pub fn normalize_device_draft(mut draft: DeviceDraft) -> DeviceDraft {
+    draft.alias = draft.alias.trim().to_string();
+    draft.rustdesk_id = normalize_optional_trimmed(draft.rustdesk_id);
+    draft.hostname = normalize_optional_trimmed(draft.hostname);
+    draft.owner = normalize_optional_trimmed(draft.owner);
+    draft.os_family = normalize_optional_trimmed(draft.os_family);
+    draft.os_version = normalize_optional_trimmed(draft.os_version);
+    draft.architecture = normalize_optional_trimmed(draft.architecture);
+    draft.rustdesk_version = normalize_optional_trimmed(draft.rustdesk_version);
+    draft.notes = draft
+        .notes
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    draft
+}
+
 pub fn validate_device_draft(draft: &DeviceDraft) -> Result<(), DeviceValidationError> {
     let alias = draft.alias.trim();
     if alias.is_empty() {
@@ -156,6 +178,19 @@ mod tests {
         let device = sample_device();
         let archived = archive_device(&device);
         assert!(archived.archived);
+    }
+
+    #[test]
+    fn normalize_device_draft_trims_hostname_and_rustdesk_id() {
+        let draft = normalize_device_draft(DeviceDraft {
+            alias: "  Workstation  ".to_string(),
+            rustdesk_id: Some(" 123456789 ".to_string()),
+            hostname: Some(" ws-01 ".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(draft.alias, "Workstation");
+        assert_eq!(draft.rustdesk_id.as_deref(), Some("123456789"));
+        assert_eq!(draft.hostname.as_deref(), Some("ws-01"));
     }
 
     #[test]

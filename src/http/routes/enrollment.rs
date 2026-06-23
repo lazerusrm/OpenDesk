@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
-use crate::domain::device::{validate_device_draft, DeviceDraft};
+use crate::domain::device::{normalize_device_draft, validate_device_draft, DeviceDraft};
 use crate::domain::enrollment_checkin::{
     hostname_lookup_key, select_existing_device_for_checkin, EnrollmentDeviceLookup,
 };
@@ -143,7 +143,7 @@ async fn enrollment_checkin(
         .ok_or(StatusCode::UNAUTHORIZED)?;
     verify_enrollment_token_value(&record, &body.enrollment_token, OffsetDateTime::now_utc())
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
-    let draft = DeviceDraft {
+    let draft = normalize_device_draft(DeviceDraft {
         rustdesk_id: body.rustdesk_id.clone(),
         alias: body
             .hostname
@@ -158,16 +158,16 @@ async fn enrollment_checkin(
         site_uuid: record.site_uuid,
         owner: None,
         notes: None,
-    };
+    });
     validate_device_draft(&draft).map_err(|_| StatusCode::BAD_REQUEST)?;
-    let by_rustdesk_id = if let Some(rustdesk_id) = body.rustdesk_id.as_deref() {
+    let by_rustdesk_id = if let Some(rustdesk_id) = draft.rustdesk_id.as_deref() {
         find_device_by_rustdesk_id(&state.db, rustdesk_id)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     } else {
         None
     };
-    let by_hostname = if let Some(hostname) = hostname_lookup_key(body.hostname.as_deref()) {
+    let by_hostname = if let Some(hostname) = hostname_lookup_key(draft.hostname.as_deref()) {
         find_device_by_hostname(&state.db, &hostname)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?

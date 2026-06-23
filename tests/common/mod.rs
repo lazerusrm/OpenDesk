@@ -1,6 +1,6 @@
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use opendesk::{build_router, AppState};
+use opendesk::AppState;
 use sqlx::sqlite::SqlitePoolOptions;
 use tower::ServiceExt;
 
