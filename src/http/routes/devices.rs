@@ -13,10 +13,14 @@ use uuid::Uuid;
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::device::{
-    device_matches_search_with_site_name, merge_device_update, validate_device_draft, DeviceDraft,
+    device_matches_search_with_metadata, merge_device_update, validate_device_draft, DeviceDraft,
     DeviceSearchQuery,
 };
+use crate::domain::tag::format_tag_names_display;
 use crate::repository::sites::list_sites;
+use crate::repository::tags::{
+    list_device_tag_names_map, list_tag_uuids_for_device, set_device_tags,
+};
 use crate::http::routes::render::render_device_form;
 use crate::http::session::{require_user, AuthenticatedUser};
 use crate::http::views::{DeviceRowView, DevicesListView};
@@ -60,6 +64,9 @@ async fn devices_list(
         .iter()
         .map(|site| (site.site_uuid, site.name.clone()))
         .collect();
+    let device_tag_names = list_device_tag_names_map(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     let devices = list_devices(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -69,19 +76,30 @@ async fn devices_list(
             let site_name = device
                 .site_uuid
                 .and_then(|uuid| site_names.get(&uuid).map(String::as_str));
-            device_matches_search_with_site_name(device, &search, site_name)
+            let tag_names: Vec<&str> = device_tag_names
+                .get(&device.device_uuid)
+                .map(|names| names.iter().map(String::as_str).collect())
+                .unwrap_or_default();
+            device_matches_search_with_metadata(device, &search, site_name, &tag_names)
         })
-        .map(|device| DeviceRowView {
-            device_uuid: device.device_uuid.to_string(),
-            alias: device.alias,
-            site_display: device
-                .site_uuid
-                .and_then(|uuid| site_names.get(&uuid).cloned())
-                .unwrap_or_else(|| "-".to_string()),
-            rustdesk_id_display: device.rustdesk_id.unwrap_or_else(|| "-".to_string()),
-            hostname_display: device.hostname.unwrap_or_else(|| "-".to_string()),
-            last_checkin_display: format_last_checkin_display(device.last_checkin_at.as_deref()),
-            archived_display: if device.archived { "yes" } else { "no" }.to_string(),
+        .map(|device| {
+            let tag_names = device_tag_names
+                .get(&device.device_uuid)
+                .cloned()
+                .unwrap_or_default();
+            DeviceRowView {
+                device_uuid: device.device_uuid.to_string(),
+                alias: device.alias,
+                site_display: device
+                    .site_uuid
+                    .and_then(|uuid| site_names.get(&uuid).cloned())
+                    .unwrap_or_else(|| "-".to_string()),
+                tags_display: format_tag_names_display(&tag_names),
+                rustdesk_id_display: device.rustdesk_id.unwrap_or_else(|| "-".to_string()),
+                hostname_display: device.hostname.unwrap_or_else(|| "-".to_string()),
+                last_checkin_display: format_last_checkin_display(device.last_checkin_at.as_deref()),
+                archived_display: if device.archived { "yes" } else { "no" }.to_string(),
+            }
         })
         .collect();
     let view = DevicesListView {
@@ -104,6 +122,7 @@ async fn device_new_page(State(state): State<AppState>, jar: CookieJar) -> Resul
         "/devices",
         Uuid::nil(),
         DeviceDraft::default(),
+        &[],
         None,
         false,
         false,
@@ -135,12 +154,16 @@ async fn device_edit_page(
         owner: device.owner,
         notes: device.notes,
     };
+    let selected_tag_uuids = list_tag_uuids_for_device(&state.db, device_uuid)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     Ok(render_device_form(
         &state,
         "Edit device",
         &format!("/devices/{device_uuid}"),
         device_uuid,
         draft,
+        &selected_tag_uuids,
         None,
         !device.archived,
         device.archived,
@@ -148,6 +171,23 @@ async fn device_edit_page(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
     .into_response())
+}
+
+fn deserialize_form_string_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrVec {
+        One(String),
+        Many(Vec<String>),
+    }
+
+    Ok(match StringOrVec::deserialize(deserializer)? {
+        StringOrVec::One(value) => vec![value],
+        StringOrVec::Many(values) => values,
+    })
 }
 
 #[derive(Deserialize)]
@@ -158,6 +198,15 @@ pub struct DeviceForm {
     owner: Option<String>,
     notes: Option<String>,
     site_uuid: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_form_string_vec")]
+    tag_uuids: Vec<String>,
+}
+
+pub fn parse_tag_uuids_from_form(tag_uuids: &[String]) -> Vec<Uuid> {
+    tag_uuids
+        .iter()
+        .filter_map(|value| Uuid::parse_str(value.trim()).ok())
+        .collect()
 }
 
 pub fn device_form_to_draft(form: DeviceForm) -> DeviceDraft {
@@ -181,6 +230,7 @@ async fn device_create_submit(
     Form(form): Form<DeviceForm>,
 ) -> Result<Response, Response> {
     let user = require_user(&state, &jar).await?;
+    let tag_uuids = parse_tag_uuids_from_form(&form.tag_uuids);
     let draft = device_form_to_draft(form);
     if let Err(error) = validate_device_draft(&draft) {
         return Ok(render_device_form(
@@ -189,6 +239,7 @@ async fn device_create_submit(
             "/devices",
             Uuid::nil(),
             draft,
+            &tag_uuids,
             Some(error.to_string()),
             false,
             false,
@@ -198,6 +249,9 @@ async fn device_create_submit(
         .into_response());
     }
     let device = create_device(&state.db, &draft)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    set_device_tags(&state.db, device.device_uuid, &tag_uuids)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     write_device_audit(&state, &user, "device_create", &device.device_uuid).await;
@@ -215,6 +269,7 @@ async fn device_update_submit(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
+    let tag_uuids = parse_tag_uuids_from_form(&form.tag_uuids);
     let draft = merge_device_update(device_form_to_draft(form), &existing);
     if let Err(error) = validate_device_draft(&draft) {
         return Ok(render_device_form(
@@ -223,6 +278,7 @@ async fn device_update_submit(
             &format!("/devices/{device_uuid}"),
             device_uuid,
             draft,
+            &tag_uuids,
             Some(error.to_string()),
             !existing.archived,
             existing.archived,
@@ -232,6 +288,9 @@ async fn device_update_submit(
         .into_response());
     }
     let device = update_device(&state.db, device_uuid, &draft)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    set_device_tags(&state.db, device_uuid, &tag_uuids)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     write_device_audit(&state, &user, "device_update", &device.device_uuid).await;
@@ -262,6 +321,21 @@ async fn device_unarchive(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     write_device_audit(&state, &user, "device_unarchive", &device_uuid).await;
     Ok(Redirect::to(&format!("/devices/{device_uuid}")).into_response())
+}
+
+#[cfg(test)]
+mod form_tests {
+    use super::DeviceForm;
+
+    #[test]
+    fn deserializes_single_tag_uuid_field() {
+        let body = format!(
+            "alias=Tagged+Workstation&tag_uuids={}",
+            uuid::Uuid::new_v4()
+        );
+        let form: DeviceForm = serde_urlencoded::from_str(&body).expect("deserialize form");
+        assert_eq!(form.tag_uuids.len(), 1);
+    }
 }
 
 async fn write_device_audit(

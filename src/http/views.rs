@@ -22,10 +22,33 @@ pub struct DeviceRowView {
     pub device_uuid: String,
     pub alias: String,
     pub site_display: String,
+    pub tags_display: String,
     pub rustdesk_id_display: String,
     pub hostname_display: String,
     pub last_checkin_display: String,
     pub archived_display: String,
+}
+
+#[derive(Clone)]
+pub struct TagOptionView {
+    pub tag_uuid: String,
+    pub name: String,
+    pub selected: bool,
+}
+
+#[derive(Template)]
+#[template(path = "tags.html")]
+pub struct TagsListView {
+    pub title: String,
+    pub show_nav: bool,
+    pub tags: Vec<TagRowView>,
+    pub error_message: Option<String>,
+}
+
+#[derive(Clone)]
+pub struct TagRowView {
+    pub tag_uuid: String,
+    pub name: String,
 }
 
 #[derive(Template)]
@@ -64,6 +87,7 @@ pub struct DeviceFormView {
     pub owner: String,
     pub notes: String,
     pub site_options: Vec<SiteOptionView>,
+    pub tag_options: Vec<TagOptionView>,
     pub error_message: Option<String>,
     pub show_archive_actions: bool,
     pub show_unarchive_actions: bool,

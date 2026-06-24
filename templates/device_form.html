@@ -26,6 +26,16 @@
       {% endfor %}
     </select>
 
+    <fieldset>
+      <legend>Tags</legend>
+      {% for tag in tag_options %}
+      <label class="checkbox-row">
+        <input type="checkbox" name="tag_uuids" value="{{ tag.tag_uuid }}" {% if tag.selected %}checked{% endif %}>
+        {{ tag.name }}
+      </label>
+      {% endfor %}
+    </fieldset>
+
     <label for="notes">Notes</label>
     <textarea id="notes" name="notes" rows="4">{{ notes }}</textarea>
 

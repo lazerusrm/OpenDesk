@@ -9,10 +9,11 @@ use crate::domain::enrollment_token::EnrollmentTokenRecord;
 use crate::domain::server_config::ServerConfig;
 use crate::http::views::{
     DeviceFormView, EnrollmentTokenRowView, EnrollmentTokensView, LoginView, ServerConfigView,
-    SiteOptionView,
+    SiteOptionView, TagOptionView,
 };
 use crate::repository::enrollment_tokens::list_enrollment_tokens;
 use crate::repository::sites::list_sites;
+use crate::repository::tags::list_tags;
 
 pub fn render_login(error_message: Option<String>) -> Html<String> {
     let view = LoginView {
@@ -29,6 +30,7 @@ pub async fn render_device_form(
     form_action: &str,
     device_uuid: Uuid,
     draft: DeviceDraft,
+    selected_tag_uuids: &[Uuid],
     error_message: Option<String>,
     show_archive_actions: bool,
     show_unarchive_actions: bool,
@@ -40,6 +42,15 @@ pub async fn render_device_form(
             site_uuid: site.site_uuid.to_string(),
             name: site.name,
             selected: Some(site.site_uuid) == draft.site_uuid,
+        })
+        .collect();
+    let tags = list_tags(&state.db).await?;
+    let tag_options = tags
+        .into_iter()
+        .map(|tag| TagOptionView {
+            tag_uuid: tag.tag_uuid.to_string(),
+            name: tag.name,
+            selected: selected_tag_uuids.contains(&tag.tag_uuid),
         })
         .collect();
     let view = DeviceFormView {
@@ -54,6 +65,7 @@ pub async fn render_device_form(
         owner: draft.owner.unwrap_or_default(),
         notes: draft.notes.unwrap_or_default(),
         site_options,
+        tag_options,
         error_message,
         show_archive_actions,
         show_unarchive_actions,

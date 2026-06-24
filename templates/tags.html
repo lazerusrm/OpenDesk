@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Tags</h1>
+  {% if error_message.is_some() %}
+  <p class="error">{{ error_message.as_ref().unwrap() }}</p>
+  {% endif %}
+  <form method="post" action="/tags">
+    <label for="name">New tag name</label>
+    <input id="name" name="name" required>
+    <button type="submit">Create tag</button>
+  </form>
+</section>
+<section class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Tag UUID</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tag in tags %}
+      <tr>
+        <td>{{ tag.name }}</td>
+        <td><code>{{ tag.tag_uuid }}</code></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -40,7 +40,7 @@ Status legend:
 - [x] Device archive/unarchive.
 - [x] Device search by alias, hostname, RustDesk ID, site, tag.
 - [x] Site/location management.
-- [ ] Tags.
+- [x] Tags.
 - [ ] Notes.
 - [ ] RustDesk ID copy button.
 - [ ] Connection helper action.
