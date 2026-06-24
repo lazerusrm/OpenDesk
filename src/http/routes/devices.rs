@@ -13,8 +13,8 @@ use uuid::Uuid;
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::device::{
-    device_matches_search_with_metadata, format_notes_display, merge_device_update,
-    notes_list_title, validate_device_draft, DeviceDraft, DeviceSearchQuery,
+    devices_for_default_list, format_notes_display, merge_device_update, notes_list_title,
+    validate_device_draft, DeviceDraft, DeviceSearchQuery,
 };
 use crate::domain::tag::format_tag_names_display;
 use crate::repository::sites::list_sites;
@@ -70,18 +70,9 @@ async fn devices_list(
     let devices = list_devices(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
-    let rows = devices
+    let listed = devices_for_default_list(&devices, &search, &site_names, &device_tag_names);
+    let rows = listed
         .into_iter()
-        .filter(|device| {
-            let site_name = device
-                .site_uuid
-                .and_then(|uuid| site_names.get(&uuid).map(String::as_str));
-            let tag_names: Vec<&str> = device_tag_names
-                .get(&device.device_uuid)
-                .map(|names| names.iter().map(String::as_str).collect())
-                .unwrap_or_default();
-            device_matches_search_with_metadata(device, &search, site_name, &tag_names)
-        })
         .map(|device| {
             let tag_names = device_tag_names
                 .get(&device.device_uuid)
@@ -89,7 +80,7 @@ async fn devices_list(
                 .unwrap_or_default();
             DeviceRowView {
                 device_uuid: device.device_uuid.to_string(),
-                alias: device.alias,
+                alias: device.alias.clone(),
                 site_display: device
                     .site_uuid
                     .and_then(|uuid| site_names.get(&uuid).cloned())
@@ -97,10 +88,16 @@ async fn devices_list(
                 tags_display: format_tag_names_display(&tag_names),
                 notes_display: format_notes_display(device.notes.as_deref()),
                 notes_title: notes_list_title(device.notes.as_deref()),
-                rustdesk_id_display: device.rustdesk_id.unwrap_or_else(|| "-".to_string()),
-                hostname_display: device.hostname.unwrap_or_else(|| "-".to_string()),
+                rustdesk_id_display: device
+                    .rustdesk_id
+                    .clone()
+                    .unwrap_or_else(|| "-".to_string()),
+                hostname_display: device
+                    .hostname
+                    .clone()
+                    .unwrap_or_else(|| "-".to_string()),
                 last_checkin_display: format_last_checkin_display(device.last_checkin_at.as_deref()),
-                archived_display: if device.archived { "yes" } else { "no" }.to_string(),
+                archived_display: "no".to_string(),
             }
         })
         .collect();

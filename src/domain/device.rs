@@ -119,6 +119,37 @@ pub fn device_matches_search(device: &Device, query: &DeviceSearchQuery) -> bool
     fields.iter().any(|field| field.to_ascii_lowercase().contains(&term))
 }
 
+pub fn device_in_default_list(
+    device: &Device,
+    query: &DeviceSearchQuery,
+    site_name: Option<&str>,
+    tag_names: &[&str],
+) -> bool {
+    !device.archived
+        && device_matches_search_with_metadata(device, query, site_name, tag_names)
+}
+
+pub fn devices_for_default_list<'a>(
+    devices: &'a [Device],
+    query: &DeviceSearchQuery,
+    site_names: &std::collections::HashMap<uuid::Uuid, String>,
+    device_tag_names: &std::collections::HashMap<uuid::Uuid, Vec<String>>,
+) -> Vec<&'a Device> {
+    devices
+        .iter()
+        .filter(|device| {
+            let site_name = device
+                .site_uuid
+                .and_then(|uuid| site_names.get(&uuid).map(String::as_str));
+            let tag_names: Vec<&str> = device_tag_names
+                .get(&device.device_uuid)
+                .map(|names| names.iter().map(String::as_str).collect())
+                .unwrap_or_default();
+            device_in_default_list(device, query, site_name, &tag_names)
+        })
+        .collect()
+}
+
 pub fn device_matches_search_with_metadata(
     device: &Device,
     query: &DeviceSearchQuery,
@@ -212,6 +243,37 @@ mod tests {
             validate_device_draft(&draft),
             Err(DeviceValidationError::EmptyAlias)
         );
+    }
+
+    #[test]
+    fn devices_for_default_list_excludes_archived_devices() {
+        let mut active = sample_device();
+        active.alias = "Active Workstation".to_string();
+        let mut archived = sample_device();
+        archived.alias = "Archived Workstation".to_string();
+        archived.archived = true;
+        let devices = vec![active, archived];
+        let query = DeviceSearchQuery::default();
+        let site_names = std::collections::HashMap::new();
+        let tag_names = std::collections::HashMap::new();
+        let listed = devices_for_default_list(&devices, &query, &site_names, &tag_names);
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].alias, "Active Workstation");
+    }
+
+    #[test]
+    fn devices_for_default_list_hides_archived_even_when_search_matches() {
+        let mut archived = sample_device();
+        archived.alias = "Archived Workstation".to_string();
+        archived.archived = true;
+        let devices = vec![archived];
+        let query = DeviceSearchQuery {
+            term: "Archived".to_string(),
+        };
+        let site_names = std::collections::HashMap::new();
+        let tag_names = std::collections::HashMap::new();
+        let listed = devices_for_default_list(&devices, &query, &site_names, &tag_names);
+        assert!(listed.is_empty());
     }
 
     #[test]
