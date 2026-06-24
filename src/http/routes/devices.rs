@@ -13,8 +13,10 @@ use uuid::Uuid;
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::device::{
-    device_matches_search, merge_device_update, validate_device_draft, DeviceDraft, DeviceSearchQuery,
+    device_matches_search_with_site_name, merge_device_update, validate_device_draft, DeviceDraft,
+    DeviceSearchQuery,
 };
+use crate::repository::sites::list_sites;
 use crate::http::routes::render::render_device_form;
 use crate::http::session::{require_user, AuthenticatedUser};
 use crate::http::views::{DeviceRowView, DevicesListView};
@@ -51,15 +53,31 @@ async fn devices_list(
     let search = DeviceSearchQuery {
         term: search_term.clone(),
     };
+    let sites = list_sites(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    let site_names: std::collections::HashMap<uuid::Uuid, String> = sites
+        .iter()
+        .map(|site| (site.site_uuid, site.name.clone()))
+        .collect();
     let devices = list_devices(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     let rows = devices
         .into_iter()
-        .filter(|device| device_matches_search(device, &search))
+        .filter(|device| {
+            let site_name = device
+                .site_uuid
+                .and_then(|uuid| site_names.get(&uuid).map(String::as_str));
+            device_matches_search_with_site_name(device, &search, site_name)
+        })
         .map(|device| DeviceRowView {
             device_uuid: device.device_uuid.to_string(),
             alias: device.alias,
+            site_display: device
+                .site_uuid
+                .and_then(|uuid| site_names.get(&uuid).cloned())
+                .unwrap_or_else(|| "-".to_string()),
             rustdesk_id_display: device.rustdesk_id.unwrap_or_else(|| "-".to_string()),
             hostname_display: device.hostname.unwrap_or_else(|| "-".to_string()),
             last_checkin_display: format_last_checkin_display(device.last_checkin_at.as_deref()),
@@ -81,6 +99,7 @@ async fn devices_list(
 async fn device_new_page(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
     let _user = require_user(&state, &jar).await?;
     Ok(render_device_form(
+        &state,
         "New device",
         "/devices",
         Uuid::nil(),
@@ -89,6 +108,8 @@ async fn device_new_page(State(state): State<AppState>, jar: CookieJar) -> Resul
         false,
         false,
     )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
     .into_response())
 }
 
@@ -115,6 +136,7 @@ async fn device_edit_page(
         notes: device.notes,
     };
     Ok(render_device_form(
+        &state,
         "Edit device",
         &format!("/devices/{device_uuid}"),
         device_uuid,
@@ -123,6 +145,8 @@ async fn device_edit_page(
         !device.archived,
         device.archived,
     )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
     .into_response())
 }
 
@@ -133,6 +157,7 @@ pub struct DeviceForm {
     hostname: Option<String>,
     owner: Option<String>,
     notes: Option<String>,
+    site_uuid: Option<String>,
 }
 
 pub fn device_form_to_draft(form: DeviceForm) -> DeviceDraft {
@@ -142,6 +167,10 @@ pub fn device_form_to_draft(form: DeviceForm) -> DeviceDraft {
         hostname: form.hostname.filter(|value| !value.trim().is_empty()),
         owner: form.owner.filter(|value| !value.trim().is_empty()),
         notes: form.notes.filter(|value| !value.trim().is_empty()),
+        site_uuid: form
+            .site_uuid
+            .filter(|value| !value.trim().is_empty())
+            .and_then(|value| Uuid::parse_str(value.trim()).ok()),
         ..Default::default()
     }
 }
@@ -155,6 +184,7 @@ async fn device_create_submit(
     let draft = device_form_to_draft(form);
     if let Err(error) = validate_device_draft(&draft) {
         return Ok(render_device_form(
+            &state,
             "New device",
             "/devices",
             Uuid::nil(),
@@ -163,6 +193,8 @@ async fn device_create_submit(
             false,
             false,
         )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .into_response());
     }
     let device = create_device(&state.db, &draft)
@@ -186,6 +218,7 @@ async fn device_update_submit(
     let draft = merge_device_update(device_form_to_draft(form), &existing);
     if let Err(error) = validate_device_draft(&draft) {
         return Ok(render_device_form(
+            &state,
             "Edit device",
             &format!("/devices/{device_uuid}"),
             device_uuid,
@@ -194,6 +227,8 @@ async fn device_update_submit(
             !existing.archived,
             existing.archived,
         )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .into_response());
     }
     let device = update_device(&state.db, device_uuid, &draft)

@@ -21,10 +21,33 @@ pub struct DevicesListView {
 pub struct DeviceRowView {
     pub device_uuid: String,
     pub alias: String,
+    pub site_display: String,
     pub rustdesk_id_display: String,
     pub hostname_display: String,
     pub last_checkin_display: String,
     pub archived_display: String,
+}
+
+#[derive(Template)]
+#[template(path = "sites.html")]
+pub struct SitesListView {
+    pub title: String,
+    pub show_nav: bool,
+    pub sites: Vec<SiteRowView>,
+    pub error_message: Option<String>,
+}
+
+#[derive(Clone)]
+pub struct SiteRowView {
+    pub site_uuid: String,
+    pub name: String,
+}
+
+#[derive(Clone)]
+pub struct SiteOptionView {
+    pub site_uuid: String,
+    pub name: String,
+    pub selected: bool,
 }
 
 #[derive(Template)]
@@ -40,6 +63,7 @@ pub struct DeviceFormView {
     pub hostname: String,
     pub owner: String,
     pub notes: String,
+    pub site_options: Vec<SiteOptionView>,
     pub error_message: Option<String>,
     pub show_archive_actions: bool,
     pub show_unarchive_actions: bool,

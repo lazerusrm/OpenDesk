@@ -4,6 +4,7 @@ mod devices;
 mod enrollment;
 mod render;
 mod settings;
+mod sites;
 
 use axum::{routing::get, Router};
 use tower_http::services::ServeDir;
@@ -15,6 +16,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(auth::routes())
         .merge(devices::routes())
         .merge(settings::routes())
+        .merge(sites::routes())
         .merge(deployment::routes())
         .merge(enrollment::routes())
         .route("/health", get(|| async { "ok" }))

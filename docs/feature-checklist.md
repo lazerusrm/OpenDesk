@@ -39,7 +39,7 @@ Status legend:
 - [x] Device CRUD.
 - [x] Device archive/unarchive.
 - [x] Device search by alias, hostname, RustDesk ID, site, tag.
-- [ ] Site/location management.
+- [x] Site/location management.
 - [ ] Tags.
 - [ ] Notes.
 - [ ] RustDesk ID copy button.
