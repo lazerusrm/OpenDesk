@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Sites</h1>
+  {% if error_message.is_some() %}
+  <p class="error">{{ error_message.as_ref().unwrap() }}</p>
+  {% endif %}
+  <form method="post" action="/sites">
+    <label for="name">New site name</label>
+    <input id="name" name="name" required>
+    <button type="submit">Create site</button>
+  </form>
+</section>
+<section class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Site UUID</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for site in sites %}
+      <tr>
+        <td>{{ site.name }}</td>
+        <td><code>{{ site.site_uuid }}</code></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -18,6 +18,14 @@
     <label for="owner">Owner</label>
     <input id="owner" name="owner" value="{{ owner }}">
 
+    <label for="site_uuid">Site</label>
+    <select id="site_uuid" name="site_uuid">
+      <option value="">Unassigned</option>
+      {% for site in site_options %}
+      <option value="{{ site.site_uuid }}" {% if site.selected %}selected{% endif %}>{{ site.name }}</option>
+      {% endfor %}
+    </select>
+
     <label for="notes">Notes</label>
     <textarea id="notes" name="notes" rows="4">{{ notes }}</textarea>
 

@@ -102,6 +102,23 @@ pub fn device_matches_search(device: &Device, query: &DeviceSearchQuery) -> bool
     fields.iter().any(|field| field.to_ascii_lowercase().contains(&term))
 }
 
+pub fn device_matches_search_with_site_name(
+    device: &Device,
+    query: &DeviceSearchQuery,
+    site_name: Option<&str>,
+) -> bool {
+    if device_matches_search(device, query) {
+        return true;
+    }
+    let term = query.term.trim().to_ascii_lowercase();
+    if term.is_empty() {
+        return true;
+    }
+    site_name
+        .map(|name| name.to_ascii_lowercase().contains(&term))
+        .unwrap_or(false)
+}
+
 pub fn archive_device(device: &Device) -> Device {
     let mut updated = device.clone();
     updated.archived = true;
@@ -126,7 +143,7 @@ pub fn merge_device_update(form: DeviceDraft, existing: &Device) -> DeviceDraft 
         os_version: existing.os_version.clone(),
         architecture: existing.architecture.clone(),
         rustdesk_version: existing.rustdesk_version.clone(),
-        site_uuid: existing.site_uuid,
+        site_uuid: form.site_uuid.or(existing.site_uuid),
     }
 }
 
@@ -162,6 +179,19 @@ mod tests {
             validate_device_draft(&draft),
             Err(DeviceValidationError::EmptyAlias)
         );
+    }
+
+    #[test]
+    fn device_matches_search_includes_site_name() {
+        let device = sample_device();
+        let query = DeviceSearchQuery {
+            term: "lab floor".to_string(),
+        };
+        assert!(device_matches_search_with_site_name(
+            &device,
+            &query,
+            Some("Main Lab Floor")
+        ));
     }
 
     #[test]

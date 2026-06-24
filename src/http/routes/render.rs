@@ -9,8 +9,10 @@ use crate::domain::enrollment_token::EnrollmentTokenRecord;
 use crate::domain::server_config::ServerConfig;
 use crate::http::views::{
     DeviceFormView, EnrollmentTokenRowView, EnrollmentTokensView, LoginView, ServerConfigView,
+    SiteOptionView,
 };
 use crate::repository::enrollment_tokens::list_enrollment_tokens;
+use crate::repository::sites::list_sites;
 
 pub fn render_login(error_message: Option<String>) -> Html<String> {
     let view = LoginView {
@@ -21,7 +23,8 @@ pub fn render_login(error_message: Option<String>) -> Html<String> {
     Html(view.render().expect("render login"))
 }
 
-pub fn render_device_form(
+pub async fn render_device_form(
+    state: &AppState,
     heading: &str,
     form_action: &str,
     device_uuid: Uuid,
@@ -29,7 +32,16 @@ pub fn render_device_form(
     error_message: Option<String>,
     show_archive_actions: bool,
     show_unarchive_actions: bool,
-) -> Html<String> {
+) -> Result<Html<String>, sqlx::Error> {
+    let sites = list_sites(&state.db).await?;
+    let site_options = sites
+        .into_iter()
+        .map(|site| SiteOptionView {
+            site_uuid: site.site_uuid.to_string(),
+            name: site.name,
+            selected: Some(site.site_uuid) == draft.site_uuid,
+        })
+        .collect();
     let view = DeviceFormView {
         title: heading.to_string(),
         show_nav: true,
@@ -41,11 +53,12 @@ pub fn render_device_form(
         hostname: draft.hostname.unwrap_or_default(),
         owner: draft.owner.unwrap_or_default(),
         notes: draft.notes.unwrap_or_default(),
+        site_options,
         error_message,
         show_archive_actions,
         show_unarchive_actions,
     };
-    Html(view.render().expect("render device form"))
+    Ok(Html(view.render().expect("render device form")))
 }
 
 pub fn render_server_config(

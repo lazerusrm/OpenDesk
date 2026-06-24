@@ -14,6 +14,7 @@
     <thead>
       <tr>
         <th>Alias</th>
+        <th>Site</th>
         <th>RustDesk ID</th>
         <th>Hostname</th>
         <th>Last check-in</th>
@@ -25,6 +26,7 @@
       {% for device in devices %}
       <tr>
         <td>{{ device.alias }}</td>
+        <td>{{ device.site_display }}</td>
         <td>{{ device.rustdesk_id_display }}</td>
         <td>{{ device.hostname_display }}</td>
         <td>{{ device.last_checkin_display }}</td>
