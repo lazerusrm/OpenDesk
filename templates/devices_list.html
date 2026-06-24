@@ -16,6 +16,7 @@
         <th>Alias</th>
         <th>Site</th>
         <th>Tags</th>
+        <th>Notes</th>
         <th>RustDesk ID</th>
         <th>Hostname</th>
         <th>Last check-in</th>
@@ -29,6 +30,7 @@
         <td>{{ device.alias }}</td>
         <td>{{ device.site_display }}</td>
         <td>{{ device.tags_display }}</td>
+        <td{% if device.notes_title != "" %} title="{{ device.notes_title }}"{% endif %}>{{ device.notes_display }}</td>
         <td>{{ device.rustdesk_id_display }}</td>
         <td>{{ device.hostname_display }}</td>
         <td>{{ device.last_checkin_display }}</td>

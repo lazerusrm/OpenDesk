@@ -23,6 +23,8 @@ pub struct DeviceRowView {
     pub alias: String,
     pub site_display: String,
     pub tags_display: String,
+    pub notes_display: String,
+    pub notes_title: String,
     pub rustdesk_id_display: String,
     pub hostname_display: String,
     pub last_checkin_display: String,
