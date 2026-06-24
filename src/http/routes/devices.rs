@@ -22,6 +22,7 @@ use crate::repository::sites::list_sites;
 use crate::repository::tags::{
     list_device_tag_names_map, list_tag_uuids_for_device, set_device_tags,
 };
+use crate::http::routes::device_export::export_csv_href;
 use crate::http::routes::render::render_device_form;
 use crate::http::session::{require_user, AuthenticatedUser};
 use crate::http::views::{DeviceRowView, DevicesListView};
@@ -33,6 +34,7 @@ use crate::repository::devices::{
 
 pub fn routes() -> Router<AppState> {
     Router::new()
+        .merge(super::device_export::routes())
         .route("/devices", get(devices_list).post(device_create_submit))
         .route("/devices/new", get(device_new_page))
         .route(
@@ -107,7 +109,8 @@ async fn devices_list(
     let view = DevicesListView {
         title: "Devices".to_string(),
         show_nav: true,
-        search_term,
+        search_term: search_term.clone(),
+        export_csv_href: export_csv_href(&search_term),
         devices: rows,
     };
     let html = view

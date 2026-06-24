@@ -7,7 +7,7 @@ This document maps replacement requirements to validation coverage. It should be
 | Requirement | Validation Coverage | Notes |
 |---|---|---|
 | PR-001 Web admin console | C-001 through C-010 | Covers auth, device workflows, export, audit, health, user admin, and deployment UI. |
-| PR-002 Device inventory | C-002, C-003, C-004, C-005, C-006 | Inventory export included. |
+| PR-002 Device inventory | C-002, C-003, C-004, C-005, C-006 | Device CSV export at `/devices/export.csv` covered by `device_csv` unit tests and `device_csv_export_integration` tests; respects default-list archive exclusion and current search term. |
 | PR-003 Address-book workflow | R-001 through R-006, CUT-003 | RustDesk ID copy button on device list and edit form covered by `rustdesk_id_copy_integration` tests (R-001 copy ID validation). Pilot workflow evidence still required for cutover. |
 | PR-004 Sites/tags/notes/archive | C-003, C-004, C-005 | Site CRUD + device assignment covered by sites_integration tests; tag CRUD + device tag assignment + tag search covered by tags_integration tests; notes edit persistence covered by integration_test and notes list display/search covered by notes_integration tests; default list excludes archived devices via `devices_for_default_list` unit tests, `devices_list_contract` integration test, and launch seed archive check. |
 | PR-005 Client delivery | D-001 through D-010 | Must pass for required OSes before cutover. |

@@ -44,7 +44,7 @@ Status legend:
 - [x] Notes.
 - [x] RustDesk ID copy button.
 - [ ] Connection helper action.
-- [ ] CSV export.
+- [x] CSV export.
 - [ ] JSON backup export.
 - [ ] JSON backup restore.
 
