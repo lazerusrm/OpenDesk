@@ -10,7 +10,12 @@
     <input id="alias" name="alias" value="{{ alias }}" required>
 
     <label for="rustdesk_id">RustDesk ID</label>
-    <input id="rustdesk_id" name="rustdesk_id" value="{{ rustdesk_id }}">
+    <div class="input-with-copy">
+      <input id="rustdesk_id" name="rustdesk_id" value="{{ rustdesk_id }}">
+      {% if show_rustdesk_id_copy %}
+      <button type="button" class="copy-button" data-copy-input="rustdesk_id">Copy</button>
+      {% endif %}
+    </div>
 
     <label for="hostname">Hostname</label>
     <input id="hostname" name="hostname" value="{{ hostname }}">

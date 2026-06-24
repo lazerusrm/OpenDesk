@@ -1,5 +1,6 @@
 pub mod audit_event;
 pub mod device;
+pub mod device_list;
 pub mod enrollment_checkin;
 pub mod enrollment_token;
 pub mod site;

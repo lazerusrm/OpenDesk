@@ -42,7 +42,7 @@ Status legend:
 - [x] Site/location management.
 - [x] Tags.
 - [x] Notes.
-- [ ] RustDesk ID copy button.
+- [x] RustDesk ID copy button.
 - [ ] Connection helper action.
 - [ ] CSV export.
 - [ ] JSON backup export.

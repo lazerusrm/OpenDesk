@@ -31,7 +31,12 @@
         <td>{{ device.site_display }}</td>
         <td>{{ device.tags_display }}</td>
         <td{% if device.notes_title != "" %} title="{{ device.notes_title }}"{% endif %}>{{ device.notes_display }}</td>
-        <td>{{ device.rustdesk_id_display }}</td>
+        <td class="rustdesk-id-cell">
+          <span>{{ device.rustdesk_id_display }}</span>
+          {% if device.rustdesk_id_copy_text != "" %}
+          <button type="button" class="copy-button" data-copy-text="{{ device.rustdesk_id_copy_text }}">Copy</button>
+          {% endif %}
+        </td>
         <td>{{ device.hostname_display }}</td>
         <td>{{ device.last_checkin_display }}</td>
         <td>{{ device.archived_display }}</td>

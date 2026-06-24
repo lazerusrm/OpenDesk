@@ -83,3 +83,24 @@ button,
 .inline-form {
   display: inline;
 }
+
+.rustdesk-id-cell {
+  white-space: nowrap;
+}
+
+.input-with-copy {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.input-with-copy input {
+  flex: 1;
+}
+
+.copy-button {
+  margin-top: 0;
+  padding: 0.25rem 0.55rem;
+  background: #4b5563;
+  font-size: 0.85rem;
+}

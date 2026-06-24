@@ -12,9 +12,10 @@ use uuid::Uuid;
 
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
-use crate::domain::device::{
-    devices_for_default_list, format_notes_display, merge_device_update, notes_list_title,
-    validate_device_draft, DeviceDraft, DeviceSearchQuery,
+use crate::domain::device::{merge_device_update, validate_device_draft, DeviceDraft};
+use crate::domain::device_list::{
+    devices_for_default_list, format_notes_display, notes_list_title, rustdesk_id_copy_text,
+    DeviceSearchQuery,
 };
 use crate::domain::tag::format_tag_names_display;
 use crate::repository::sites::list_sites;
@@ -92,6 +93,8 @@ async fn devices_list(
                     .rustdesk_id
                     .clone()
                     .unwrap_or_else(|| "-".to_string()),
+                rustdesk_id_copy_text: rustdesk_id_copy_text(device.rustdesk_id.as_deref())
+                    .unwrap_or_default(),
                 hostname_display: device
                     .hostname
                     .clone()
