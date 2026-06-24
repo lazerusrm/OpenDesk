@@ -9,7 +9,7 @@ This document maps replacement requirements to validation coverage. It should be
 | PR-001 Web admin console | C-001 through C-010 | Covers auth, device workflows, export, audit, health, user admin, and deployment UI. |
 | PR-002 Device inventory | C-002, C-003, C-004, C-005, C-006 | Inventory export included. |
 | PR-003 Address-book workflow | R-001 through R-006, CUT-003 | Requires pilot workflow evidence. |
-| PR-004 Sites/tags/notes/archive | C-003, C-004, C-005 | Site CRUD + device assignment covered by sites_integration tests. |
+| PR-004 Sites/tags/notes/archive | C-003, C-004, C-005 | Site CRUD + device assignment covered by sites_integration tests; tag CRUD + device tag assignment + tag search covered by tags_integration tests. |
 | PR-005 Client delivery | D-001 through D-010 | Must pass for required OSes before cutover. |
 | PR-006 Endpoint self-registration | E-001 through E-007 | E-002/E-003/E-004 covered by enrollment API, generated Linux script, and integration tests. |
 | PR-007 Server health | S-001 through S-005, C-008 | UDP reachability may need documented exception. |

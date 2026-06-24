@@ -102,10 +102,11 @@ pub fn device_matches_search(device: &Device, query: &DeviceSearchQuery) -> bool
     fields.iter().any(|field| field.to_ascii_lowercase().contains(&term))
 }
 
-pub fn device_matches_search_with_site_name(
+pub fn device_matches_search_with_metadata(
     device: &Device,
     query: &DeviceSearchQuery,
     site_name: Option<&str>,
+    tag_names: &[&str],
 ) -> bool {
     if device_matches_search(device, query) {
         return true;
@@ -114,9 +115,23 @@ pub fn device_matches_search_with_site_name(
     if term.is_empty() {
         return true;
     }
-    site_name
+    if site_name
         .map(|name| name.to_ascii_lowercase().contains(&term))
         .unwrap_or(false)
+    {
+        return true;
+    }
+    tag_names
+        .iter()
+        .any(|name| name.to_ascii_lowercase().contains(&term))
+}
+
+pub fn device_matches_search_with_site_name(
+    device: &Device,
+    query: &DeviceSearchQuery,
+    site_name: Option<&str>,
+) -> bool {
+    device_matches_search_with_metadata(device, query, site_name, &[])
 }
 
 pub fn archive_device(device: &Device) -> Device {
@@ -192,6 +207,20 @@ mod tests {
             &device,
             &query,
             Some("Main Lab Floor")
+        ));
+    }
+
+    #[test]
+    fn device_matches_search_includes_tag_name() {
+        let device = sample_device();
+        let query = DeviceSearchQuery {
+            term: "production".to_string(),
+        };
+        assert!(device_matches_search_with_metadata(
+            &device,
+            &query,
+            None,
+            &["Production Fleet"]
         ));
     }
 
