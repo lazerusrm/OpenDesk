@@ -143,7 +143,8 @@ pub fn merge_device_update(form: DeviceDraft, existing: &Device) -> DeviceDraft 
         os_version: existing.os_version.clone(),
         architecture: existing.architecture.clone(),
         rustdesk_version: existing.rustdesk_version.clone(),
-        site_uuid: form.site_uuid.or(existing.site_uuid),
+        // Site select always submits a value; empty means unassigned.
+        site_uuid: form.site_uuid,
     }
 }
 
@@ -221,6 +222,33 @@ mod tests {
         assert_eq!(draft.alias, "Workstation");
         assert_eq!(draft.rustdesk_id.as_deref(), Some("123456789"));
         assert_eq!(draft.hostname.as_deref(), Some("ws-01"));
+    }
+
+    #[test]
+    fn merge_device_update_clears_site_when_form_unassigns() {
+        let mut existing = sample_device();
+        existing.site_uuid = Some(Uuid::new_v4());
+        let form = DeviceDraft {
+            alias: "Renamed".to_string(),
+            site_uuid: None,
+            ..Default::default()
+        };
+        let merged = merge_device_update(form, &existing);
+        assert_eq!(merged.site_uuid, None);
+        assert_eq!(merged.rustdesk_id.as_deref(), Some("123456789"));
+    }
+
+    #[test]
+    fn merge_device_update_assigns_site_from_form() {
+        let existing = sample_device();
+        let new_site = Uuid::new_v4();
+        let form = DeviceDraft {
+            alias: "Renamed".to_string(),
+            site_uuid: Some(new_site),
+            ..Default::default()
+        };
+        let merged = merge_device_update(form, &existing);
+        assert_eq!(merged.site_uuid, Some(new_site));
     }
 
     #[test]

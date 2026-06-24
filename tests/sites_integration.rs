@@ -80,6 +80,90 @@ async fn site_create_and_device_assignment_persist() {
 }
 
 #[tokio::test]
+async fn device_update_assigns_and_unassigns_site() {
+    let state = test_state().await;
+    let site_a = opendesk::repository::sites::create_site(
+        &state.db,
+        &opendesk::domain::site::SiteDraft {
+            name: "Site Alpha".to_string(),
+        },
+    )
+    .await
+    .expect("create site a");
+    let site_b = opendesk::repository::sites::create_site(
+        &state.db,
+        &opendesk::domain::site::SiteDraft {
+            name: "Site Beta".to_string(),
+        },
+    )
+    .await
+    .expect("create site b");
+    let device = opendesk::repository::devices::create_device(
+        &state.db,
+        &opendesk::domain::device::DeviceDraft {
+            alias: "Mobile endpoint".to_string(),
+            site_uuid: Some(site_a.site_uuid),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("create device");
+
+    let app = build_router(state.clone());
+    let session_cookie = login_and_get_session_cookie(&app).await;
+
+    let assign_beta = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/devices/{}", device.device_uuid))
+                .header("content-type", "application/x-www-form-urlencoded")
+                .header("cookie", session_cookie.clone())
+                .body(Body::from(format!(
+                    "alias=Mobile+endpoint&site_uuid={}",
+                    site_b.site_uuid
+                )))
+                .unwrap(),
+        )
+        .await
+        .expect("assign site beta");
+    assert_eq!(assign_beta.status(), StatusCode::SEE_OTHER);
+
+    let updated = opendesk::repository::devices::find_device_by_uuid(
+        &state.db,
+        device.device_uuid,
+    )
+    .await
+    .expect("reload")
+    .expect("device");
+    assert_eq!(updated.site_uuid, Some(site_b.site_uuid));
+
+    let unassign = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/devices/{}", device.device_uuid))
+                .header("content-type", "application/x-www-form-urlencoded")
+                .header("cookie", session_cookie)
+                .body(Body::from("alias=Mobile+endpoint&site_uuid="))
+                .unwrap(),
+        )
+        .await
+        .expect("unassign site");
+    assert_eq!(unassign.status(), StatusCode::SEE_OTHER);
+
+    let cleared = opendesk::repository::devices::find_device_by_uuid(
+        &state.db,
+        device.device_uuid,
+    )
+    .await
+    .expect("reload cleared")
+    .expect("device");
+    assert_eq!(cleared.site_uuid, None);
+}
+
+#[tokio::test]
 async fn device_search_matches_site_name() {
     let state = test_state().await;
     let site = opendesk::repository::sites::create_site(
