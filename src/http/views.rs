@@ -14,6 +14,7 @@ pub struct DevicesListView {
     pub title: String,
     pub show_nav: bool,
     pub search_term: String,
+    pub export_csv_href: String,
     pub devices: Vec<DeviceRowView>,
 }
 
