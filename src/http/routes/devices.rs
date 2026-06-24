@@ -13,8 +13,8 @@ use uuid::Uuid;
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::device::{
-    device_matches_search_with_metadata, merge_device_update, validate_device_draft, DeviceDraft,
-    DeviceSearchQuery,
+    device_matches_search_with_metadata, format_notes_display, merge_device_update,
+    notes_list_title, validate_device_draft, DeviceDraft, DeviceSearchQuery,
 };
 use crate::domain::tag::format_tag_names_display;
 use crate::repository::sites::list_sites;
@@ -95,6 +95,8 @@ async fn devices_list(
                     .and_then(|uuid| site_names.get(&uuid).cloned())
                     .unwrap_or_else(|| "-".to_string()),
                 tags_display: format_tag_names_display(&tag_names),
+                notes_display: format_notes_display(device.notes.as_deref()),
+                notes_title: notes_list_title(device.notes.as_deref()),
                 rustdesk_id_display: device.rustdesk_id.unwrap_or_else(|| "-".to_string()),
                 hostname_display: device.hostname.unwrap_or_else(|| "-".to_string()),
                 last_checkin_display: format_last_checkin_display(device.last_checkin_at.as_deref()),

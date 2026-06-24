@@ -86,6 +86,23 @@ pub fn validate_device_draft(draft: &DeviceDraft) -> Result<(), DeviceValidation
     Ok(())
 }
 
+pub const NOTES_DISPLAY_MAX_LEN: usize = 64;
+
+pub fn format_notes_display(notes: Option<&str>) -> String {
+    let Some(notes) = notes.map(str::trim).filter(|value| !value.is_empty()) else {
+        return "-".to_string();
+    };
+    if notes.chars().count() <= NOTES_DISPLAY_MAX_LEN {
+        return notes.to_string();
+    }
+    let truncated: String = notes.chars().take(NOTES_DISPLAY_MAX_LEN).collect();
+    format!("{truncated}...")
+}
+
+pub fn notes_list_title(notes: Option<&str>) -> String {
+    notes.map(str::trim).filter(|value| !value.is_empty()).unwrap_or("").to_string()
+}
+
 pub fn device_matches_search(device: &Device, query: &DeviceSearchQuery) -> bool {
     let term = query.term.trim().to_ascii_lowercase();
     if term.is_empty() {
@@ -222,6 +239,26 @@ mod tests {
             None,
             &["Production Fleet"]
         ));
+    }
+
+    #[test]
+    fn format_notes_display_truncates_long_values() {
+        let long = "a".repeat(80);
+        let display = format_notes_display(Some(&long));
+        assert!(display.ends_with("..."));
+        assert!(display.chars().count() <= NOTES_DISPLAY_MAX_LEN + 3);
+        assert_eq!(format_notes_display(None), "-");
+        assert_eq!(format_notes_display(Some("  ")), "-");
+        assert_eq!(format_notes_display(Some("lab device")), "lab device");
+    }
+
+    #[test]
+    fn device_matches_search_by_notes() {
+        let device = sample_device();
+        let query = DeviceSearchQuery {
+            term: "lab device".to_string(),
+        };
+        assert!(device_matches_search(&device, &query));
     }
 
     #[test]

@@ -41,7 +41,7 @@ Status legend:
 - [x] Device search by alias, hostname, RustDesk ID, site, tag.
 - [x] Site/location management.
 - [x] Tags.
-- [ ] Notes.
+- [x] Notes.
 - [ ] RustDesk ID copy button.
 - [ ] Connection helper action.
 - [ ] CSV export.
