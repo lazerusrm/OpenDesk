@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use crate::app_state::AppState;
 use crate::domain::device::DeviceDraft;
+use crate::domain::device_list::rustdesk_id_copy_text;
 use crate::domain::enrollment_token::EnrollmentTokenRecord;
 use crate::domain::server_config::ServerConfig;
 use crate::http::views::{
@@ -60,7 +61,8 @@ pub async fn render_device_form(
         form_action: form_action.to_string(),
         device_uuid: device_uuid.to_string(),
         alias: draft.alias,
-        rustdesk_id: draft.rustdesk_id.unwrap_or_default(),
+        rustdesk_id: draft.rustdesk_id.clone().unwrap_or_default(),
+        show_rustdesk_id_copy: rustdesk_id_copy_text(draft.rustdesk_id.as_deref()).is_some(),
         hostname: draft.hostname.unwrap_or_default(),
         owner: draft.owner.unwrap_or_default(),
         notes: draft.notes.unwrap_or_default(),

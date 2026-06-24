@@ -73,7 +73,7 @@ EOF
 
 curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
   -X POST "$BASE/devices" \
-  -d "alias=Tagged+Workstation&notes=Operator+runbook+reference&site_uuid=${SITE_UUID}&tag_uuids=${TAG_UUID}" \
+  -d "alias=Tagged+Workstation&rustdesk_id=123456789&notes=Operator+runbook+reference&site_uuid=${SITE_UUID}&tag_uuids=${TAG_UUID}" \
   -o /dev/null
 
 curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
@@ -99,7 +99,7 @@ curl -sf -b "$COOKIE_JAR" "$BASE/deployment" >"$SCRATCH/launch-$RUN_ID-deploymen
 {
   echo "launch-$RUN_ID health=$(cat "$SCRATCH/launch-$RUN_ID-health.txt")"
   echo "launch-$RUN_ID site_uuid=$SITE_UUID tag_uuid=$TAG_UUID archived_uuid=$ARCHIVED_UUID"
-  grep -E 'Tagged Workstation|Main Lab|Production|Operator runbook' "$SCRATCH/launch-$RUN_ID-devices.html" || true
+  grep -E 'Tagged Workstation|Main Lab|Production|Operator runbook|data-copy-text="123456789"' "$SCRATCH/launch-$RUN_ID-devices.html" || true
   if grep -q 'Archived Workstation' "$SCRATCH/launch-$RUN_ID-devices.html"; then
     echo "launch-$RUN_ID archived_hidden=no"
     exit 1
