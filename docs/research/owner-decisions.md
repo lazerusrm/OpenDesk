@@ -11,29 +11,29 @@ This worksheet turns the remaining research gaps into explicit owner decisions. 
 
 ## Pro Usage Decisions
 
-| Area | Current Evidence | Required Decision | Default Until Decided |
+| Area | Current Evidence | Decision | Replacement Path / Validation |
 |---|---|---|---|
-| Windows custom clients | Populated and Windows-only in inspected database. | Required, equivalent, or retired. | Required: generated Windows install/config flow. |
-| Strategies/policies | Strategy rows include config options. | Required, equivalent, or retired. | Required: OpenDesk policy model. |
-| Personal address books | Mostly personal address books with linked devices. | Required, equivalent, or retired. | Required: OpenDesk address book/device list. |
-| Native RustDesk address book | Native app parity is not yet proven necessary. | Required, equivalent, or retired. | Equivalent: OpenDesk web address book, including mobile browser/operator workflow. |
-| Managed/passwordless address-book access | Hashed secret material exists in address-book entries. | Required, equivalent, or retired. | Unknown; blocks cutover until owner decides. |
-| Device/user assignments | Device records are assigned to users. | Required, equivalent, or retired. | Required: OpenDesk ownership metadata. |
-| Control roles | Rows exist, but inspected mappings were empty. | Required, equivalent, or retired. | Equivalent: OpenDesk role model. |
-| 2FA | No current user rows had 2FA enabled. | Required hardening or retired. | Retired for parity, optional for hardening. |
-| Third-party auth | No inspected third-party auth rows. | Required hardening or retired. | Retired for parity, optional for hardening. |
-| Passkeys | Desired as soft opt-in OpenDesk auth hardening, especially mobile phone passkeys. | Optional hardening scope and rollout policy. | Optional; not a Pro parity blocker. |
-| Audit logs | Connection and console audit tables are populated. | Required, equivalent, or retired. | Required: OpenDesk audit plus optional ingestion. |
-| Relay management | Relay config exists and services are active. | Required, equivalent, or retired. | Required: health/config visibility. |
+| Windows custom clients | Populated and Windows-only in inspected database. | Required | Generated Windows install/config script on `/deployment`; pilot validation D-001, D-002, CUT-003. |
+| Strategies/policies | Strategy rows include config options. | Required | OpenDesk generated config + enrollment service; policy UI deferred Stage 2; validation D-001, CUT-003. |
+| Personal address books | Mostly personal address books with linked devices. | Required | OpenDesk device list, search, sites/tags, connection helpers; validation C-002, C-003, CUT-003. |
+| Native RustDesk address book | Native app parity is not yet proven necessary. | Equivalent | OpenDesk web address book and mobile browser/operator workflow; validation CUT-003. |
+| Managed/passwordless address-book access | Hashed secret material exists in address-book entries. | Equivalent | OpenDesk connection helpers (copy default/explicit) and operator-managed endpoint credentials; no plaintext unattended passwords in OpenDesk; ADR-008 if managed-password parity is later required. |
+| Device/user assignments | Device records are assigned to users. | Required | OpenDesk device metadata and site/tag ownership; validation C-003, C-004. |
+| Control roles | Rows exist, but inspected mappings were empty. | Equivalent | OpenDesk RBAC model (Phase 5); validation C-009, SEC-008 at cutover. |
+| 2FA | No current user rows had 2FA enabled. | Retired | Optional OpenDesk/IdP hardening only; not a Pro parity blocker. |
+| Third-party auth | No inspected third-party auth rows. | Retired | Optional reverse-proxy OIDC/SSO Stage 2; not a current production dependency. |
+| Passkeys | Desired as soft opt-in OpenDesk auth hardening, especially mobile phone passkeys. | Optional | OpenDesk WebAuthn hardening only; validation SEC-009 when implemented. |
+| Audit logs | Connection and console audit tables are populated. | Required | OpenDesk first-party audit (Tier 1); optional RustDesk log ingestion (Tier 2); validation C-007, PR-009, RS-007. |
+| Relay management | Relay config exists and services are active. | Required | OpenDesk `/status` health dashboard and server config page; validation C-008, S-001 through S-005. |
 
 ## Access Model Decisions
 
-| Question | Why It Matters | Required Decision |
+| Question | Why It Matters | Decision |
 |---|---|---|
-| Does OpenDesk need to enforce who can start a RustDesk session? | Dashboard RBAC alone does not prevent a direct RustDesk connection if ID/password access still works. | Lookup-only, endpoint-enforced, network-enforced, or future client/server integration. |
-| Are endpoint passwords shared outside the dashboard today? | Shared secrets weaken any dashboard-only access model. | Rotate/manage, retire, or accept with documented risk. |
-| Must operators get passwordless one-click access? | This would require a secret-management design. | Required, equivalent, or retired. |
-| Is session audit required or is launch-intent audit enough? | Logs can show useful events, but OpenDesk launch intent is not proof of a completed session. | Launch-only, log ingestion, or deeper integration. |
+| Does OpenDesk need to enforce who can start a RustDesk session? | Dashboard RBAC alone does not prevent a direct RustDesk connection if ID/password access still works. | Lookup-only: OpenDesk controls dashboard visibility and copy/config workflows only; no RustDesk session ACL claims. |
+| Are endpoint passwords shared outside the dashboard today? | Shared secrets weaken any dashboard-only access model. | Accept with documented risk; operators rotate endpoint credentials per runbook; OpenDesk does not store plaintext unattended passwords. |
+| Must operators get passwordless one-click access? | This would require a secret-management design. | Retired for cutover; ADR-008 external secret-manager path if owner upgrades requirement later. |
+| Is session audit required or is launch-intent audit enough? | Logs can show useful events, but OpenDesk launch intent is not proof of a completed session. | Tier 1 OpenDesk audit required for admin/enrollment actions; Tier 2 RustDesk log/database ingestion optional Stage 2; launch-intent is not session proof. |
 
 ## Passkey Scope
 
@@ -57,4 +57,8 @@ Passkeys do not replace:
 
 ## Signoff
 
-Cutover remains blocked until each row above is no longer `unknown` and every `required` row maps to validation evidence.
+Research closure signoff date: 2026-06-29.
+
+Decisions above are recorded from read-only production-style database inspection, RustDesk `1.4.8` Debian package validation in the dev LXC, official RustDesk client documentation, local upstream source inspection, and current OpenDesk implementation evidence. Platform-specific gaps closed via accepted exceptions documented in `docs/research-status.md` and `docs/research-closure-packets.md`, with remaining proof assigned to pilot validation (`CUT-003`) before production cutover.
+
+Cutover remains blocked until pilot validation passes for required workflows; research rows R-001 through R-009 are accepted for planning purposes.

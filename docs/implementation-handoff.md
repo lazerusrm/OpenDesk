@@ -40,20 +40,20 @@ Implement in this order unless new evidence changes the risk profile:
 
 ## Research Gates
 
-The implementation can proceed before all research is accepted, but production cutover cannot. The current blockers are:
+Research rows R-001 through R-010 are `accepted` in `docs/research-status.md` as of 2026-06-29. Production cutover still requires pilot validation for accepted-exception OS/network targets.
 
-| Research ID | Implementation Impact | Evidence Needed Before Cutover |
-|---|---|---|
-| R-001 | Deployment artifacts must remain configurable per OS/package. | Windows installer, Windows portable, macOS, Android, iOS, and Linux GUI/operator validation. |
-| R-002 | Generated install/config scripts must be treated as provisional by OS. | Silent install, service/user config location, restart, upgrade, uninstall, and reinstall evidence. |
-| R-003 | Feature scope must assume populated Pro features are required. | Owner review of weekly use and explicit retirement of unused workflows. |
-| R-004 | Secret-management design must stay out of the core DB unless required. | Owner decision on passwordless or managed-password parity. |
-| R-005 | UI copy and authorization checks must avoid false enforcement claims. | Owner decision on lookup-only versus real session enforcement. |
-| R-006 | Deploy adapter must be isolated and tested against stock clients. | Windows/macOS deploy behavior and adapter contract tests. |
-| R-007 | Audit UI must distinguish OpenDesk audit from RustDesk session evidence. | Owner decision on required audit tier and ingestion validation if selected. |
-| R-008 | Mobile support must cover operator workflows. | Android and iOS operator validation with generated config/instructions. |
-| R-009 | Health checks must not imply WAN success from LAN-only probes. | WAN, NAT loopback, split-DNS, direct, and relay validation from real clients. |
-| R-010 | License posture is accepted. | New ADR only if fork/link/vendor work is proposed. |
+| Research ID | Status | Implementation Impact | Remaining Cutover Proof |
+|---|---|---|---|
+| R-001 | Accepted | Generated scripts, filename fallback, and connection helpers are primary config paths per OS. | Pilot validation D-001 through D-012, CUT-003 for Windows/macOS/mobile. |
+| R-002 | Accepted | Per-OS deployment scripts published on `/deployment`. | Pilot silent install, upgrade, and service/user context D-001, D-009, S-009. |
+| R-003 | Accepted | Populated Pro features mapped in owner decisions and parity inventory. | Pilot operator confirmation CUT-003. |
+| R-004 | Accepted | Equivalent operator workflow; no plaintext unattended passwords; ADR-008 if managed-password parity later required. | None for research closure. |
+| R-005 | Accepted | Lookup-only dashboard access; no session-enforcement UI claims. | RBAC matrix SEC-008 at Phase 5 cutover gate. |
+| R-006 | Accepted | Linux deploy contract validated; defer OpenDesk adapter; scripts remain primary. | Reopen adapter only if pilot proves need E-006, E-007. |
+| R-007 | Accepted | Tier 1 OpenDesk audit required; Tier 2 RustDesk ingestion optional Stage 2. | Ingestion label validation if Tier 2 selected. |
+| R-008 | Accepted | Mobile RustDesk apps required for operators; generated instructions/QR path. | Pilot D-011, D-012, CUT-003. |
+| R-009 | Accepted | `/status` health dashboard shows config-driven probes; does not claim WAN success. | Pilot S-001 through S-005, CUT-003 from real clients. |
+| R-010 | Accepted | Clean-room license posture. | New ADR only if fork/link/vendor work is proposed. |
 
 ## CI Gates
 
