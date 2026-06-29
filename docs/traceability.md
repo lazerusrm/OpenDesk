@@ -13,7 +13,7 @@ This document maps replacement requirements to validation coverage. It should be
 | PR-005 Client delivery | D-001 through D-010 | Must pass for required OSes before cutover. |
 | PR-006 Endpoint self-registration | E-001 through E-007 | E-002/E-003/E-004 covered by enrollment API, generated Linux script, and integration tests. |
 | PR-007 Server health | S-001 through S-005, C-008 | UDP reachability may need documented exception. |
-| PR-008 Backup/restore | S-006, S-007, SEC-005, CUT-004 | Restore drill required. |
+| PR-008 Backup/restore | S-006, S-007, SEC-005, CUT-004 | JSON export at `/backup/export.json` and restore via `/backup` covered by `backup_integration` round-trip tests; sensitivity metadata documents password/token hashes and excluded runtime tables. Full cutover restore drill still required. |
 | PR-009 Audit logs | C-007, E-004, SEC-002 | Add event-specific tests with implementation. |
 | PR-010 RBAC | C-009, SEC-003, SEC-004, SEC-008 | Role matrix must cover admin/operator/read-only behavior before cutover. |
 | PR-011 Access boundary clarity | SEC-007 | Docs currently state boundary; implementation must avoid misleading UI. |

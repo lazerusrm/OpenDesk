@@ -94,6 +94,7 @@ curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
 
 curl -sf -b "$COOKIE_JAR" "$BASE/devices" >"$SCRATCH/launch-$RUN_ID-devices.html"
 curl -sf -b "$COOKIE_JAR" "$BASE/devices/export.csv" >"$SCRATCH/launch-$RUN_ID-devices.csv"
+curl -sf -b "$COOKIE_JAR" "$BASE/backup/export.json" >"$SCRATCH/launch-$RUN_ID-backup.json"
 curl -sf -b "$COOKIE_JAR" "$BASE/tags" >"$SCRATCH/launch-$RUN_ID-tags.html"
 curl -sf -b "$COOKIE_JAR" "$BASE/deployment" >"$SCRATCH/launch-$RUN_ID-deployment.html"
 
@@ -103,6 +104,7 @@ curl -sf -b "$COOKIE_JAR" "$BASE/deployment" >"$SCRATCH/launch-$RUN_ID-deploymen
   grep -E 'Tagged Workstation|Main Lab|Production|Operator runbook|data-copy-text="123456789"' "$SCRATCH/launch-$RUN_ID-devices.html" || true
   head -2 "$SCRATCH/launch-$RUN_ID-devices.csv" | tee -a "$SCRATCH/launch-$RUN_ID-summary.log" || true
   grep -E 'device_uuid,alias|Tagged Workstation|123456789' "$SCRATCH/launch-$RUN_ID-devices.csv" || true
+  grep -E '"schema_version": 1|"excludes_sessions": true|Tagged Workstation' "$SCRATCH/launch-$RUN_ID-backup.json" || true
   if grep -q 'Archived Workstation' "$SCRATCH/launch-$RUN_ID-devices.html"; then
     echo "launch-$RUN_ID archived_hidden=no"
     exit 1
