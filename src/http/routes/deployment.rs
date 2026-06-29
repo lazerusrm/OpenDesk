@@ -11,7 +11,9 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::app_state::AppState;
+use crate::deployment::filename_config::generate_filename_custom_server;
 use crate::deployment::linux_script::{render_linux_deployment_script, LinuxDeploymentScriptInput};
+use crate::deployment::macos_script::{render_macos_deployment_script, MacosDeploymentScriptInput};
 use crate::deployment::windows_script::{
     render_windows_deployment_script, WindowsDeploymentScriptInput,
 };
@@ -91,6 +93,12 @@ async fn deployment_page(
         enrollment_token: &script_token,
         opendesk_base_url: &state.public_base_url,
     });
+    let macos_script = render_macos_deployment_script(&MacosDeploymentScriptInput {
+        server_config: &config,
+        enrollment_token: &script_token,
+        opendesk_base_url: &state.public_base_url,
+    });
+    let filename_custom_server = generate_filename_custom_server(&config);
     let view = DeploymentView {
         title: "Deployment".to_string(),
         show_nav: true,
@@ -99,6 +107,8 @@ async fn deployment_page(
         public_base_url: state.public_base_url.clone(),
         linux_script,
         windows_script,
+        macos_script,
+        filename_custom_server,
     };
     let html = view
         .render()

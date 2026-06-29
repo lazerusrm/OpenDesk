@@ -43,7 +43,7 @@ Status legend:
 - [x] Tags.
 - [x] Notes.
 - [x] RustDesk ID copy button.
-- [ ] Connection helper action.
+- [x] Connection helper action.
 - [x] CSV export.
 - [x] JSON backup export.
 - [x] JSON backup restore.
@@ -56,11 +56,11 @@ Status legend:
   - API server: blank for OSS path
   - Public key: imported from current server
 - [ ] Generate RustDesk import string if supported by current client.
-- [ ] Generate filename-based custom server download name as fallback.
+- [x] Generate filename-based custom server download name as fallback.
 - [x] Generate Windows PowerShell installer/config script.
 - [x] Generate Linux installer/config script.
-- [ ] Generate macOS installer/config script if required.
-- [ ] Provide official-client download links or cached installer packages.
+- [x] Generate macOS installer/config script if required.
+- [x] Provide official-client download links or cached installer packages.
 - [ ] Provide a single frontend page per OS with install command/download.
 - [ ] Avoid executable renaming as the main workflow.
 - [ ] Version generated scripts.
@@ -83,12 +83,12 @@ Status legend:
 
 ## Phase 4: Health and Operations
 
-- [ ] Check `hbbs` TCP ports.
-- [ ] Check `hbbr` TCP ports.
+- [x] Check `hbbs` TCP ports.
+- [x] Check `hbbr` TCP ports.
 - [ ] Check UDP `21116` reachability where feasible.
-- [ ] Check DNS resolution for `rd.example.com`.
+- [x] Check DNS resolution for `rd.example.com`.
 - [ ] Check public IP expectation.
-- [ ] Show current server public key fingerprint.
+- [x] Show current server public key fingerprint.
 - [ ] Backup scheduler.
 - [ ] Restore procedure.
 - [ ] Log rotation.
