@@ -1,4 +1,5 @@
 pub mod audit_events;
+pub mod backup;
 pub mod devices;
 pub mod enrollment_tokens;
 pub mod server_config;

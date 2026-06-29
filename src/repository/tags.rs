@@ -95,6 +95,25 @@ pub async fn list_tags_for_device(
         .collect())
 }
 
+pub async fn list_device_tag_links(
+    pool: &SqlitePool,
+) -> Result<Vec<(Uuid, Uuid)>, sqlx::Error> {
+    let rows = sqlx::query_as::<_, (String, String)>(
+        "SELECT device_uuid, tag_uuid FROM device_tags ORDER BY device_uuid ASC",
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            (
+                Uuid::parse_str(&row.0).expect("stored uuid"),
+                Uuid::parse_str(&row.1).expect("stored uuid"),
+            )
+        })
+        .collect())
+}
+
 pub async fn list_device_tag_names_map(
     pool: &SqlitePool,
 ) -> Result<HashMap<Uuid, Vec<String>>, sqlx::Error> {

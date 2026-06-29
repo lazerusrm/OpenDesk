@@ -1,4 +1,5 @@
 pub mod audit_event;
+pub mod backup;
 pub mod device;
 pub mod device_csv;
 pub mod device_list;

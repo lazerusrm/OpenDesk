@@ -98,6 +98,13 @@ button,
   flex: 1;
 }
 
+.checkbox-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
 .copy-button {
   margin-top: 0;
   padding: 0.25rem 0.55rem;

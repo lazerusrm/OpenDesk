@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Backup</h1>
+  <p>Export or restore OpenDesk inventory and configuration. Backups include sites, tags, devices, server config, enrollment token hashes, and user password hashes. Sessions, audit events, and endpoint check-ins are excluded.</p>
+  {% if message.is_some() %}
+  <p>{{ message.as_ref().unwrap() }}</p>
+  {% endif %}
+  {% if error_message.is_some() %}
+  <p class="error">{{ error_message.as_ref().unwrap() }}</p>
+  {% endif %}
+  <a class="button" href="/backup/export.json">Export JSON backup</a>
+</section>
+<section class="card">
+  <h2>Restore JSON backup</h2>
+  <form method="post" action="/backup">
+    <label for="backup_json">Backup JSON</label>
+    <textarea id="backup_json" name="backup_json" rows="16" required></textarea>
+    <label class="checkbox-row">
+      <input type="checkbox" name="confirm" value="yes">
+      I understand restore replaces current inventory, config, users, and enrollment tokens.
+    </label>
+    <button type="submit">Restore backup</button>
+  </form>
+</section>
+{% endblock %}

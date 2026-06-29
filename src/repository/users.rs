@@ -12,6 +12,23 @@ pub struct UserRow {
     pub role: String,
 }
 
+pub async fn list_users(pool: &SqlitePool) -> Result<Vec<UserRow>, sqlx::Error> {
+    let rows = sqlx::query_as::<_, (String, String, String, String)>(
+        "SELECT user_uuid, username, password_hash, role FROM users ORDER BY username ASC",
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| UserRow {
+            user_uuid: Uuid::parse_str(&row.0).expect("stored uuid"),
+            username: row.1,
+            password_hash: row.2,
+            role: row.3,
+        })
+        .collect())
+}
+
 pub async fn count_users(pool: &SqlitePool) -> Result<i64, sqlx::Error> {
     let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
         .fetch_one(pool)

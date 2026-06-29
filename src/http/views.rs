@@ -99,6 +99,15 @@ pub struct DeviceFormView {
 }
 
 #[derive(Template)]
+#[template(path = "backup.html")]
+pub struct BackupView {
+    pub title: String,
+    pub show_nav: bool,
+    pub message: Option<String>,
+    pub error_message: Option<String>,
+}
+
+#[derive(Template)]
 #[template(path = "server_config.html")]
 pub struct ServerConfigView {
     pub title: String,

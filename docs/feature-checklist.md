@@ -45,8 +45,8 @@ Status legend:
 - [x] RustDesk ID copy button.
 - [ ] Connection helper action.
 - [x] CSV export.
-- [ ] JSON backup export.
-- [ ] JSON backup restore.
+- [x] JSON backup export.
+- [x] JSON backup restore.
 
 ## Phase 2: Client Configuration and Downloads
 

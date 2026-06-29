@@ -1,4 +1,5 @@
 mod auth;
+mod backup;
 mod deployment;
 mod device_export;
 mod devices;
@@ -16,6 +17,7 @@ use crate::app_state::AppState;
 pub fn build_router(state: AppState) -> Router {
     Router::new()
         .merge(auth::routes())
+        .merge(backup::routes())
         .merge(devices::routes())
         .merge(settings::routes())
         .merge(sites::routes())
