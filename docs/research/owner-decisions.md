@@ -7,7 +7,7 @@ This worksheet turns the remaining research gaps into explicit owner decisions. 
 - `required`: OpenDesk must replace this before cutover.
 - `equivalent`: A different OpenDesk workflow is acceptable.
 - `retired`: The workflow is not needed after cutover.
-- `unknown`: Cutover blocker.
+- `unresolved`: Cutover blocker until owner records required, equivalent, retired, or optional.
 
 ## Pro Usage Decisions
 
@@ -15,16 +15,16 @@ This worksheet turns the remaining research gaps into explicit owner decisions. 
 |---|---|---|---|
 | Windows custom clients | Populated and Windows-only in inspected database. | Required | Generated Windows install/config script on `/deployment`; pilot validation D-001, D-002, CUT-003. |
 | Strategies/policies | Strategy rows include config options. | Required | OpenDesk generated config + enrollment service; policy UI deferred Stage 2; validation D-001, CUT-003. |
-| Personal address books | Mostly personal address books with linked devices. | Required | OpenDesk device list, search, sites/tags, connection helpers; validation C-002, C-003, CUT-003. |
+| Personal address books | Mostly personal address books with linked devices. | Required | OpenDesk device list, search, sites/tags, RustDesk ID copy; connection helpers in PR #14; validation C-002, C-003, CUT-003. |
 | Native RustDesk address book | Native app parity is not yet proven necessary. | Equivalent | OpenDesk web address book and mobile browser/operator workflow; validation CUT-003. |
-| Managed/passwordless address-book access | Hashed secret material exists in address-book entries. | Equivalent | OpenDesk connection helpers (copy default/explicit) and operator-managed endpoint credentials; no plaintext unattended passwords in OpenDesk; ADR-008 if managed-password parity is later required. |
+| Managed/passwordless address-book access | Hashed secret material exists in address-book entries. | Equivalent | Documented copy/helper workflow (PR #14) and operator-managed endpoint credentials; no plaintext unattended passwords in OpenDesk; ADR-008 if managed-password parity is later required. |
 | Device/user assignments | Device records are assigned to users. | Required | OpenDesk device metadata and site/tag ownership; validation C-003, C-004. |
 | Control roles | Rows exist, but inspected mappings were empty. | Equivalent | OpenDesk RBAC model (Phase 5); validation C-009, SEC-008 at cutover. |
 | 2FA | No current user rows had 2FA enabled. | Retired | Optional OpenDesk/IdP hardening only; not a Pro parity blocker. |
 | Third-party auth | No inspected third-party auth rows. | Retired | Optional reverse-proxy OIDC/SSO Stage 2; not a current production dependency. |
 | Passkeys | Desired as soft opt-in OpenDesk auth hardening, especially mobile phone passkeys. | Optional | OpenDesk WebAuthn hardening only; validation SEC-009 when implemented. |
 | Audit logs | Connection and console audit tables are populated. | Required | OpenDesk first-party audit (Tier 1); optional RustDesk log ingestion (Tier 2); validation C-007, PR-009, RS-007. |
-| Relay management | Relay config exists and services are active. | Required | OpenDesk `/status` health dashboard and server config page; validation C-008, S-001 through S-005. |
+| Relay management | Relay config exists and services are active. | Required | Plain `/health` on `main`; `/status` dashboard in PR #14; server config page; validation C-008, S-001 through S-005. |
 
 ## Access Model Decisions
 

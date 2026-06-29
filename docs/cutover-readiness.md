@@ -13,7 +13,7 @@ Production cutover is blocked until this checklist passes. Development can proce
 ## Prerequisites
 
 - [x] Current production Pro usage has been inventoried.
-- [x] Owner decision worksheet has no `unknown` rows.
+- [x] Owner decision worksheet has no unresolved decision rows (see `docs/research/owner-decisions.md` Pro Usage and Access Model tables).
 - [x] Every item in `docs/research-roadmap.md` has evidence and a decision.
 - [x] Every item in `docs/research-status.md` is `accepted`.
 - [ ] Every used Pro feature is mapped in `docs/pro-feature-parity.md`.

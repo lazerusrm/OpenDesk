@@ -44,15 +44,15 @@ Research rows R-001 through R-010 are `accepted` in `docs/research-status.md` as
 
 | Research ID | Status | Implementation Impact | Remaining Cutover Proof |
 |---|---|---|---|
-| R-001 | Accepted | Generated scripts, filename fallback, and connection helpers are primary config paths per OS. | Pilot validation D-001 through D-012, CUT-003 for Windows/macOS/mobile. |
-| R-002 | Accepted | Per-OS deployment scripts published on `/deployment`. | Pilot silent install, upgrade, and service/user context D-001, D-009, S-009. |
+| R-001 | Accepted | Generated scripts are the primary config path; Linux/Windows renderers merged on `main`; macOS/filename/helpers in PR #14. | Pilot validation D-001 through D-012, CUT-003 for Windows/macOS/mobile. |
+| R-002 | Accepted | Linux/Windows scripts on `/deployment` (`main`); macOS template in PR #14. | Pilot silent install, upgrade, and service/user context D-001, D-009, S-009. |
 | R-003 | Accepted | Populated Pro features mapped in owner decisions and parity inventory. | Pilot operator confirmation CUT-003. |
 | R-004 | Accepted | Equivalent operator workflow; no plaintext unattended passwords; ADR-008 if managed-password parity later required. | None for research closure. |
 | R-005 | Accepted | Lookup-only dashboard access; no session-enforcement UI claims. | RBAC matrix SEC-008 at Phase 5 cutover gate. |
 | R-006 | Accepted | Linux deploy contract validated; defer OpenDesk adapter; scripts remain primary. | Reopen adapter only if pilot proves need E-006, E-007. |
 | R-007 | Accepted | Tier 1 OpenDesk audit required; Tier 2 RustDesk ingestion optional Stage 2. | Ingestion label validation if Tier 2 selected. |
 | R-008 | Accepted | Mobile RustDesk apps required for operators; generated instructions/QR path. | Pilot D-011, D-012, CUT-003. |
-| R-009 | Accepted | `/status` health dashboard shows config-driven probes; does not claim WAN success. | Pilot S-001 through S-005, CUT-003 from real clients. |
+| R-009 | Accepted | Config-driven health dashboard in PR #14; `main` has plain `/health` only; probes must not claim WAN success. | Pilot S-001 through S-005, CUT-003 from real clients. |
 | R-010 | Accepted | Clean-room license posture. | New ADR only if fork/link/vendor work is proposed. |
 
 ## CI Gates

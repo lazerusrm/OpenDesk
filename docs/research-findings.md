@@ -31,15 +31,15 @@ The current production-style deployment was inspected read-only. Evidence confir
 
 | Research ID | Decision | Status | Remaining Pilot Work |
 |---|---|---|---|
-| R-001 | Generated scripts primary; filename fallback convenience; Linux `.deb` config validated; Windows/macOS/mobile accepted-exception until pilot. | Accepted | Pilot: D-001 through D-012, CUT-003 per OS. |
-| R-002 | Generated install/config scripts primary; Linux package lifecycle validated; Windows/macOS accepted-exception until pilot. | Accepted | Pilot: silent install, upgrade, service/user context D-001, D-009, S-009. |
+| R-001 | Generated scripts primary; Linux/Windows on `main`; macOS/filename/helpers in PR #14; Linux `.deb` config validated; Windows/macOS/mobile accepted-exception until pilot. | Accepted | Pilot: D-001 through D-012, CUT-003 per OS. |
+| R-002 | Linux/Windows scripts on `main`; macOS in PR #14; Linux package lifecycle validated; Windows/macOS accepted-exception until pilot. | Accepted | Pilot: silent install, upgrade, service/user context D-001, D-009, S-009. |
 | R-003 | Populated Pro features mapped in owner decisions and parity inventory; weekly-use assumptions recorded from inspected evidence. | Accepted | Pilot operator confirmation CUT-003. |
-| R-004 | Equivalent workflow: connection helpers + operator credentials; no plaintext storage; ADR-008 if managed-password parity later required. | Accepted | None for research closure. |
+| R-004 | Equivalent workflow: documented copy/helper path (PR #14) + operator credentials; no plaintext storage; ADR-008 if managed-password parity later required. | Accepted | None for research closure. |
 | R-005 | Lookup-only dashboard access; no RustDesk session-enforcement claims. | Accepted | RBAC matrix at Phase 5 cutover gate. |
 | R-006 | Linux deploy contract validated; defer OpenDesk `/api/devices/deploy` adapter; scripts remain primary. | Accepted | Pilot only if adapter scope reopens E-006, E-007. |
 | R-007 | Tier 1 OpenDesk audit required; Tier 2 RustDesk ingestion optional Stage 2. | Accepted | Ingestion label validation if Tier 2 selected. |
 | R-008 | Mobile RustDesk apps required for operators; Android QR/manual; iOS operator-only. | Accepted | Pilot D-011, D-012, CUT-003. |
-| R-009 | LAN TCP + split DNS confirmed; health dashboard config-driven probes; WAN/mobile accepted-exception. | Accepted | Pilot S-001 through S-005, CUT-003 from real clients. |
+| R-009 | LAN TCP + split DNS confirmed; `/status` dashboard PR #14; plain `/health` on `main`; WAN/mobile accepted-exception. | Accepted | Pilot S-001 through S-005, CUT-003 from real clients. |
 | R-010 | Clean-room control plane remains the license posture. | Accepted | ADR-007 records fork/link/vendor rules. |
 
 ## Sources
