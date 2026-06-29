@@ -51,6 +51,11 @@ fi
 curl -sf "$BASE/health" >"$SCRATCH/launch-$RUN_ID-health.txt"
 
 curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
+  -X POST "$BASE/settings/server-config" \
+  -d "id_server=rd.example.com&relay_server=rd.example.com&public_key=launch-test-public-key" \
+  -o /dev/null
+
+curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
   -X POST "$BASE/sites" \
   -d "name=Main+Lab" \
   -o /dev/null
@@ -102,7 +107,16 @@ curl -sf -b "$COOKIE_JAR" "$BASE/status" >"$SCRATCH/launch-$RUN_ID-status.html"
 {
   echo "launch-$RUN_ID health=$(cat "$SCRATCH/launch-$RUN_ID-health.txt")"
   echo "launch-$RUN_ID site_uuid=$SITE_UUID tag_uuid=$TAG_UUID archived_uuid=$ARCHIVED_UUID"
-  grep -E 'Tagged Workstation|Main Lab|Production|Operator runbook|data-copy-text="123456789"|Copy default|Copy explicit' "$SCRATCH/launch-$RUN_ID-devices.html" || true
+  grep -E 'Tagged Workstation|Main Lab|Production|Operator runbook|Copy default|Copy explicit|data-copy-text="123456789@rd.example.com:21117\?key=launch-test-public-key"' "$SCRATCH/launch-$RUN_ID-devices.html" || true
+  if ! grep -q 'Copy explicit' "$SCRATCH/launch-$RUN_ID-devices.html"; then
+    echo "launch-$RUN_ID explicit_helper_button=missing"
+    exit 1
+  fi
+  if ! grep -q 'data-copy-text="123456789@rd.example.com:21117?key=launch-test-public-key"' "$SCRATCH/launch-$RUN_ID-devices.html"; then
+    echo "launch-$RUN_ID explicit_helper_attr=missing"
+    exit 1
+  fi
+  echo "launch-$RUN_ID explicit_helper=ok"
   grep -E 'macOS shell script|rustdesk-host=rd.example.com|Official RustDesk clients' "$SCRATCH/launch-$RUN_ID-deployment.html" || true
   grep -E 'Public key fingerprint|tcp:rd.example.com:21116|tcp:rd.example.com:21117|dns:rd.example.com' "$SCRATCH/launch-$RUN_ID-status.html" || true
   head -2 "$SCRATCH/launch-$RUN_ID-devices.csv" | tee -a "$SCRATCH/launch-$RUN_ID-summary.log" || true
