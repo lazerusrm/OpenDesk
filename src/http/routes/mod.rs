@@ -6,6 +6,7 @@ mod devices;
 mod enrollment;
 mod render;
 mod settings;
+mod status;
 mod sites;
 mod tags;
 
@@ -24,6 +25,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(tags::routes())
         .merge(deployment::routes())
         .merge(enrollment::routes())
+        .merge(status::routes())
         .route("/health", get(|| async { "ok" }))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(state)

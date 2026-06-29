@@ -21,11 +21,29 @@
   </form>
 </section>
 <section class="card">
+  <h2>Official RustDesk clients</h2>
+  <p>Install the official client for each endpoint OS, then run the generated script for that platform.</p>
+  <ul>
+    <li><a href="https://github.com/rustdesk/rustdesk/releases">Windows, Linux, and macOS release packages</a></li>
+    <li><a href="https://rustdesk.com/docs/en/client/">Official client documentation</a></li>
+  </ul>
+</section>
+<section class="card">
+  <h2>Filename-based custom server fallback</h2>
+  <p>Rename an official Windows portable executable using this documented fallback pattern when script-based delivery is not available.</p>
+  <pre>{{ filename_custom_server }}</pre>
+  <button type="button" class="copy-button" data-copy-text="{{ filename_custom_server }}">Copy filename</button>
+</section>
+<section class="card">
   <h2>Linux shell script</h2>
   <pre>{{ linux_script }}</pre>
 </section>
 <section class="card">
   <h2>Windows PowerShell script</h2>
   <pre>{{ windows_script }}</pre>
+</section>
+<section class="card">
+  <h2>macOS shell script</h2>
+  <pre>{{ macos_script }}</pre>
 </section>
 {% endblock %}

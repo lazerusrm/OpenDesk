@@ -4,15 +4,19 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::app_state::AppState;
+use crate::domain::connection_helper::{
+    explicit_server_helper_for_device, generate_default_server_helper,
+};
 use crate::domain::device::DeviceDraft;
 use crate::domain::device_list::rustdesk_id_copy_text;
 use crate::domain::enrollment_token::EnrollmentTokenRecord;
-use crate::domain::server_config::ServerConfig;
+use crate::domain::server_config::{default_server_config, ServerConfig};
 use crate::http::views::{
     DeviceFormView, EnrollmentTokenRowView, EnrollmentTokensView, LoginView, ServerConfigView,
     SiteOptionView, TagOptionView,
 };
 use crate::repository::enrollment_tokens::list_enrollment_tokens;
+use crate::repository::server_config::load_server_config;
 use crate::repository::sites::list_sites;
 use crate::repository::tags::list_tags;
 
@@ -54,6 +58,9 @@ pub async fn render_device_form(
             selected: selected_tag_uuids.contains(&tag.tag_uuid),
         })
         .collect();
+    let server_config = load_server_config(&state.db)
+        .await?
+        .unwrap_or_else(default_server_config);
     let view = DeviceFormView {
         title: heading.to_string(),
         show_nav: true,
@@ -63,6 +70,13 @@ pub async fn render_device_form(
         alias: draft.alias,
         rustdesk_id: draft.rustdesk_id.clone().unwrap_or_default(),
         show_rustdesk_id_copy: rustdesk_id_copy_text(draft.rustdesk_id.as_deref()).is_some(),
+        default_helper_copy_text: generate_default_server_helper(draft.rustdesk_id.as_deref())
+            .unwrap_or_default(),
+        explicit_helper_copy_text: explicit_server_helper_for_device(
+            draft.rustdesk_id.as_deref(),
+            &server_config,
+        )
+        .unwrap_or_default(),
         hostname: draft.hostname.unwrap_or_default(),
         owner: draft.owner.unwrap_or_default(),
         notes: draft.notes.unwrap_or_default(),

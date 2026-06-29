@@ -1,5 +1,7 @@
 pub mod audit_event;
 pub mod backup;
+pub mod connection_helper;
+pub mod health;
 pub mod device;
 pub mod device_csv;
 pub mod device_list;

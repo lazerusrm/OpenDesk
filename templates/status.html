@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Server Status</h1>
+  <p>Health probes use configured server values. TCP and DNS results reflect the current runtime environment.</p>
+  <dl class="status-summary">
+    <dt>ID server</dt>
+    <dd>{{ id_server }}</dd>
+    <dt>Relay server</dt>
+    <dd>{{ relay_server }}</dd>
+    <dt>Public key fingerprint</dt>
+    <dd><code>{{ public_key_fingerprint }}</code></dd>
+  </dl>
+</section>
+<section class="card">
+  <h2>Checks</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Check</th>
+        <th>Target</th>
+        <th>Status</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for check in checks %}
+      <tr>
+        <td>{{ check.label }}</td>
+        <td><code>{{ check.target }}</code></td>
+        <td>{{ check.status }}</td>
+        <td>{{ check.detail }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

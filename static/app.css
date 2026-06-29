@@ -105,6 +105,15 @@ button,
   margin-top: 0.75rem;
 }
 
+.status-summary dt {
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.status-summary dd {
+  margin: 0.15rem 0 0.5rem;
+}
+
 .copy-button {
   margin-top: 0;
   padding: 0.25rem 0.55rem;

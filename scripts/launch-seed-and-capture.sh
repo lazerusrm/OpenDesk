@@ -97,11 +97,14 @@ curl -sf -b "$COOKIE_JAR" "$BASE/devices/export.csv" >"$SCRATCH/launch-$RUN_ID-d
 curl -sf -b "$COOKIE_JAR" "$BASE/backup/export.json" >"$SCRATCH/launch-$RUN_ID-backup.json"
 curl -sf -b "$COOKIE_JAR" "$BASE/tags" >"$SCRATCH/launch-$RUN_ID-tags.html"
 curl -sf -b "$COOKIE_JAR" "$BASE/deployment" >"$SCRATCH/launch-$RUN_ID-deployment.html"
+curl -sf -b "$COOKIE_JAR" "$BASE/status" >"$SCRATCH/launch-$RUN_ID-status.html"
 
 {
   echo "launch-$RUN_ID health=$(cat "$SCRATCH/launch-$RUN_ID-health.txt")"
   echo "launch-$RUN_ID site_uuid=$SITE_UUID tag_uuid=$TAG_UUID archived_uuid=$ARCHIVED_UUID"
-  grep -E 'Tagged Workstation|Main Lab|Production|Operator runbook|data-copy-text="123456789"' "$SCRATCH/launch-$RUN_ID-devices.html" || true
+  grep -E 'Tagged Workstation|Main Lab|Production|Operator runbook|data-copy-text="123456789"|Copy default|Copy explicit' "$SCRATCH/launch-$RUN_ID-devices.html" || true
+  grep -E 'macOS shell script|rustdesk-host=rd.example.com|Official RustDesk clients' "$SCRATCH/launch-$RUN_ID-deployment.html" || true
+  grep -E 'Public key fingerprint|tcp:rd.example.com:21116|tcp:rd.example.com:21117|dns:rd.example.com' "$SCRATCH/launch-$RUN_ID-status.html" || true
   head -2 "$SCRATCH/launch-$RUN_ID-devices.csv" | tee -a "$SCRATCH/launch-$RUN_ID-summary.log" || true
   grep -E 'device_uuid,alias|Tagged Workstation|123456789' "$SCRATCH/launch-$RUN_ID-devices.csv" || true
   grep -E '"schema_version": 1|"excludes_sessions": true|Tagged Workstation' "$SCRATCH/launch-$RUN_ID-backup.json" || true

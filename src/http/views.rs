@@ -28,6 +28,8 @@ pub struct DeviceRowView {
     pub notes_title: String,
     pub rustdesk_id_display: String,
     pub rustdesk_id_copy_text: String,
+    pub default_helper_copy_text: String,
+    pub explicit_helper_copy_text: String,
     pub hostname_display: String,
     pub last_checkin_display: String,
     pub archived_display: String,
@@ -88,6 +90,8 @@ pub struct DeviceFormView {
     pub alias: String,
     pub rustdesk_id: String,
     pub show_rustdesk_id_copy: bool,
+    pub default_helper_copy_text: String,
+    pub explicit_helper_copy_text: String,
     pub hostname: String,
     pub owner: String,
     pub notes: String,
@@ -130,6 +134,27 @@ pub struct DeploymentView {
     pub public_base_url: String,
     pub linux_script: String,
     pub windows_script: String,
+    pub macos_script: String,
+    pub filename_custom_server: String,
+}
+
+#[derive(Clone)]
+pub struct HealthCheckRowView {
+    pub label: String,
+    pub target: String,
+    pub status: String,
+    pub detail: String,
+}
+
+#[derive(Template)]
+#[template(path = "status.html")]
+pub struct StatusView {
+    pub title: String,
+    pub show_nav: bool,
+    pub id_server: String,
+    pub relay_server: String,
+    pub public_key_fingerprint: String,
+    pub checks: Vec<HealthCheckRowView>,
 }
 
 #[derive(Clone)]

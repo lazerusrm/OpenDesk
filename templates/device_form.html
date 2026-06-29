@@ -13,9 +13,15 @@
     <div class="input-with-copy">
       <input id="rustdesk_id" name="rustdesk_id" value="{{ rustdesk_id }}">
       {% if show_rustdesk_id_copy %}
-      <button type="button" class="copy-button" data-copy-input="rustdesk_id">Copy</button>
+      <button type="button" class="copy-button" data-copy-input="rustdesk_id">Copy ID</button>
       {% endif %}
     </div>
+    {% if default_helper_copy_text != "" %}
+    <button type="button" class="copy-button" data-copy-text="{{ default_helper_copy_text }}">Copy default helper</button>
+    {% endif %}
+    {% if explicit_helper_copy_text != "" %}
+    <button type="button" class="copy-button" data-copy-text="{{ explicit_helper_copy_text }}">Copy explicit helper</button>
+    {% endif %}
 
     <label for="hostname">Hostname</label>
     <input id="hostname" name="hostname" value="{{ hostname }}">

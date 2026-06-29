@@ -8,11 +8,11 @@ This document maps replacement requirements to validation coverage. It should be
 |---|---|---|
 | PR-001 Web admin console | C-001 through C-010 | Covers auth, device workflows, export, audit, health, user admin, and deployment UI. |
 | PR-002 Device inventory | C-002, C-003, C-004, C-005, C-006 | Device CSV export at `/devices/export.csv` covered by `device_csv` unit tests and `device_csv_export_integration` tests; respects default-list archive exclusion and current search term. |
-| PR-003 Address-book workflow | R-001 through R-006, CUT-003 | RustDesk ID copy button on device list and edit form covered by `rustdesk_id_copy_integration` tests (R-001 copy ID validation). Pilot workflow evidence still required for cutover. |
+| PR-003 Address-book workflow | R-001 through R-006, CUT-003 | RustDesk ID copy button on device list and edit form covered by `rustdesk_id_copy_integration` tests; default/explicit connection helper copy actions covered by `connection_helper` unit tests and `phases_1_2_4_integration` tests. Pilot workflow evidence still required for cutover. |
 | PR-004 Sites/tags/notes/archive | C-003, C-004, C-005 | Site CRUD + device assignment covered by sites_integration tests; tag CRUD + device tag assignment + tag search covered by tags_integration tests; notes edit persistence covered by integration_test and notes list display/search covered by notes_integration tests; default list excludes archived devices via `devices_for_default_list` unit tests, `devices_list_contract` integration test, and launch seed archive check. |
-| PR-005 Client delivery | D-001 through D-010 | Must pass for required OSes before cutover. |
+| PR-005 Client delivery | D-001 through D-010 | macOS deployment script, filename-based fallback, and official-client guidance on `/deployment` covered by deployment render unit tests and `phases_1_2_4_integration` tests; full OS/package validation still required before cutover. |
 | PR-006 Endpoint self-registration | E-001 through E-007 | E-002/E-003/E-004 covered by enrollment API, generated Linux script, and integration tests. |
-| PR-007 Server health | S-001 through S-005, C-008 | UDP reachability may need documented exception. |
+| PR-007 Server health | S-001 through S-005, C-008 | DNS/TCP probes and public key fingerprint on authenticated `/status` dashboard covered by `health` unit tests and `phases_1_2_4_integration` tests; plain `/health` endpoint remains `ok`; UDP reachability may need documented exception. |
 | PR-008 Backup/restore | S-006, S-007, SEC-005, CUT-004 | JSON export at `/backup/export.json` and restore via `/backup` covered by `backup_integration` round-trip tests; sensitivity metadata documents password/token hashes and excluded runtime tables. Full cutover restore drill still required. |
 | PR-009 Audit logs | C-007, E-004, SEC-002 | Add event-specific tests with implementation. |
 | PR-010 RBAC | C-009, SEC-003, SEC-004, SEC-008 | Role matrix must cover admin/operator/read-only behavior before cutover. |
@@ -44,7 +44,7 @@ This document maps replacement requirements to validation coverage. It should be
 | OR-011 Research roadmap completion | RS-001 through RS-010 | Required before production cutover. |
 | IR-001 Monitor OSS services | S-002, S-003, C-008 | Do not modify `hbbs`/`hbbr` initially. |
 | IR-002 Public key/fingerprint handling | S-005, SEC-006 | Real key material remains ignored/private. |
-| IR-003 Connection helpers | R-001, R-002, R-006 | Validate copy/open behavior for default and explicit server cases. |
+| IR-003 Connection helpers | R-001, R-002, R-006 | Default and explicit helper string generation plus copy UI covered by `connection_helper` unit tests and `phases_1_2_4_integration` tests; launch/open behavior per OS still requires pilot evidence. |
 | IR-004 Client config per OS/version | D-001 through D-010 | Matrix must record OS/package/version. |
 | IR-005 Compatibility endpoints | E-006, E-007 | Only if implemented. |
 | IR-006 Released client behavior validation | RS-001, RS-002, D-001 through D-010 | Do not rely on source hooks without package validation. |
