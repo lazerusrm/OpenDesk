@@ -1,3 +1,4 @@
+use crate::domain::health::host_from_server_value;
 use crate::domain::server_config::ServerConfig;
 
 pub const EXPLICIT_HELPER_DEFAULT_PORT: u16 = 21117;
@@ -15,7 +16,7 @@ pub fn generate_explicit_server_helper(
     port: u16,
 ) -> Option<String> {
     let rustdesk_id = rustdesk_id?.trim();
-    let id_server = config.id_server.trim();
+    let id_server = host_from_server_value(&config.id_server);
     let public_key = config.public_key.trim();
     if rustdesk_id.is_empty() || id_server.is_empty() || public_key.is_empty() {
         return None;
@@ -51,6 +52,17 @@ mod tests {
         assert_eq!(
             generate_explicit_server_helper(Some("987654321"), &config, 21117),
             Some("987654321@rd.example.com:21117?key=test-public-key".to_string())
+        );
+    }
+
+    #[test]
+    fn explicit_helper_strips_port_suffix_from_id_server() {
+        let mut config = default_server_config();
+        config.id_server = "rd.example.com:21116".to_string();
+        config.public_key = "test-public-key".to_string();
+        assert_eq!(
+            generate_explicit_server_helper(Some("123456789"), &config, 21117),
+            Some("123456789@rd.example.com:21117?key=test-public-key".to_string())
         );
     }
 
