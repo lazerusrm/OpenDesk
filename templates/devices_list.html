@@ -35,7 +35,13 @@
         <td class="rustdesk-id-cell">
           <span>{{ device.rustdesk_id_display }}</span>
           {% if device.rustdesk_id_copy_text != "" %}
-          <button type="button" class="copy-button" data-copy-text="{{ device.rustdesk_id_copy_text }}">Copy</button>
+          <button type="button" class="copy-button" data-copy-text="{{ device.rustdesk_id_copy_text }}">Copy ID</button>
+          {% endif %}
+          {% if device.default_helper_copy_text != "" %}
+          <button type="button" class="copy-button" data-copy-text="{{ device.default_helper_copy_text }}">Copy default</button>
+          {% endif %}
+          {% if device.explicit_helper_copy_text != "" %}
+          <button type="button" class="copy-button" data-copy-text="{{ device.explicit_helper_copy_text }}">Copy explicit</button>
           {% endif %}
         </td>
         <td>{{ device.hostname_display }}</td>

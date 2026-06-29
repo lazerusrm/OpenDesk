@@ -12,12 +12,17 @@ use uuid::Uuid;
 
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
+use crate::domain::connection_helper::{
+    explicit_server_helper_for_device, generate_default_server_helper,
+};
 use crate::domain::device::{merge_device_update, validate_device_draft, DeviceDraft};
+use crate::domain::server_config::default_server_config;
 use crate::domain::device_list::{
     devices_for_default_list, format_notes_display, notes_list_title, rustdesk_id_copy_text,
     DeviceSearchQuery,
 };
 use crate::domain::tag::format_tag_names_display;
+use crate::repository::server_config::load_server_config;
 use crate::repository::sites::list_sites;
 use crate::repository::tags::{
     list_device_tag_names_map, list_tag_uuids_for_device, set_device_tags,
@@ -70,6 +75,10 @@ async fn devices_list(
     let device_tag_names = list_device_tag_names_map(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    let server_config = load_server_config(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+        .unwrap_or_else(default_server_config);
     let devices = list_devices(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -97,6 +106,15 @@ async fn devices_list(
                     .unwrap_or_else(|| "-".to_string()),
                 rustdesk_id_copy_text: rustdesk_id_copy_text(device.rustdesk_id.as_deref())
                     .unwrap_or_default(),
+                default_helper_copy_text: generate_default_server_helper(
+                    device.rustdesk_id.as_deref(),
+                )
+                .unwrap_or_default(),
+                explicit_helper_copy_text: explicit_server_helper_for_device(
+                    device.rustdesk_id.as_deref(),
+                    &server_config,
+                )
+                .unwrap_or_default(),
                 hostname_display: device
                     .hostname
                     .clone()
