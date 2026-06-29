@@ -14,8 +14,8 @@ The current production-style deployment was inspected read-only. Evidence confir
 - Server logs expose rendezvous, direct-address fetch, relay pairing/closure, startup settings, and wrong-key events.
 - Current production-style usage includes users, groups, assigned devices, address-book entries, strategies, custom clients, sessions, and audit history.
 - No current users have 2FA enabled in the inspected database, and third-party auth rows were absent.
-- Address-book entries include hashed secret material, so passwordless/managed-password parity must be treated as a security-sensitive requirement until owner signoff retires it.
-- Released Linux client evidence now covers current AppImage version readout and current Debian package install/config/restart/reinstall persistence in a dev LXC.
+- Address-book entries include hashed secret material; OpenDesk rejects plaintext unattended passwords and uses equivalent operator workflows.
+- Released Linux client evidence covers current AppImage version readout and RustDesk `1.4.8` Debian package install/config/restart/reinstall persistence in a dev LXC.
 - A separate dev LXC/VM is the preferred place to validate package installs, deploy compatibility, config persistence, and failure modes.
 - Current custom-client usage is Windows-only in the inspected database.
 - Strategy rows include active config options, so strategies/policies remain replacement scope unless explicitly retired.
@@ -29,18 +29,18 @@ The current production-style deployment was inspected read-only. Evidence confir
 
 ## Current Decisions
 
-| Research ID | Decision | Remaining Work |
-|---|---|---|
-| R-001 | Official docs/source support multiple config paths. Current released Linux `.deb` validates command-line config writing ID server, key, API server, and relay server values into root service config. | Run Windows/macOS/mobile released-client validation matrix and Linux GUI/operator workflow tests. |
-| R-002 | Generated scripts using official client commands are the primary deployment path. Current released Linux `.deb` validates package install, root service creation, ID readout, service restart persistence, and same-version reinstall persistence. | Confirm Windows/macOS silent flags, config persistence, service/user config, and upgrade behavior on real released clients. |
-| R-003 | Pro features are actively present and several are populated: users, groups, assigned devices, address books, strategies with config options, Windows custom clients, sessions, console activity, and audit logs. Role mappings and third-party auth integrations were not populated in inspected evidence. | Owner must confirm which populated features are actually used weekly and which may be retired. |
-| R-004 | Address-book entries include hashed secret material. OpenDesk must not store plaintext unattended passwords, and any managed-password parity needs a dedicated secret-management design. | Owner must decide whether passwordless/managed-password workflow is required for cutover. |
-| R-005 | Current settings do not require login for access, so dashboard RBAC alone cannot be treated as RustDesk session enforcement. | Decide whether session-level enforcement is required and how to implement it. |
-| R-006 | Released Linux `.deb` validated `--deploy --token` against a controlled dev endpoint. The client posts bearer-auth JSON to `/api/devices/deploy`, accepts `OK`, and returns distinct CLI messages/exit codes for `NOT_ENABLED`, `INVALID_INPUT`, and `ID_TAKEN`. | Test Windows/macOS clients and implement isolated compatibility adapter tests. |
-| R-007 | Database audit tables and server logs provide useful visibility; OpenDesk can provide native admin/enrollment audit plus optional RustDesk log/database ingestion. Console audit rows also prove recent admin-console activity, and local RustDesk source provides numeric action mappings. | Define exact audit tiers and avoid claiming full session enforcement from launch-intent events alone. Validate labels against observed rows before cutover. |
-| R-008 | Mobile RustDesk apps must work with OpenDesk for operator workflows. Official docs support manual mobile configuration and Android QR config. iOS is operator-only for OpenDesk purposes because official docs state it cannot be controlled remotely. | Validate Android and iOS operator workflows with OpenDesk-generated config/instructions. |
-| R-009 | Standard RustDesk ports, service state, direct-address lookup, punch-hole behavior, relay pairing events, inside-LAN TCP reachability, split public/local DNS shape, and local-resolution TCP reachability are confirmed. | Add WAN/NAT/mobile-network/direct-vs-relay validation evidence from real clients. |
-| R-010 | Clean-room control plane remains the license posture. | ADR-007 records fork/link/vendor rules. |
+| Research ID | Decision | Status | Remaining Pilot Work |
+|---|---|---|---|
+| R-001 | Generated scripts primary; Linux/Windows on `main`; macOS/filename/helpers in PR #14; Linux `.deb` config validated; Windows/macOS/mobile accepted-exception until pilot. | Accepted | Pilot: D-001 through D-012, CUT-003 per OS. |
+| R-002 | Linux/Windows scripts on `main`; macOS in PR #14; Linux package lifecycle validated; Windows/macOS accepted-exception until pilot. | Accepted | Pilot: silent install, upgrade, service/user context D-001, D-009, S-009. |
+| R-003 | Populated Pro features mapped in owner decisions and parity inventory; weekly-use assumptions recorded from inspected evidence. | Accepted | Pilot operator confirmation CUT-003. |
+| R-004 | Equivalent workflow: documented copy/helper path (PR #14) + operator credentials; no plaintext storage; ADR-008 if managed-password parity later required. | Accepted | None for research closure. |
+| R-005 | Lookup-only dashboard access; no RustDesk session-enforcement claims. | Accepted | RBAC matrix at Phase 5 cutover gate. |
+| R-006 | Linux deploy contract validated; defer OpenDesk `/api/devices/deploy` adapter; scripts remain primary. | Accepted | Pilot only if adapter scope reopens E-006, E-007. |
+| R-007 | Tier 1 OpenDesk audit required; Tier 2 RustDesk ingestion optional Stage 2. | Accepted | Ingestion label validation if Tier 2 selected. |
+| R-008 | Mobile RustDesk apps required for operators; Android QR/manual; iOS operator-only. | Accepted | Pilot D-011, D-012, CUT-003. |
+| R-009 | LAN TCP + split DNS confirmed; `/status` dashboard PR #14; plain `/health` on `main`; WAN/mobile accepted-exception. | Accepted | Pilot S-001 through S-005, CUT-003 from real clients. |
+| R-010 | Clean-room control plane remains the license posture. | Accepted | ADR-007 records fork/link/vendor rules. |
 
 ## Sources
 
@@ -51,3 +51,4 @@ The current production-style deployment was inspected read-only. Evidence confir
 - RustDesk Server Pro web console documentation.
 - Local ignored RustDesk OSS source inspection.
 - Local read-only production-style server evidence under ignored `local/research/`.
+- Dev LXC RustDesk `1.4.8` Debian package validation recorded in `docs/dev-validation.md`.

@@ -23,15 +23,15 @@
 
 ## Research Sprint
 
-- [~] Fill R-001 client configuration behavior matrix.
-- [~] Fill R-002 official client deployment mechanics.
-- [~] Fill R-003 production Pro usage inventory.
-- [~] Fill R-004 address book/password model.
-- [~] Fill R-005 access control reality.
-- [~] Fill R-006 deployment endpoint compatibility.
-- [~] Fill R-007 session/audit log sources.
-- [~] Fill R-008 mobile workflow.
-- [~] Fill R-009 relay/NAT/LAN/DNS behavior.
+- [x] Fill R-001 client configuration behavior matrix.
+- [x] Fill R-002 official client deployment mechanics.
+- [x] Fill R-003 production Pro usage inventory.
+- [x] Fill R-004 address book/password model.
+- [x] Fill R-005 access control reality.
+- [x] Fill R-006 deployment endpoint compatibility.
+- [x] Fill R-007 session/audit log sources.
+- [x] Fill R-008 mobile workflow.
+- [x] Fill R-009 relay/NAT/LAN/DNS behavior.
 - [x] Fill R-010 legal/license posture.
 
 ## First Build Slice

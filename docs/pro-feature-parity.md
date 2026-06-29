@@ -46,27 +46,25 @@ Status categories:
 
 ## Production Usage Inventory
 
-Read-only production-style evidence currently proves these populated Pro areas exist: users, groups, device assignments, personal address books, strategies with config options, Windows custom clients, sessions, and audit logs. No current user rows had 2FA enabled in the inspected database, and third-party auth rows were absent.
+Inventory recorded 2026-06-29 from read-only production-style database inspection, owner decisions in `docs/research/owner-decisions.md`, and dev LXC Linux package validation. No unresolved Used Today values remain.
 
-Current replacement assumptions until owner review:
-
-- Windows generated install/config flow is required because current custom clients are Windows-only.
-- Strategy/policy replacement is required because active strategy config exists.
-- Native passwordless address-book parity remains undecided because address-book entries contain hashed secret material.
-- SSO/third-party auth and 2FA are not currently proven production dependencies, but may still be added as hardening features.
-- Passkeys are desired as optional OpenDesk login hardening and should not be treated as a replacement for endpoint password or session enforcement.
-
-Before cutover, the owner must inventory current RustDesk Server Pro usage from operator interviews and any available Pro exports/screenshots. For every capability above, record:
-
-| Field | Required Meaning |
-|---|---|
-| Used Today | `yes`, `no`, `unknown`, or `retired by owner decision`. |
-| Replacement Path | OpenDesk feature, equivalent workflow, or explicit retirement decision. |
-| Validation IDs | Validation cases proving the replacement path. |
-| Evidence | Link/path to test evidence, pilot notes, export comparison, or owner signoff. |
-| Blocker | Remaining gap, or `none`. |
-
-Any `unknown` Used Today value blocks cutover. Any `yes` value needs either passing validation evidence or a signed retirement decision before OpenDesk can be treated as a full Pro replacement.
+| Pro Area | Used Today | Replacement Path | Validation IDs | Evidence | Blocker |
+|---|---|---|---|---|---|
+| Users and admin accounts | yes | OpenDesk admin login; multi-user RBAC Phase 5 | C-001, C-009 | Inspected Pro users table populated; OpenDesk auth implemented | RBAC matrix at cutover |
+| Device groups / assignments | yes | OpenDesk sites, tags, device metadata | C-003, C-004, C-005 | Inspected device-user assignments | none for research closure |
+| Personal address books | yes | OpenDesk device list, search, RustDesk ID copy (main); connection helpers (PR #14) | C-002, C-003, CUT-003 | Inspected address-book entries linked to devices | Pilot operator workflow |
+| Native RustDesk address book | no | Equivalent: OpenDesk web address book | CUT-003 | Owner decision: equivalent workflow | Pilot confirmation |
+| Managed/passwordless address-book access | yes | Equivalent: documented copy/helper workflow (PR #14) + operator-managed credentials; ADR-008 if upgraded | IR-003, CUT-003 | Hashed secrets in Pro entries; OpenDesk rejects plaintext storage | Pilot operator workflow |
+| Strategies/policies | yes | Generated config + enrollment; policy UI Stage 2 | D-001, CUT-003 | Active strategy config rows in inspected DB | Pilot policy parity |
+| Windows custom clients | yes | Generated Windows PowerShell script on `/deployment` | D-001, D-002, CUT-003 | Windows-only custom clients in inspected DB | Pilot Windows install |
+| Sessions / connection history | yes | OpenDesk device list + optional Tier 2 log ingestion | C-007, RS-007 | Connection audit rows populated | Tier 2 optional |
+| Console / admin audit | yes | OpenDesk Tier 1 audit; optional RustDesk ingestion | C-007, PR-009 | Console audit rows with recent activity | Ingestion labels if Tier 2 |
+| Relay / ID server management | yes | OSS `hbbs`/`hbbr` unchanged; plain `/health` on main; `/status` dashboard PR #14 | C-008, S-001 through S-005 | Service ports and logs validated | WAN pilot S-004 |
+| 2FA | no | Retired for parity; optional IdP hardening | SEC-009 | No users with 2FA in inspected DB | none |
+| SSO / third-party auth | no | Retired for parity; optional reverse-proxy OIDC Stage 2 | SEC-001 | No third-party auth rows in inspected DB | none |
+| Passkeys | no | Optional OpenDesk login hardening | SEC-009 | Owner preference only | Implementation Phase 5+ |
+| API integrations / deploy endpoint | no | Retired for cutover; generated scripts primary; R-006 defers adapter | E-006, E-007 | Linux deploy contract validated; adapter deferred | Reopen only if pilot requires |
+| Mobile operator workflow | yes | Official RustDesk apps + OpenDesk config instructions | D-011, D-012, CUT-003 | Official mobile docs; accepted-exception until pilot | Pilot Android/iOS |
 
 ## Replacement Acceptance
 

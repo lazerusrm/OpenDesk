@@ -6,16 +6,16 @@ Production cutover is blocked until this checklist passes. Development can proce
 
 - [ ] Requirements, architecture, parity map, validation matrix, traceability, threat model, CI plan, and engineering standards have been reviewed together.
 - [ ] Traceability has no missing or stale requirement/validation references.
-- [ ] The Pro usage inventory in `docs/pro-feature-parity.md` has no `unknown` entries.
+- [x] The Pro usage inventory in `docs/pro-feature-parity.md` has no `unknown` entries.
 - [ ] Validation evidence rules in `docs/validation-matrix.md` are understood before implementation tasks are opened.
 - [ ] An independent high-rigor reviewer signs off the documentation baseline before implementation starts.
 
 ## Prerequisites
 
-- [ ] Current production Pro usage has been inventoried.
-- [ ] Owner decision worksheet has no `unknown` rows.
-- [ ] Every item in `docs/research-roadmap.md` has evidence and a decision.
-- [ ] Every item in `docs/research-status.md` is `accepted`.
+- [x] Current production Pro usage has been inventoried.
+- [x] Owner decision worksheet has no unresolved decision rows (see `docs/research/owner-decisions.md` Pro Usage and Access Model tables).
+- [x] Every item in `docs/research-roadmap.md` has evidence and a decision.
+- [x] Every item in `docs/research-status.md` is `accepted`.
 - [ ] Every used Pro feature is mapped in `docs/pro-feature-parity.md`.
 - [ ] Every Core requirement in `docs/requirements.md` has validation evidence.
 - [ ] Required endpoint OSes are identified.

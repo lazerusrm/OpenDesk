@@ -58,6 +58,8 @@ Decision:
 
 Treat every populated Pro feature as required until owner review marks it replaced, equivalent, or retired.
 
+Closure (2026-06-29): R-003 accepted. Production Usage Inventory in `docs/pro-feature-parity.md` and owner decisions recorded with no `unknown` rows.
+
 ## R-004 Address Book And Password Model
 
 Question:
@@ -91,6 +93,8 @@ Address-book entry metadata includes hashed secret material. It does not expose 
 Decision:
 
 OpenDesk must not store plaintext unattended passwords. ADR-008 requires externalizing managed access secrets if native passwordless or managed-password workflow is required for cutover.
+
+Closure (2026-06-29): R-004 accepted. Equivalent operator workflow; passwordless one-click retired for cutover.
 
 ## R-005 Access Control Reality
 
@@ -126,6 +130,8 @@ Current server settings do not require login for access, while device records ar
 Decision:
 
 OpenDesk may claim dashboard access control only for OpenDesk UI/API workflows. It must not claim RustDesk session-level enforcement unless endpoint settings, password rotation, network controls, or future client/server integration actually enforce it.
+
+Closure (2026-06-29): R-005 accepted. Lookup-only dashboard access model.
 
 ## R-007 Session And Audit Log Sources
 
@@ -169,6 +175,8 @@ Decision:
 
 OpenDesk should implement first-party audit for admin actions, deployment artifacts, enrollment, auth, and settings changes. ADR-009 defines separate audit tiers for OpenDesk actions, RustDesk log/database ingestion, and any future deeper session proof.
 
+Closure (2026-06-29): R-007 accepted. Tier 1 OpenDesk audit required; Tier 2 ingestion optional Stage 2.
+
 ## R-009 Relay Scaling, NAT, LAN, And DNS Behavior
 
 Question:
@@ -209,6 +217,8 @@ Inside-LAN TCP reachability from the dev LXC to the expected RustDesk service po
 Decision:
 
 OpenDesk health checks should cover DNS, TCP listeners, UDP where feasible, public key fingerprint, service state, log freshness, and disk/database health. Real LAN/WAN/NAT/split-DNS behavior still needs client-side validation before cutover.
+
+Closure (2026-06-29): R-009 accepted. LAN TCP and split DNS confirmed; WAN/mobile accepted-exception with pilot S-001 through S-005, CUT-003.
 
 ## R-010 Legal And License Posture
 

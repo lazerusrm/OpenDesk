@@ -41,7 +41,7 @@ This document maps replacement requirements to validation coverage. It should be
 | OR-008 CI checks | CI-001 through CI-009 | Bootstrap docs/security checks exist; app-specific checks arrive with implementation. |
 | OR-009 Canonical contracts and anti-shim discipline | CI-008 plus engineering review | Needs automated and human review once implementation begins. |
 | OR-010 Source file size limits | CI-007 plus code review | Needs automated report once implementation begins. |
-| OR-011 Research roadmap completion | RS-001 through RS-010 | Required before production cutover. |
+| OR-011 Research roadmap completion | RS-001 through RS-010 | Research status ledger accepted 2026-06-29 (`docs/research-status.md`); pilot validation remains for accepted-exception OS/network targets before cutover. |
 | IR-001 Monitor OSS services | S-002, S-003, C-008 | Do not modify `hbbs`/`hbbr` initially. |
 | IR-002 Public key/fingerprint handling | S-005, SEC-006 | Real key material remains ignored/private. |
 | IR-003 Connection helpers | R-001, R-002, R-006 | Validate copy/open behavior for default and explicit server cases. |
