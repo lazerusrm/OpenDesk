@@ -28,16 +28,37 @@ Canonical domain vocabulary:
 | OpenDesk admin service | `opendesk` | `control_plane` in runtime names |
 | Generated install flow | `deployment_artifact` | `installer_blob`, `download_thing` |
 
+## Positive Contract and Hard-Cut Rule
+
+Internal contract boundaries are positive allowlists, not denylists of previous
+mistakes:
+
+- Define the complete accepted names, values, and shapes once.
+- Accept exact members and reject every non-member through one generic
+  invalid/noncanonical boundary.
+- Do not retain obsolete names as aliases, translation layers, normalizers,
+  bespoke denial reasons, metrics, fixtures, or one-test-per-old-value catalogs.
+- Use specific failures only for missing prerequisites of a currently accepted
+  operation.
+- Test accepted members plus the universal non-member invariant with compact
+  tables, representative boundaries, or generated inputs.
+
+“Fail closed” does not justify preserving historical-input knowledge. External
+RustDesk vocabulary may be mapped at the explicit integration boundary, but
+core OpenDesk contracts must remain singular.
+
 ## Anti-Shim Policy
 
 Shims, adapters, and compatibility paths are allowed only at explicit boundaries.
 
 Allowed:
 
-- Boundary adapters for RustDesk-specific config names.
-- Compatibility endpoint handlers isolated from OpenDesk-native APIs.
+- Boundary adapters for current RustDesk-specific config names.
+- Compatibility endpoint handlers isolated from OpenDesk-native APIs only when a
+  currently supported external RustDesk contract requires them.
 - Migration code with a planned removal point.
-- Test fixtures that intentionally model legacy/external behavior.
+- Compact boundary fixtures that prove the current external contract or the
+  general non-member rejection invariant.
 
 Rejected:
 
