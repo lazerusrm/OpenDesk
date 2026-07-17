@@ -21,7 +21,8 @@ type DeviceRow = (
     i64,
 );
 
-const DEVICE_SELECT: &str = "SELECT device_uuid, rustdesk_id, alias, hostname, os_family, os_version, architecture,
+const DEVICE_SELECT: &str =
+    "SELECT device_uuid, rustdesk_id, alias, hostname, os_family, os_version, architecture,
                 rustdesk_version, site_uuid, owner, notes, last_checkin_at, archived";
 
 fn row_to_device(row: DeviceRow) -> Device {
@@ -43,9 +44,10 @@ fn row_to_device(row: DeviceRow) -> Device {
 }
 
 pub async fn list_devices(pool: &SqlitePool) -> Result<Vec<Device>, sqlx::Error> {
-    let rows = sqlx::query_as::<_, DeviceRow>(&format!("{DEVICE_SELECT} FROM devices ORDER BY alias ASC"))
-        .fetch_all(pool)
-        .await?;
+    let rows =
+        sqlx::query_as::<_, DeviceRow>(&format!("{DEVICE_SELECT} FROM devices ORDER BY alias ASC"))
+            .fetch_all(pool)
+            .await?;
     Ok(rows.into_iter().map(row_to_device).collect())
 }
 
@@ -53,10 +55,12 @@ pub async fn find_device_by_uuid(
     pool: &SqlitePool,
     device_uuid: Uuid,
 ) -> Result<Option<Device>, sqlx::Error> {
-    let row = sqlx::query_as::<_, DeviceRow>(&format!("{DEVICE_SELECT} FROM devices WHERE device_uuid = ?"))
-        .bind(device_uuid.to_string())
-        .fetch_optional(pool)
-        .await?;
+    let row = sqlx::query_as::<_, DeviceRow>(&format!(
+        "{DEVICE_SELECT} FROM devices WHERE device_uuid = ?"
+    ))
+    .bind(device_uuid.to_string())
+    .fetch_optional(pool)
+    .await?;
     Ok(row.map(row_to_device))
 }
 
@@ -64,10 +68,12 @@ pub async fn find_device_by_rustdesk_id(
     pool: &SqlitePool,
     rustdesk_id: &str,
 ) -> Result<Option<Device>, sqlx::Error> {
-    let row = sqlx::query_as::<_, DeviceRow>(&format!("{DEVICE_SELECT} FROM devices WHERE rustdesk_id = ?"))
-        .bind(rustdesk_id)
-        .fetch_optional(pool)
-        .await?;
+    let row = sqlx::query_as::<_, DeviceRow>(&format!(
+        "{DEVICE_SELECT} FROM devices WHERE rustdesk_id = ?"
+    ))
+    .bind(rustdesk_id)
+    .fetch_optional(pool)
+    .await?;
     Ok(row.map(row_to_device))
 }
 
@@ -75,10 +81,11 @@ pub async fn find_device_by_hostname(
     pool: &SqlitePool,
     hostname: &str,
 ) -> Result<Option<Device>, sqlx::Error> {
-    let row = sqlx::query_as::<_, DeviceRow>(&format!("{DEVICE_SELECT} FROM devices WHERE hostname = ?"))
-        .bind(hostname)
-        .fetch_optional(pool)
-        .await?;
+    let row =
+        sqlx::query_as::<_, DeviceRow>(&format!("{DEVICE_SELECT} FROM devices WHERE hostname = ?"))
+            .bind(hostname)
+            .fetch_optional(pool)
+            .await?;
     Ok(row.map(row_to_device))
 }
 

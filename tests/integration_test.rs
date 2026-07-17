@@ -8,8 +8,8 @@ use std::os::unix::fs::PermissionsExt;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use http_body_util::BodyExt;
 use common::{login_and_get_session_cookie, test_state};
+use http_body_util::BodyExt;
 use opendesk::build_router;
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -19,7 +19,12 @@ use tower::ServiceExt;
 async fn health_endpoint_returns_ok() {
     let app = build_router(test_state().await);
     let response = app
-        .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .expect("response");
     assert_eq!(response.status(), StatusCode::OK);
@@ -29,7 +34,12 @@ async fn health_endpoint_returns_ok() {
 async fn login_page_renders_opendesk_form() {
     let app = build_router(test_state().await);
     let response = app
-        .oneshot(Request::builder().uri("/login").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/login")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .expect("response");
     assert_eq!(response.status(), StatusCode::OK);
@@ -78,13 +88,10 @@ async fn device_update_via_handler_preserves_enrollment_metadata() {
         .expect("checkin");
     assert_eq!(checkin.status(), StatusCode::NO_CONTENT);
 
-    let device = opendesk::repository::devices::find_device_by_rustdesk_id(
-        &state.db,
-        "554433221",
-    )
-    .await
-    .expect("lookup")
-    .expect("device");
+    let device = opendesk::repository::devices::find_device_by_rustdesk_id(&state.db, "554433221")
+        .await
+        .expect("lookup")
+        .expect("device");
 
     let session_cookie = login_and_get_session_cookie(&app).await;
     let update = app
@@ -103,13 +110,10 @@ async fn device_update_via_handler_preserves_enrollment_metadata() {
         .expect("device update");
     assert_eq!(update.status(), StatusCode::SEE_OTHER);
 
-    let updated = opendesk::repository::devices::find_device_by_uuid(
-        &state.db,
-        device.device_uuid,
-    )
-    .await
-    .expect("reload")
-    .expect("updated device");
+    let updated = opendesk::repository::devices::find_device_by_uuid(&state.db, device.device_uuid)
+        .await
+        .expect("reload")
+        .expect("updated device");
 
     assert_eq!(updated.alias, "Renamed device");
     assert_eq!(updated.os_family.as_deref(), Some("linux"));
@@ -131,7 +135,9 @@ async fn linux_script_export_executes_check_in_against_running_server() {
     .await
     .expect("create token");
 
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind listener");
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind listener");
     let addr = listener.local_addr().expect("listener address");
     let mut state = state;
     state.public_base_url = format!("http://{addr}");
@@ -223,13 +229,10 @@ esac
     );
     assert!(stdout.contains("opendesk enrollment check-in http_status=204"));
 
-    let device = opendesk::repository::devices::find_device_by_rustdesk_id(
-        &state.db,
-        "887766554",
-    )
-    .await
-    .expect("lookup enrolled device")
-    .expect("device created by exported script check-in");
+    let device = opendesk::repository::devices::find_device_by_rustdesk_id(&state.db, "887766554")
+        .await
+        .expect("lookup enrolled device")
+        .expect("device created by exported script check-in");
     assert_eq!(device.os_family.as_deref(), Some("linux"));
 
     let _ = fs::remove_dir_all(&temp_root);
@@ -271,4 +274,3 @@ async fn archived_device_validation_error_shows_unarchive_action() {
     assert!(html.contains("Unarchive"));
     assert!(!html.contains("/archive\">\n    <button type=\"submit\">Archive</button>"));
 }
-

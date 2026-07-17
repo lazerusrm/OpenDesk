@@ -9,7 +9,10 @@ pub async fn test_state() -> AppState {
         .connect("sqlite::memory:")
         .await
         .expect("connect");
-    sqlx::migrate!("./migrations").run(&db).await.expect("migrate");
+    sqlx::migrate!("./migrations")
+        .run(&db)
+        .await
+        .expect("migrate");
     opendesk::repository::users::create_user(&db, "admin", "test-password", "admin")
         .await
         .expect("bootstrap user");

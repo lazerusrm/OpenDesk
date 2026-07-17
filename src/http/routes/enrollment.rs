@@ -20,7 +20,7 @@ use crate::domain::enrollment_token::{
     hash_enrollment_token_value, validate_enrollment_token_label, verify_enrollment_token_value,
 };
 use crate::http::routes::render::render_enrollment_tokens;
-use crate::http::session::require_user;
+use crate::http::session::{require_mutator, require_user};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::devices::{
     create_device, find_device_by_hostname, find_device_by_rustdesk_id, touch_device_checkin,
@@ -64,7 +64,7 @@ async fn enrollment_token_create(
     jar: CookieJar,
     Form(form): Form<EnrollmentTokenForm>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_mutator(&state, &jar).await?;
     if let Err(_error) = validate_enrollment_token_label(&form.label) {
         return Ok(render_enrollment_tokens(&state, None)
             .await
@@ -101,7 +101,7 @@ async fn enrollment_token_revoke(
     jar: CookieJar,
     Path(enrollment_token_uuid): Path<Uuid>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_mutator(&state, &jar).await?;
     revoke_enrollment_token(&state.db, enrollment_token_uuid)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -137,12 +137,40 @@ async fn enrollment_checkin(
     Json(body): Json<EnrollmentCheckinRequest>,
 ) -> Result<StatusCode, StatusCode> {
     let token_hash = hash_enrollment_token_value(&body.enrollment_token);
-    let record = find_enrollment_token_by_hash(&state.db, &token_hash)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-    verify_enrollment_token_value(&record, &body.enrollment_token, OffsetDateTime::now_utc())
-        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    let record = match find_enrollment_token_by_hash(&state.db, &token_hash).await {
+        Ok(Some(record)) => record,
+        Ok(None) => {
+            write_checkin_audit(
+                &state,
+                None,
+                "failure",
+                Some(serde_json::json!({
+                    "reason": "unknown_token",
+                    "enrollment_token": body.enrollment_token,
+                    "hostname": body.hostname,
+                })),
+            )
+            .await;
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    if verify_enrollment_token_value(&record, &body.enrollment_token, OffsetDateTime::now_utc())
+        .is_err()
+    {
+        write_checkin_audit(
+            &state,
+            None,
+            "failure",
+            Some(serde_json::json!({
+                "reason": "token_invalid_or_revoked",
+                "enrollment_token": body.enrollment_token,
+                "enrollment_token_uuid": record.enrollment_token_uuid,
+            })),
+        )
+        .await;
+        return Err(StatusCode::UNAUTHORIZED);
+    }
     let draft = normalize_device_draft(DeviceDraft {
         rustdesk_id: body.rustdesk_id.clone(),
         alias: body
@@ -159,7 +187,19 @@ async fn enrollment_checkin(
         owner: None,
         notes: None,
     });
-    validate_device_draft(&draft).map_err(|_| StatusCode::BAD_REQUEST)?;
+    if validate_device_draft(&draft).is_err() {
+        write_checkin_audit(
+            &state,
+            None,
+            "failure",
+            Some(serde_json::json!({
+                "reason": "invalid_device_payload",
+                "enrollment_token": body.enrollment_token,
+            })),
+        )
+        .await;
+        return Err(StatusCode::BAD_REQUEST);
+    }
     let by_rustdesk_id = if let Some(rustdesk_id) = draft.rustdesk_id.as_deref() {
         find_device_by_rustdesk_id(&state.db, rustdesk_id)
             .await
@@ -174,12 +214,12 @@ async fn enrollment_checkin(
     } else {
         None
     };
-    let device = if let Some(device_uuid) = select_existing_device_for_checkin(
-        &EnrollmentDeviceLookup {
-            by_rustdesk_id,
-            by_hostname,
-        },
-    ) {
+    let existing_uuid = select_existing_device_for_checkin(&EnrollmentDeviceLookup {
+        by_rustdesk_id,
+        by_hostname,
+    });
+    let is_update = existing_uuid.is_some();
+    let device = if let Some(device_uuid) = existing_uuid {
         touch_device_checkin(&state.db, device_uuid, &draft)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
@@ -204,15 +244,40 @@ async fn enrollment_checkin(
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let action = if is_update {
+        "endpoint_checkin_update"
+    } else {
+        "endpoint_checkin_create"
+    };
+    write_checkin_audit(
+        &state,
+        Some(device.device_uuid),
+        "success",
+        Some(serde_json::json!({
+            "action": action,
+            "enrollment_token_uuid": record.enrollment_token_uuid,
+            "hostname": body.hostname,
+            "os_family": body.os_family,
+        })),
+    )
+    .await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn write_checkin_audit(
+    state: &AppState,
+    device_uuid: Option<Uuid>,
+    outcome: &str,
+    detail: Option<serde_json::Value>,
+) {
     let audit = AuditEventDraft {
         actor_user_uuid: None,
         action: "endpoint_checkin".to_string(),
         object_type: "device".to_string(),
-        object_uuid: Some(device.device_uuid),
-        outcome: "success".to_string(),
+        object_uuid: device_uuid,
+        outcome: outcome.to_string(),
         source: "api".to_string(),
-        detail: None,
+        detail,
     };
     let _ = insert_audit_event(&state.db, &audit).await;
-    Ok(StatusCode::NO_CONTENT)
 }

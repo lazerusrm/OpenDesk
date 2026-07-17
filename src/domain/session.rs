@@ -30,7 +30,13 @@ mod tests {
     #[test]
     fn session_validity_respects_expiry() {
         let expires = datetime!(2026-06-24 12:00:00 UTC);
-        assert!(session_is_valid(expires, datetime!(2026-06-23 12:00:00 UTC)));
-        assert!(!session_is_valid(expires, datetime!(2026-06-24 12:00:01 UTC)));
+        assert!(session_is_valid(
+            expires,
+            datetime!(2026-06-23 12:00:00 UTC)
+        ));
+        assert!(!session_is_valid(
+            expires,
+            datetime!(2026-06-24 12:00:01 UTC)
+        ));
     }
 }

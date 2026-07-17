@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Audit Log</h1>
+  <p>Tier-1 operational events (auth, device mutations, enrollment, deployment artifacts, exports). Secret material is redacted.</p>
+  <p><a href="/audit/export.csv">Export CSV</a></p>
+</section>
+<section class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Actor</th>
+        <th>Action</th>
+        <th>Object</th>
+        <th>Object UUID</th>
+        <th>Outcome</th>
+        <th>Source</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in events %}
+      <tr>
+        <td>{{ event.created_at }}</td>
+        <td>{{ event.actor_display }}</td>
+        <td>{{ event.action }}</td>
+        <td>{{ event.object_type }}</td>
+        <td><code>{{ event.object_uuid_display }}</code></td>
+        <td>{{ event.outcome }}</td>
+        <td>{{ event.source }}</td>
+        <td><code>{{ event.detail_display }}</code></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -1,3 +1,4 @@
+use askama::Template;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -6,7 +7,6 @@ use axum::{
     Form, Router,
 };
 use axum_extra::extract::cookie::CookieJar;
-use askama::Template;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -16,26 +16,26 @@ use crate::domain::connection_helper::{
     explicit_server_helper_for_device, generate_default_server_helper,
 };
 use crate::domain::device::{merge_device_update, validate_device_draft, DeviceDraft};
-use crate::domain::server_config::default_server_config;
 use crate::domain::device_list::{
     devices_for_default_list, format_notes_display, notes_list_title, rustdesk_id_copy_text,
     DeviceSearchQuery,
 };
+use crate::domain::server_config::default_server_config;
 use crate::domain::tag::format_tag_names_display;
+use crate::http::routes::device_export::export_csv_href;
+use crate::http::routes::render::render_device_form;
+use crate::http::session::{require_mutator, require_user, AuthenticatedUser};
+use crate::http::views::{DeviceRowView, DevicesListView};
+use crate::repository::audit_events::insert_audit_event;
+use crate::repository::devices::{
+    create_device, find_device_by_uuid, list_devices, set_device_archived, update_device,
+};
 use crate::repository::server_config::load_server_config;
 use crate::repository::sites::list_sites;
 use crate::repository::tags::{
     list_device_tag_names_map, list_tag_uuids_for_device, set_device_tags,
 };
-use crate::http::routes::device_export::export_csv_href;
-use crate::http::routes::render::render_device_form;
-use crate::http::session::{require_user, AuthenticatedUser};
-use crate::http::views::{DeviceRowView, DevicesListView};
 use crate::time_format::format_last_checkin_display;
-use crate::repository::audit_events::insert_audit_event;
-use crate::repository::devices::{
-    create_device, find_device_by_uuid, list_devices, set_device_archived, update_device,
-};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -115,11 +115,10 @@ async fn devices_list(
                     &server_config,
                 )
                 .unwrap_or_default(),
-                hostname_display: device
-                    .hostname
-                    .clone()
-                    .unwrap_or_else(|| "-".to_string()),
-                last_checkin_display: format_last_checkin_display(device.last_checkin_at.as_deref()),
+                hostname_display: device.hostname.clone().unwrap_or_else(|| "-".to_string()),
+                last_checkin_display: format_last_checkin_display(
+                    device.last_checkin_at.as_deref(),
+                ),
                 archived_display: "no".to_string(),
             }
         })
@@ -137,7 +136,10 @@ async fn devices_list(
     Ok(Html(html).into_response())
 }
 
-async fn device_new_page(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
+async fn device_new_page(
+    State(state): State<AppState>,
+    jar: CookieJar,
+) -> Result<Response, Response> {
     let _user = require_user(&state, &jar).await?;
     Ok(render_device_form(
         &state,
@@ -252,7 +254,7 @@ async fn device_create_submit(
     jar: CookieJar,
     Form(form): Form<DeviceForm>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_mutator(&state, &jar).await?;
     let tag_uuids = parse_tag_uuids_from_form(&form.tag_uuids);
     let draft = device_form_to_draft(form);
     if let Err(error) = validate_device_draft(&draft) {
@@ -287,7 +289,7 @@ async fn device_update_submit(
     Path(device_uuid): Path<Uuid>,
     Form(form): Form<DeviceForm>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_mutator(&state, &jar).await?;
     let existing = find_device_by_uuid(&state.db, device_uuid)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -325,7 +327,7 @@ async fn device_archive(
     jar: CookieJar,
     Path(device_uuid): Path<Uuid>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_mutator(&state, &jar).await?;
     set_device_archived(&state.db, device_uuid, true)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -338,27 +340,12 @@ async fn device_unarchive(
     jar: CookieJar,
     Path(device_uuid): Path<Uuid>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_mutator(&state, &jar).await?;
     set_device_archived(&state.db, device_uuid, false)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     write_device_audit(&state, &user, "device_unarchive", &device_uuid).await;
     Ok(Redirect::to(&format!("/devices/{device_uuid}")).into_response())
-}
-
-#[cfg(test)]
-mod form_tests {
-    use super::DeviceForm;
-
-    #[test]
-    fn deserializes_single_tag_uuid_field() {
-        let body = format!(
-            "alias=Tagged+Workstation&tag_uuids={}",
-            uuid::Uuid::new_v4()
-        );
-        let form: DeviceForm = serde_urlencoded::from_str(&body).expect("deserialize form");
-        assert_eq!(form.tag_uuids.len(), 1);
-    }
 }
 
 async fn write_device_audit(
@@ -377,4 +364,19 @@ async fn write_device_audit(
         detail: None,
     };
     let _ = insert_audit_event(&state.db, &audit).await;
+}
+
+#[cfg(test)]
+mod form_tests {
+    use super::DeviceForm;
+
+    #[test]
+    fn deserializes_single_tag_uuid_field() {
+        let body = format!(
+            "alias=Tagged+Workstation&tag_uuids={}",
+            uuid::Uuid::new_v4()
+        );
+        let form: DeviceForm = serde_urlencoded::from_str(&body).expect("deserialize form");
+        assert_eq!(form.tag_uuids.len(), 1);
+    }
 }

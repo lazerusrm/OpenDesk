@@ -12,7 +12,7 @@ use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::server_config::{default_server_config, validate_server_config, ServerConfig};
 use crate::http::routes::render::render_server_config;
-use crate::http::session::require_user;
+use crate::http::session::{require_admin, require_user};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::server_config::{load_server_config, save_server_config};
 
@@ -48,7 +48,7 @@ async fn server_config_submit(
     jar: CookieJar,
     Form(form): Form<ServerConfigForm>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_admin(&state, &jar).await?;
     let config = ServerConfig {
         id_server: form.id_server,
         relay_server: form.relay_server,
@@ -71,5 +71,8 @@ async fn server_config_submit(
         detail: None,
     };
     let _ = insert_audit_event(&state.db, &audit).await;
-    Ok(render_server_config(&config, Some("Server config saved".to_string()), None).into_response())
+    Ok(
+        render_server_config(&config, Some("Server config saved".to_string()), None)
+            .into_response(),
+    )
 }

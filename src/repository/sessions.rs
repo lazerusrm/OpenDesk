@@ -11,10 +11,7 @@ pub struct SessionRow {
     pub expires_at: OffsetDateTime,
 }
 
-pub async fn create_session(
-    pool: &SqlitePool,
-    user_uuid: Uuid,
-) -> Result<SessionRow, sqlx::Error> {
+pub async fn create_session(pool: &SqlitePool, user_uuid: Uuid) -> Result<SessionRow, sqlx::Error> {
     let session_uuid = new_session_uuid();
     let now = OffsetDateTime::now_utc();
     let expires_at = session_expires_at(now);

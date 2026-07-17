@@ -29,6 +29,7 @@ pub fn render_login(error_message: Option<String>) -> Html<String> {
     Html(view.render().expect("render login"))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn render_device_form(
     state: &AppState,
     heading: &str,

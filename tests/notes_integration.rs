@@ -36,7 +36,12 @@ async fn device_list_shows_notes_and_search_matches_them() {
         .await
         .expect("devices list");
     assert_eq!(list_response.status(), StatusCode::OK);
-    let body = list_response.into_body().collect().await.unwrap().to_bytes();
+    let body = list_response
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
     let html = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(html.contains("Notes Workstation"));
     assert!(html.contains("Keep firmware updated weekly"));
@@ -53,7 +58,12 @@ async fn device_list_shows_notes_and_search_matches_them() {
         .await
         .expect("search devices");
     assert_eq!(search_response.status(), StatusCode::OK);
-    let body = search_response.into_body().collect().await.unwrap().to_bytes();
+    let body = search_response
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
     let html = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(html.contains("Notes Workstation"));
     let _ = device;

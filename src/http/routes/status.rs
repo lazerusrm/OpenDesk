@@ -19,10 +19,7 @@ pub fn routes() -> Router<AppState> {
     Router::new().route("/status", get(status_page))
 }
 
-async fn status_page(
-    State(state): State<AppState>,
-    jar: CookieJar,
-) -> Result<Response, Response> {
+async fn status_page(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
     let _user = require_user(&state, &jar).await?;
     let config = load_server_config(&state.db)
         .await

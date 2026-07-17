@@ -60,10 +60,11 @@ async fn backup_export_and_restore_round_trip() {
     restore_backup_document(&target.db, &parsed)
         .await
         .expect("restore backup");
-    let restored = opendesk::repository::devices::find_device_by_uuid(&target.db, device.device_uuid)
-        .await
-        .expect("lookup restored device")
-        .expect("restored device");
+    let restored =
+        opendesk::repository::devices::find_device_by_uuid(&target.db, device.device_uuid)
+            .await
+            .expect("lookup restored device")
+            .expect("restored device");
     assert_eq!(restored.alias, "Backup Device");
     assert_eq!(restored.rustdesk_id.as_deref(), Some("424242424"));
     assert_eq!(restored.notes.as_deref(), Some("restore me"));

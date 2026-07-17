@@ -17,10 +17,12 @@ use crate::deployment::macos_script::{render_macos_deployment_script, MacosDeplo
 use crate::deployment::windows_script::{
     render_windows_deployment_script, WindowsDeploymentScriptInput,
 };
+use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::server_config::{default_server_config, ServerConfig};
 use crate::http::routes::render::enrollment_token_status;
-use crate::http::session::require_user;
+use crate::http::session::{require_mutator, require_user, AuthenticatedUser};
 use crate::http::views::{DeploymentView, EnrollmentTokenOptionView};
+use crate::repository::audit_events::insert_audit_event;
 use crate::repository::enrollment_tokens::list_enrollment_tokens;
 use crate::repository::server_config::load_server_config;
 
@@ -61,7 +63,7 @@ async fn deployment_page(
     jar: CookieJar,
     Query(query): Query<DeploymentQuery>,
 ) -> Result<Response, Response> {
-    let _user = require_user(&state, &jar).await?;
+    let user = require_user(&state, &jar).await?;
     let config = load_server_config(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -99,6 +101,17 @@ async fn deployment_page(
         opendesk_base_url: &state.public_base_url,
     });
     let filename_custom_server = generate_filename_custom_server(&config);
+    write_deployment_audit(
+        &state,
+        &user,
+        "deployment_artifact_generate",
+        serde_json::json!({
+            "artifacts": ["linux", "windows", "macos", "filename_custom_server"],
+            "enrollment_token": token_value,
+            "enrollment_token_uuid": selected_uuid,
+        }),
+    )
+    .await;
     let view = DeploymentView {
         title: "Deployment".to_string(),
         show_nav: true,
@@ -121,21 +134,49 @@ async fn linux_script_export(
     jar: CookieJar,
     Query(query): Query<DeploymentQuery>,
 ) -> Result<Response, Response> {
-    let _user = require_user(&state, &jar).await?;
+    let user = require_mutator(&state, &jar).await?;
     let config = load_server_config(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .unwrap_or_else(default_server_config);
     let script = render_linux_script_for_deployment(
         &config,
-        query.enrollment_token_value,
+        query.enrollment_token_value.clone(),
         &state.public_base_url,
     );
+    write_deployment_audit(
+        &state,
+        &user,
+        "deployment_script_export",
+        serde_json::json!({
+            "artifact": "linux.sh",
+            "enrollment_token": query.enrollment_token_value,
+        }),
+    )
+    .await;
     Ok((
         [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
         script,
     )
         .into_response())
+}
+
+async fn write_deployment_audit(
+    state: &AppState,
+    user: &AuthenticatedUser,
+    action: &str,
+    detail: serde_json::Value,
+) {
+    let audit = AuditEventDraft {
+        actor_user_uuid: Some(user.user_uuid),
+        action: action.to_string(),
+        object_type: "deployment_artifact".to_string(),
+        object_uuid: None,
+        outcome: "success".to_string(),
+        source: "web".to_string(),
+        detail: Some(detail),
+    };
+    let _ = insert_audit_event(&state.db, &audit).await;
 }
 
 #[cfg(test)]

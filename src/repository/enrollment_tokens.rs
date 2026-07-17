@@ -53,14 +53,17 @@ pub async fn create_enrollment_token(
 pub async fn list_enrollment_tokens(
     pool: &SqlitePool,
 ) -> Result<Vec<EnrollmentTokenRecord>, sqlx::Error> {
-    let rows = sqlx::query_as::<_, (
-        String,
-        String,
-        String,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-    )>(
+    let rows = sqlx::query_as::<
+        _,
+        (
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        ),
+    >(
         "SELECT enrollment_token_uuid, token_hash, label, site_uuid, expires_at, revoked_at
          FROM enrollment_tokens ORDER BY created_at DESC",
     )
@@ -83,14 +86,17 @@ pub async fn find_enrollment_token_by_hash(
     pool: &SqlitePool,
     token_hash: &str,
 ) -> Result<Option<EnrollmentTokenRecord>, sqlx::Error> {
-    let row = sqlx::query_as::<_, (
-        String,
-        String,
-        String,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-    )>(
+    let row = sqlx::query_as::<
+        _,
+        (
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        ),
+    >(
         "SELECT enrollment_token_uuid, token_hash, label, site_uuid, expires_at, revoked_at
          FROM enrollment_tokens WHERE token_hash = ?",
     )
@@ -120,6 +126,7 @@ pub async fn revoke_enrollment_token(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn record_endpoint_checkin(
     pool: &SqlitePool,
     device_uuid: Uuid,

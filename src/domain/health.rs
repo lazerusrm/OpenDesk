@@ -97,10 +97,7 @@ pub fn tcp_port_check(host: &str, port: u16, timeout_ms: u64) -> HealthCheckResu
             };
         }
     };
-    match TcpStream::connect_timeout(
-        &socket_addr,
-        Duration::from_millis(timeout_ms),
-    ) {
+    match TcpStream::connect_timeout(&socket_addr, Duration::from_millis(timeout_ms)) {
         Ok(_) => HealthCheckResult {
             label: format!("TCP {port}"),
             target,
@@ -151,7 +148,9 @@ mod tests {
         let config = default_server_config();
         let checks = build_health_checks(&config);
         assert_eq!(checks.len(), 4);
-        assert!(checks.iter().any(|check| check.target.starts_with("dns:rd.example.com")));
+        assert!(checks
+            .iter()
+            .any(|check| check.target.starts_with("dns:rd.example.com")));
         assert!(checks
             .iter()
             .any(|check| check.target == "tcp:rd.example.com:21116"));

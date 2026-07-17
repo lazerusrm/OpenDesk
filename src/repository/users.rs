@@ -75,12 +75,14 @@ pub async fn find_user_by_username(
     .bind(username)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|(user_uuid, username, password_hash, role)| UserRow {
-        user_uuid: Uuid::parse_str(&user_uuid).expect("stored uuid"),
-        username,
-        password_hash,
-        role,
-    }))
+    Ok(
+        row.map(|(user_uuid, username, password_hash, role)| UserRow {
+            user_uuid: Uuid::parse_str(&user_uuid).expect("stored uuid"),
+            username,
+            password_hash,
+            role,
+        }),
+    )
 }
 
 pub async fn find_user_by_uuid(
@@ -93,10 +95,12 @@ pub async fn find_user_by_uuid(
     .bind(user_uuid.to_string())
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|(user_uuid, username, password_hash, role)| UserRow {
-        user_uuid: Uuid::parse_str(&user_uuid).expect("stored uuid"),
-        username,
-        password_hash,
-        role,
-    }))
+    Ok(
+        row.map(|(user_uuid, username, password_hash, role)| UserRow {
+            user_uuid: Uuid::parse_str(&user_uuid).expect("stored uuid"),
+            username,
+            password_hash,
+            role,
+        }),
+    )
 }

@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::tag::{validate_tag_draft, TagDraft};
-use crate::http::session::require_user;
+use crate::http::session::{require_mutator, require_user};
 use crate::http::views::{TagRowView, TagsListView};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::tags::{create_tag, list_tags};
@@ -26,10 +26,7 @@ struct TagForm {
     name: String,
 }
 
-async fn tags_list(
-    State(state): State<AppState>,
-    jar: CookieJar,
-) -> Result<Response, Response> {
+async fn tags_list(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
     let _user = require_user(&state, &jar).await?;
     Ok(render_tags_page(&state, None)
         .await
@@ -42,7 +39,7 @@ async fn tag_create_submit(
     jar: CookieJar,
     Form(form): Form<TagForm>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_mutator(&state, &jar).await?;
     let draft = TagDraft { name: form.name };
     if let Err(error) = validate_tag_draft(&draft) {
         return Ok(render_tags_page(&state, Some(error.to_string()))
@@ -53,13 +50,12 @@ async fn tag_create_submit(
     let tag = match create_tag(&state.db, &draft).await {
         Ok(tag) => tag,
         Err(sqlx::Error::Database(db_error)) if db_error.is_unique_violation() => {
-            return Ok(render_tags_page(
-                &state,
-                Some("tag name already exists".to_string()),
-            )
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-            .into_response());
+            return Ok(
+                render_tags_page(&state, Some("tag name already exists".to_string()))
+                    .await
+                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+                    .into_response(),
+            );
         }
         Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response()),
     };

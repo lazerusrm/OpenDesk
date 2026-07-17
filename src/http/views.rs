@@ -181,3 +181,39 @@ pub struct EnrollmentTokenRowView {
     pub status: String,
     pub can_revoke: bool,
 }
+
+#[derive(Template)]
+#[template(path = "audit.html")]
+pub struct AuditLogView {
+    pub title: String,
+    pub show_nav: bool,
+    pub events: Vec<AuditEventRowView>,
+}
+
+#[derive(Clone)]
+pub struct AuditEventRowView {
+    pub created_at: String,
+    pub actor_display: String,
+    pub action: String,
+    pub object_type: String,
+    pub object_uuid_display: String,
+    pub outcome: String,
+    pub source: String,
+    pub detail_display: String,
+}
+
+#[derive(Template)]
+#[template(path = "users.html")]
+pub struct UsersListView {
+    pub title: String,
+    pub show_nav: bool,
+    pub users: Vec<UserRowView>,
+    pub error_message: Option<String>,
+}
+
+#[derive(Clone)]
+pub struct UserRowView {
+    pub user_uuid: String,
+    pub username: String,
+    pub role_display: String,
+}

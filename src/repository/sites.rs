@@ -40,15 +40,13 @@ pub async fn create_site(pool: &SqlitePool, draft: &SiteDraft) -> Result<Site, s
     let site_uuid = Uuid::new_v4();
     let name = normalize_site_name(&draft.name);
     let now = format_timestamp(OffsetDateTime::now_utc());
-    sqlx::query(
-        "INSERT INTO sites (site_uuid, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-    )
-    .bind(site_uuid.to_string())
-    .bind(&name)
-    .bind(&now)
-    .bind(&now)
-    .execute(pool)
-    .await?;
+    sqlx::query("INSERT INTO sites (site_uuid, name, created_at, updated_at) VALUES (?, ?, ?, ?)")
+        .bind(site_uuid.to_string())
+        .bind(&name)
+        .bind(&now)
+        .bind(&now)
+        .execute(pool)
+        .await?;
     find_site_by_uuid(pool, site_uuid)
         .await?
         .ok_or_else(|| sqlx::Error::RowNotFound)

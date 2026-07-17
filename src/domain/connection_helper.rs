@@ -69,7 +69,10 @@ mod tests {
     #[test]
     fn explicit_helper_requires_rustdesk_id_and_key() {
         let config = default_server_config();
-        assert_eq!(generate_explicit_server_helper(Some(""), &config, 21117), None);
+        assert_eq!(
+            generate_explicit_server_helper(Some(""), &config, 21117),
+            None
+        );
         let mut missing_key = config.clone();
         missing_key.public_key = "  ".to_string();
         assert_eq!(

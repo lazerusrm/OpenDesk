@@ -80,7 +80,9 @@ pub async fn restore_backup_document(
     crate::domain::backup::validate_backup_document(document)?;
     let now = format_timestamp(OffsetDateTime::now_utc());
     let mut tx = pool.begin().await?;
-    sqlx::query("DELETE FROM device_tags").execute(&mut *tx).await?;
+    sqlx::query("DELETE FROM device_tags")
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("DELETE FROM endpoint_checkins")
         .execute(&mut *tx)
         .await?;
@@ -93,7 +95,9 @@ pub async fn restore_backup_document(
     sqlx::query("DELETE FROM server_configs")
         .execute(&mut *tx)
         .await?;
-    sqlx::query("DELETE FROM sessions").execute(&mut *tx).await?;
+    sqlx::query("DELETE FROM sessions")
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("DELETE FROM users").execute(&mut *tx).await?;
 
     for site in &document.sites {
@@ -200,4 +204,3 @@ pub async fn restore_backup_document(
     tx.commit().await?;
     Ok(())
 }
-

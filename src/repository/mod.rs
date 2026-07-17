@@ -3,7 +3,7 @@ pub mod backup;
 pub mod devices;
 pub mod enrollment_tokens;
 pub mod server_config;
+pub mod sessions;
 pub mod sites;
 pub mod tags;
-pub mod sessions;
 pub mod users;

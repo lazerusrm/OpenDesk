@@ -1,3 +1,4 @@
+mod audit;
 mod auth;
 mod backup;
 mod deployment;
@@ -6,9 +7,10 @@ mod devices;
 mod enrollment;
 mod render;
 mod settings;
-mod status;
 mod sites;
+mod status;
 mod tags;
+mod users;
 
 use axum::{routing::get, Router};
 use tower_http::services::ServeDir;
@@ -18,6 +20,7 @@ use crate::app_state::AppState;
 pub fn build_router(state: AppState) -> Router {
     Router::new()
         .merge(auth::routes())
+        .merge(audit::routes())
         .merge(backup::routes())
         .merge(devices::routes())
         .merge(settings::routes())
@@ -26,6 +29,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(deployment::routes())
         .merge(enrollment::routes())
         .merge(status::routes())
+        .merge(users::routes())
         .route("/health", get(|| async { "ok" }))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(state)

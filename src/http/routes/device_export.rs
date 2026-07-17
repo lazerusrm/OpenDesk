@@ -12,7 +12,7 @@ use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::device_csv::render_devices_csv;
 use crate::domain::device_list::DeviceSearchQuery;
-use crate::http::session::{require_user, AuthenticatedUser};
+use crate::http::session::{require_mutator, AuthenticatedUser};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::devices::list_devices;
 use crate::repository::sites::list_sites;
@@ -49,7 +49,7 @@ async fn devices_csv_export(
     jar: CookieJar,
     Query(query): Query<ExportSearchQuery>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_mutator(&state, &jar).await?;
     let search = DeviceSearchQuery {
         term: query.term.unwrap_or_default(),
     };

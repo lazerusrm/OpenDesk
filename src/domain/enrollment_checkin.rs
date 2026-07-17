@@ -16,12 +16,7 @@ pub fn select_existing_device_for_checkin(lookup: &EnrollmentDeviceLookup) -> Op
         .by_rustdesk_id
         .as_ref()
         .map(|device| device.device_uuid)
-        .or_else(|| {
-            lookup
-                .by_hostname
-                .as_ref()
-                .map(|device| device.device_uuid)
-        })
+        .or_else(|| lookup.by_hostname.as_ref().map(|device| device.device_uuid))
 }
 
 pub fn hostname_lookup_key(hostname: Option<&str>) -> Option<String> {

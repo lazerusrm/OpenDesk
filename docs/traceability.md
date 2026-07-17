@@ -11,11 +11,11 @@ This document maps replacement requirements to validation coverage. It should be
 | PR-003 Address-book workflow | R-001 through R-006, CUT-003 | RustDesk ID copy button on device list and edit form covered by `rustdesk_id_copy_integration` tests; default/explicit connection helper copy actions covered by `connection_helper` unit tests and `phases_1_2_4_integration` tests. Pilot workflow evidence still required for cutover. |
 | PR-004 Sites/tags/notes/archive | C-003, C-004, C-005 | Site CRUD + device assignment covered by sites_integration tests; tag CRUD + device tag assignment + tag search covered by tags_integration tests; notes edit persistence covered by integration_test and notes list display/search covered by notes_integration tests; default list excludes archived devices via `devices_for_default_list` unit tests, `devices_list_contract` integration test, and launch seed archive check. |
 | PR-005 Client delivery | D-001 through D-010 | macOS deployment script, filename-based fallback, and official-client guidance on `/deployment` covered by deployment render unit tests and `phases_1_2_4_integration` tests; full OS/package validation still required before cutover. |
-| PR-006 Endpoint self-registration | E-001 through E-007 | E-002/E-003/E-004 covered by enrollment API, generated Linux script, and integration tests. |
+| PR-006 Endpoint self-registration | E-001 through E-007 | E-002/E-003/E-004 covered by enrollment API, generated Linux/Windows/macOS scripts, and integration tests; check-in create/update/failure audit events with redacted secrets covered by `rbac_audit_integration`. |
 | PR-007 Server health | S-001 through S-005, C-008 | DNS/TCP probes and public key fingerprint on authenticated `/status` dashboard covered by `health` unit tests and `phases_1_2_4_integration` tests; plain `/health` endpoint remains `ok`; UDP reachability may need documented exception. |
-| PR-008 Backup/restore | S-006, S-007, SEC-005, CUT-004 | JSON export at `/backup/export.json` and restore via `/backup` covered by `backup_integration` round-trip tests; sensitivity metadata documents password/token hashes and excluded runtime tables. Full cutover restore drill still required. |
-| PR-009 Audit logs | C-007, E-004, SEC-002 | Add event-specific tests with implementation. |
-| PR-010 RBAC | C-009, SEC-003, SEC-004, SEC-008 | Role matrix must cover admin/operator/read-only behavior before cutover. |
+| PR-008 Backup/restore | S-006, S-007, SEC-005, CUT-004 | JSON export at `/backup/export.json` and restore via `/backup` covered by `backup_integration` round-trip tests; restore is admin-only under RBAC; sensitivity metadata documents password/token hashes and excluded runtime tables. Full cutover restore drill still required. |
+| PR-009 Audit logs | C-007, E-004, SEC-002 | `/audit` UI and `/audit/export.csv` covered by `rbac_audit_integration`; insert path redacts password/token/key detail via `redact_audit_detail`; deployment artifact generation audited. |
+| PR-010 RBAC | C-009, SEC-003, SEC-004, SEC-008 | Admin/operator/read-only roles enforced via `require_mutator`/`require_admin`; multi-user create UI at `/users` (admin-only); allow/deny matrix covered by `rbac_audit_integration`. Site/tag visibility scoping remains deferred. |
 | PR-011 Access boundary clarity | SEC-007 | Docs currently state boundary; implementation must avoid misleading UI. |
 | PR-012 Official clients | D-006, D-010 | Signature/checksum and update behavior. |
 | PR-013 No Pro dependency | CUT-003 | Pro usage inventory from CR-001 remains required for signoff. |
@@ -59,8 +59,7 @@ This document maps replacement requirements to validation coverage. It should be
 
 ## Known Coverage Gaps
 
-- Expand SEC-007 into UI-copy snapshot tests once UI exists.
-- Expand SEC-008 into a full role/action/site/tag permission matrix once RBAC exists.
-- Add generated script fixture tests once templates exist.
-- Add migration/backup/restore automation once the app exists.
+- Expand SEC-007 into UI-copy snapshot tests for access-boundary wording.
+- Expand SEC-008 site/tag visibility scoping once device visibility by site/tag ships.
 - Add release evidence format for client versions and checksums.
+- Pilot WAN/UDP health probes and cutover drills remain outside Core software readiness.

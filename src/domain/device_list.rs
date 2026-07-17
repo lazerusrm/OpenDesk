@@ -27,7 +27,11 @@ pub fn rustdesk_id_copy_text(rustdesk_id: Option<&str>) -> Option<String> {
 }
 
 pub fn notes_list_title(notes: Option<&str>) -> String {
-    notes.map(str::trim).filter(|value| !value.is_empty()).unwrap_or("").to_string()
+    notes
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("")
+        .to_string()
 }
 
 pub fn device_matches_search(device: &Device, query: &DeviceSearchQuery) -> bool {
@@ -43,7 +47,9 @@ pub fn device_matches_search(device: &Device, query: &DeviceSearchQuery) -> bool
         device.notes.as_deref().unwrap_or(""),
         device.os_family.as_deref().unwrap_or(""),
     ];
-    fields.iter().any(|field| field.to_ascii_lowercase().contains(&term))
+    fields
+        .iter()
+        .any(|field| field.to_ascii_lowercase().contains(&term))
 }
 
 pub fn device_in_default_list(
@@ -52,8 +58,7 @@ pub fn device_in_default_list(
     site_name: Option<&str>,
     tag_names: &[&str],
 ) -> bool {
-    !device.archived
-        && device_matches_search_with_metadata(device, query, site_name, tag_names)
+    !device.archived && device_matches_search_with_metadata(device, query, site_name, tag_names)
 }
 
 pub fn devices_for_default_list<'a>(

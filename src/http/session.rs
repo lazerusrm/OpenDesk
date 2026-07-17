@@ -5,6 +5,7 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::app_state::AppState;
+use crate::domain::role::Role;
 use crate::domain::session::session_is_valid;
 use crate::repository::sessions::{create_session, delete_session, find_session};
 use crate::repository::users::find_user_by_uuid;
@@ -15,6 +16,12 @@ pub struct AuthenticatedUser {
     pub user_uuid: Uuid,
     pub username: String,
     pub role: String,
+}
+
+impl AuthenticatedUser {
+    pub fn parsed_role(&self) -> Role {
+        Role::parse(&self.role).unwrap_or(Role::ReadOnly)
+    }
 }
 
 pub async fn require_user(
@@ -42,6 +49,37 @@ pub async fn require_user(
         username: user.username,
         role: user.role,
     })
+}
+
+/// Authenticated users with admin or operator role (mutations and exports).
+pub async fn require_mutator(
+    state: &AppState,
+    jar: &CookieJar,
+) -> Result<AuthenticatedUser, Response> {
+    let user = require_user(state, jar).await?;
+    if !user.parsed_role().can_mutate() {
+        return Err(forbidden_response());
+    }
+    Ok(user)
+}
+
+/// Authenticated users with admin role only.
+pub async fn require_admin(
+    state: &AppState,
+    jar: &CookieJar,
+) -> Result<AuthenticatedUser, Response> {
+    let user = require_user(state, jar).await?;
+    if !user.parsed_role().can_admin() {
+        return Err(forbidden_response());
+    }
+    Ok(user)
+}
+
+pub fn forbidden_response() -> Response {
+    html_error(
+        StatusCode::FORBIDDEN,
+        "Forbidden: insufficient role for this action",
+    )
 }
 
 pub async fn start_session(

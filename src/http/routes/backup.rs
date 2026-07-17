@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::backup::{parse_backup_json, render_backup_json};
-use crate::http::session::require_user;
+use crate::http::session::{require_admin, require_mutator, require_user};
 use crate::http::views::BackupView;
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::backup::{export_backup_document, restore_backup_document};
@@ -23,10 +23,7 @@ pub fn routes() -> Router<AppState> {
         .route("/backup/export.json", get(backup_export))
 }
 
-async fn backup_page(
-    State(state): State<AppState>,
-    jar: CookieJar,
-) -> Result<Response, Response> {
+async fn backup_page(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
     let _user = require_user(&state, &jar).await?;
     Ok(render_backup_page(None, None).into_response())
 }
@@ -35,7 +32,7 @@ async fn backup_export(
     State(state): State<AppState>,
     jar: CookieJar,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_mutator(&state, &jar).await?;
     let document = export_backup_document(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -75,22 +72,20 @@ async fn backup_restore_submit(
     jar: CookieJar,
     Form(form): Form<BackupRestoreForm>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_admin(&state, &jar).await?;
     if form.confirm.as_deref() != Some("yes") {
-        return Ok(render_backup_page(
-            None,
-            Some("Restore requires confirmation.".to_string()),
-        )
-        .into_response());
+        return Ok(
+            render_backup_page(None, Some("Restore requires confirmation.".to_string()))
+                .into_response(),
+        );
     }
     let document = match parse_backup_json(form.backup_json.trim()) {
         Ok(document) => document,
         Err(_) => {
-            return Ok(render_backup_page(
-                None,
-                Some("Backup JSON is invalid.".to_string()),
-            )
-            .into_response());
+            return Ok(
+                render_backup_page(None, Some("Backup JSON is invalid.".to_string()))
+                    .into_response(),
+            );
         }
     };
     if let Err(error) = restore_backup_document(&state.db, &document).await {

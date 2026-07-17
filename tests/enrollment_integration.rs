@@ -2,8 +2,8 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use http_body_util::BodyExt;
 use common::{login_and_get_session_cookie, test_state};
+use http_body_util::BodyExt;
 use opendesk::build_router;
 use serde_json::json;
 use tower::ServiceExt;

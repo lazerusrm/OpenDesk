@@ -62,9 +62,9 @@ Status legend:
 - [x] Generate macOS installer/config script if required.
 - [x] Provide official-client download links or cached installer packages.
 - [ ] Provide a single frontend page per OS with install command/download.
-- [ ] Avoid executable renaming as the main workflow.
+- [x] Avoid executable renaming as the main workflow.
 - [ ] Version generated scripts.
-- [ ] Audit generated downloads/scripts.
+- [x] Audit generated downloads/scripts.
 - [ ] Validate whether `/api/devices/deploy` can be used by official clients without Pro.
 - [ ] Implement `/api/devices/deploy` compatibility only if validation passes.
 
@@ -73,13 +73,13 @@ Status legend:
 - [x] Enrollment token model.
 - [x] Enrollment token creation/rotation/revocation.
 - [x] Endpoint registration API.
-- [ ] Windows self-registration script.
+- [x] Windows self-registration script.
 - [x] Linux self-registration script.
-- [ ] macOS self-registration script if required.
+- [x] macOS self-registration script if required.
 - [x] Duplicate detection by RustDesk ID and hostname.
 - [x] Last check-in timestamp.
-- [ ] Endpoint metadata update.
-- [ ] Endpoint registration audit events.
+- [x] Endpoint metadata update.
+- [x] Endpoint registration audit events.
 
 ## Phase 4: Health and Operations
 
@@ -90,17 +90,17 @@ Status legend:
 - [ ] Check public IP expectation.
 - [x] Show current server public key fingerprint.
 - [ ] Backup scheduler.
-- [ ] Restore procedure.
+- [x] Restore procedure.
 - [ ] Log rotation.
 - [ ] Upgrade procedure.
 
 ## Phase 5: Access and Governance
 
-- [ ] Multi-user admin accounts.
-- [ ] Role model: admin, operator, read-only.
+- [x] Multi-user admin accounts.
+- [x] Role model: admin, operator, read-only.
 - [ ] Device visibility by site/tag.
-- [ ] Audit log UI.
-- [ ] Export audit log.
+- [x] Audit log UI.
+- [x] Export audit log.
 - [ ] Optional reverse proxy SSO.
 - [ ] Optional OIDC.
 - [ ] Optional password vault integration.

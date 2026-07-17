@@ -2,8 +2,8 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use http_body_util::BodyExt;
 use common::{login_and_get_session_cookie, test_state};
+use http_body_util::BodyExt;
 use opendesk::build_router;
 use tower::ServiceExt;
 #[tokio::test]
@@ -73,7 +73,12 @@ async fn site_create_and_device_assignment_persist() {
         .await
         .expect("devices list");
     assert_eq!(list_response.status(), StatusCode::OK);
-    let body = list_response.into_body().collect().await.unwrap().to_bytes();
+    let body = list_response
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
     let html = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(html.contains("Main Lab"));
     assert!(html.contains("Lab Workstation"));
@@ -130,13 +135,10 @@ async fn device_update_assigns_and_unassigns_site() {
         .expect("assign site beta");
     assert_eq!(assign_beta.status(), StatusCode::SEE_OTHER);
 
-    let updated = opendesk::repository::devices::find_device_by_uuid(
-        &state.db,
-        device.device_uuid,
-    )
-    .await
-    .expect("reload")
-    .expect("device");
+    let updated = opendesk::repository::devices::find_device_by_uuid(&state.db, device.device_uuid)
+        .await
+        .expect("reload")
+        .expect("device");
     assert_eq!(updated.site_uuid, Some(site_b.site_uuid));
 
     let unassign = app
@@ -153,13 +155,10 @@ async fn device_update_assigns_and_unassigns_site() {
         .expect("unassign site");
     assert_eq!(unassign.status(), StatusCode::SEE_OTHER);
 
-    let cleared = opendesk::repository::devices::find_device_by_uuid(
-        &state.db,
-        device.device_uuid,
-    )
-    .await
-    .expect("reload cleared")
-    .expect("device");
+    let cleared = opendesk::repository::devices::find_device_by_uuid(&state.db, device.device_uuid)
+        .await
+        .expect("reload cleared")
+        .expect("device");
     assert_eq!(cleared.site_uuid, None);
 }
 

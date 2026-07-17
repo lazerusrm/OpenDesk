@@ -51,9 +51,7 @@ async fn device_list_renders_connection_helper_copy_buttons() {
     assert!(html.contains("Copy default"));
     assert!(html.contains("Copy explicit"));
     assert!(html.contains(r#"data-copy-text="123456789""#));
-    assert!(html.contains(
-        r#"data-copy-text="123456789@rd.example.com:21117?key=test-public-key""#
-    ));
+    assert!(html.contains(r#"data-copy-text="123456789@rd.example.com:21117?key=test-public-key""#));
 }
 
 #[tokio::test]
