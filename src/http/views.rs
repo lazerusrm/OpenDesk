@@ -5,6 +5,7 @@ use askama::Template;
 pub struct LoginView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub error_message: Option<String>,
 }
 
@@ -13,6 +14,7 @@ pub struct LoginView {
 pub struct DevicesListView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub search_term: String,
     pub export_csv_href: String,
     pub devices: Vec<DeviceRowView>,
@@ -47,6 +49,7 @@ pub struct TagOptionView {
 pub struct TagsListView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub tags: Vec<TagRowView>,
     pub error_message: Option<String>,
 }
@@ -62,6 +65,7 @@ pub struct TagRowView {
 pub struct SitesListView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub sites: Vec<SiteRowView>,
     pub error_message: Option<String>,
 }
@@ -84,6 +88,7 @@ pub struct SiteOptionView {
 pub struct DeviceFormView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub heading: String,
     pub form_action: String,
     pub device_uuid: String,
@@ -107,6 +112,7 @@ pub struct DeviceFormView {
 pub struct BackupView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub message: Option<String>,
     pub error_message: Option<String>,
 }
@@ -116,6 +122,7 @@ pub struct BackupView {
 pub struct ServerConfigView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub id_server: String,
     pub relay_server: String,
     pub api_server: String,
@@ -129,6 +136,7 @@ pub struct ServerConfigView {
 pub struct DeploymentView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub tokens: Vec<EnrollmentTokenOptionView>,
     pub enrollment_token_value: String,
     pub public_base_url: String,
@@ -151,9 +159,12 @@ pub struct HealthCheckRowView {
 pub struct StatusView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub id_server: String,
     pub relay_server: String,
     pub public_key_fingerprint: String,
+    pub backup_status: String,
+    pub backup_execution: String,
     pub checks: Vec<HealthCheckRowView>,
 }
 
@@ -170,6 +181,7 @@ pub struct EnrollmentTokenOptionView {
 pub struct EnrollmentTokensView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub tokens: Vec<EnrollmentTokenRowView>,
     pub created_token_value: Option<String>,
 }
@@ -187,6 +199,7 @@ pub struct EnrollmentTokenRowView {
 pub struct AuditLogView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub events: Vec<AuditEventRowView>,
 }
 
@@ -207,6 +220,7 @@ pub struct AuditEventRowView {
 pub struct UsersListView {
     pub title: String,
     pub show_nav: bool,
+    pub csrf_token: String,
     pub users: Vec<UserRowView>,
     pub error_message: Option<String>,
 }

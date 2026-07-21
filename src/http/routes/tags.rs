@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::tag::{validate_tag_draft, TagDraft};
-use crate::http::session::{require_mutator, require_user};
+use crate::http::session::{require_csrf, require_mutator, require_user};
 use crate::http::views::{TagRowView, TagsListView};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::tags::{create_tag, list_tags};
@@ -23,12 +23,13 @@ pub fn routes() -> Router<AppState> {
 
 #[derive(Deserialize)]
 struct TagForm {
+    csrf_token: String,
     name: String,
 }
 
 async fn tags_list(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
-    let _user = require_user(&state, &jar).await?;
-    Ok(render_tags_page(&state, None)
+    let user = require_user(&state, &jar).await?;
+    Ok(render_tags_page(&state, None, &user.csrf_token)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .into_response())
@@ -40,22 +41,27 @@ async fn tag_create_submit(
     Form(form): Form<TagForm>,
 ) -> Result<Response, Response> {
     let user = require_mutator(&state, &jar).await?;
+    require_csrf(&user, &form.csrf_token)?;
     let draft = TagDraft { name: form.name };
     if let Err(error) = validate_tag_draft(&draft) {
-        return Ok(render_tags_page(&state, Some(error.to_string()))
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-            .into_response());
+        return Ok(
+            render_tags_page(&state, Some(error.to_string()), &user.csrf_token)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+                .into_response(),
+        );
     }
     let tag = match create_tag(&state.db, &draft).await {
         Ok(tag) => tag,
         Err(sqlx::Error::Database(db_error)) if db_error.is_unique_violation() => {
-            return Ok(
-                render_tags_page(&state, Some("tag name already exists".to_string()))
-                    .await
-                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-                    .into_response(),
-            );
+            return Ok(render_tags_page(
+                &state,
+                Some("tag name already exists".to_string()),
+                &user.csrf_token,
+            )
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .into_response());
         }
         Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response()),
     };
@@ -75,6 +81,7 @@ async fn tag_create_submit(
 async fn render_tags_page(
     state: &AppState,
     error_message: Option<String>,
+    csrf_token: &str,
 ) -> Result<Html<String>, sqlx::Error> {
     let tags = list_tags(&state.db).await?;
     let rows = tags
@@ -87,6 +94,7 @@ async fn render_tags_page(
     let view = TagsListView {
         title: "Tags".to_string(),
         show_nav: true,
+        csrf_token: csrf_token.to_string(),
         tags: rows,
         error_message,
     };

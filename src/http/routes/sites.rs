@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::site::{validate_site_draft, SiteDraft};
-use crate::http::session::{require_mutator, require_user};
+use crate::http::session::{require_csrf, require_mutator, require_user};
 use crate::http::views::{SiteRowView, SitesListView};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::sites::{create_site, list_sites};
@@ -23,12 +23,13 @@ pub fn routes() -> Router<AppState> {
 
 #[derive(Deserialize)]
 struct SiteForm {
+    csrf_token: String,
     name: String,
 }
 
 async fn sites_list(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
-    let _user = require_user(&state, &jar).await?;
-    Ok(render_sites_page(&state, None)
+    let user = require_user(&state, &jar).await?;
+    Ok(render_sites_page(&state, None, &user.csrf_token)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .into_response())
@@ -40,22 +41,27 @@ async fn site_create_submit(
     Form(form): Form<SiteForm>,
 ) -> Result<Response, Response> {
     let user = require_mutator(&state, &jar).await?;
+    require_csrf(&user, &form.csrf_token)?;
     let draft = SiteDraft { name: form.name };
     if let Err(error) = validate_site_draft(&draft) {
-        return Ok(render_sites_page(&state, Some(error.to_string()))
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-            .into_response());
+        return Ok(
+            render_sites_page(&state, Some(error.to_string()), &user.csrf_token)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+                .into_response(),
+        );
     }
     let site = match create_site(&state.db, &draft).await {
         Ok(site) => site,
         Err(sqlx::Error::Database(db_error)) if db_error.is_unique_violation() => {
-            return Ok(
-                render_sites_page(&state, Some("site name already exists".to_string()))
-                    .await
-                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-                    .into_response(),
-            );
+            return Ok(render_sites_page(
+                &state,
+                Some("site name already exists".to_string()),
+                &user.csrf_token,
+            )
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .into_response());
         }
         Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response()),
     };
@@ -75,6 +81,7 @@ async fn site_create_submit(
 async fn render_sites_page(
     state: &AppState,
     error_message: Option<String>,
+    csrf_token: &str,
 ) -> Result<Html<String>, sqlx::Error> {
     let sites = list_sites(&state.db).await?;
     let rows = sites
@@ -87,6 +94,7 @@ async fn render_sites_page(
     let view = SitesListView {
         title: "Sites".to_string(),
         show_nav: true,
+        csrf_token: csrf_token.to_string(),
         sites: rows,
         error_message,
     };

@@ -194,7 +194,7 @@ Output:
 
 Related validation:
 
-- S-001 through S-005.
+- S-001 through S-005, S-010 through S-012.
 - R-003.
 - RS-009.
 

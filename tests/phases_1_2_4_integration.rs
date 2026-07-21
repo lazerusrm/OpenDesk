@@ -109,6 +109,45 @@ async fn status_dashboard_renders_health_targets_and_fingerprint() {
 }
 
 #[tokio::test]
+async fn diagnostics_json_is_authenticated_and_non_sensitive() {
+    let state = test_state().await;
+    let app = build_router(state);
+    let session_cookie = login_and_get_session_cookie(&app).await;
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/status/diagnostics.json")
+                .header("cookie", session_cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("diagnostics response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let json = String::from_utf8(body.to_vec()).expect("utf8");
+    assert!(json.contains("\"database\":\"ok\""));
+    assert!(json.contains("\"backup\""));
+    assert!(!json.contains("rd.example.com"));
+    assert!(!json.contains("public_key"));
+}
+
+#[tokio::test]
+async fn diagnostics_json_requires_auth() {
+    let state = test_state().await;
+    let response = build_router(state)
+        .oneshot(
+            Request::builder()
+                .uri("/status/diagnostics.json")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("diagnostics response");
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+}
+
+#[tokio::test]
 async fn status_dashboard_requires_auth() {
     let state = test_state().await;
     let app = build_router(state);

@@ -9,6 +9,7 @@
   <p class="error">{{ error_message.as_ref().unwrap() }}</p>
   {% endif %}
   <form method="post" action="/settings/server-config">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="id_server">ID server</label>
     <input id="id_server" name="id_server" value="{{ id_server }}" required>
 

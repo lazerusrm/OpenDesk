@@ -28,7 +28,7 @@ async fn audit_list_page(
     State(state): State<AppState>,
     jar: CookieJar,
 ) -> Result<Response, Response> {
-    let _user = require_user(&state, &jar).await?;
+    let user = require_user(&state, &jar).await?;
     let events = list_audit_events(&state.db, AUDIT_LIST_LIMIT)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -51,6 +51,7 @@ async fn audit_list_page(
     let view = AuditLogView {
         title: "Audit Log".to_string(),
         show_nav: true,
+        csrf_token: user.csrf_token.clone(),
         events: rows,
     };
     let html = view

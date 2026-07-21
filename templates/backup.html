@@ -14,6 +14,7 @@
 <section class="card">
   <h2>Restore JSON backup</h2>
   <form method="post" action="/backup">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="backup_json">Backup JSON</label>
     <textarea id="backup_json" name="backup_json" rows="16" required></textarea>
     <label class="checkbox-row">

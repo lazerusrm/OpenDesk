@@ -6,6 +6,7 @@
   <p>New token (shown once): <code>{{ created_token_value.as_ref().unwrap() }}</code></p>
   {% endif %}
   <form method="post" action="/enrollment-tokens">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="label">Label</label>
     <input id="label" name="label" required>
     <button type="submit">Create token</button>
@@ -28,6 +29,7 @@
         <td>
           {% if token.can_revoke %}
           <form method="post" action="/enrollment-tokens/{{ token.enrollment_token_uuid }}/revoke" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button type="submit">Revoke</button>
           </form>
           {% endif %}

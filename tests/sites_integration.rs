@@ -2,7 +2,7 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{login_and_get_session_cookie, test_state};
+use common::{form_with_csrf, login_and_get_session_cookie, test_state};
 use http_body_util::BodyExt;
 use opendesk::build_router;
 use tower::ServiceExt;
@@ -20,7 +20,7 @@ async fn site_create_and_device_assignment_persist() {
                 .uri("/sites")
                 .header("content-type", "application/x-www-form-urlencoded")
                 .header("cookie", session_cookie.clone())
-                .body(Body::from("name=Main+Lab"))
+                .body(Body::from(form_with_csrf(&session_cookie, "name=Main+Lab")))
                 .unwrap(),
         )
         .await
@@ -43,9 +43,9 @@ async fn site_create_and_device_assignment_persist() {
                 .uri("/devices")
                 .header("content-type", "application/x-www-form-urlencoded")
                 .header("cookie", session_cookie.clone())
-                .body(Body::from(format!(
-                    "alias=Lab+Workstation&site_uuid={}",
-                    site.site_uuid
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    &format!("alias=Lab+Workstation&site_uuid={}", site.site_uuid),
                 )))
                 .unwrap(),
         )
@@ -66,7 +66,7 @@ async fn site_create_and_device_assignment_persist() {
         .oneshot(
             Request::builder()
                 .uri("/devices")
-                .header("cookie", session_cookie)
+                .header("cookie", &session_cookie)
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -125,9 +125,9 @@ async fn device_update_assigns_and_unassigns_site() {
                 .uri(format!("/devices/{}", device.device_uuid))
                 .header("content-type", "application/x-www-form-urlencoded")
                 .header("cookie", session_cookie.clone())
-                .body(Body::from(format!(
-                    "alias=Mobile+endpoint&site_uuid={}",
-                    site_b.site_uuid
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    &format!("alias=Mobile+endpoint&site_uuid={}", site_b.site_uuid),
                 )))
                 .unwrap(),
         )
@@ -147,8 +147,11 @@ async fn device_update_assigns_and_unassigns_site() {
                 .method("POST")
                 .uri(format!("/devices/{}", device.device_uuid))
                 .header("content-type", "application/x-www-form-urlencoded")
-                .header("cookie", session_cookie)
-                .body(Body::from("alias=Mobile+endpoint&site_uuid="))
+                .header("cookie", &session_cookie)
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    "alias=Mobile+endpoint&site_uuid=",
+                )))
                 .unwrap(),
         )
         .await
@@ -190,7 +193,7 @@ async fn device_search_matches_site_name() {
         .oneshot(
             Request::builder()
                 .uri("/devices?term=warehouse")
-                .header("cookie", session_cookie)
+                .header("cookie", &session_cookie)
                 .body(Body::empty())
                 .unwrap(),
         )

@@ -13,7 +13,7 @@ use crate::app_state::AppState;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::role::{validate_role_value, Role};
 use crate::domain::user::validate_username;
-use crate::http::session::require_admin;
+use crate::http::session::{require_admin, require_csrf};
 use crate::http::views::{UserRowView, UsersListView};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::users::{create_user, list_users};
@@ -23,8 +23,8 @@ pub fn routes() -> Router<AppState> {
 }
 
 async fn users_list(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
-    let _user = require_admin(&state, &jar).await?;
-    Ok(render_users_page(&state, None)
+    let actor = require_admin(&state, &jar).await?;
+    Ok(render_users_page(&state, None, &actor.csrf_token)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .into_response())
@@ -32,6 +32,7 @@ async fn users_list(State(state): State<AppState>, jar: CookieJar) -> Result<Res
 
 #[derive(Deserialize)]
 struct UserCreateForm {
+    csrf_token: String,
     username: String,
     password: String,
     role: String,
@@ -43,16 +44,20 @@ async fn user_create_submit(
     Form(form): Form<UserCreateForm>,
 ) -> Result<Response, Response> {
     let actor = require_admin(&state, &jar).await?;
+    require_csrf(&actor, &form.csrf_token)?;
     if let Err(error) = validate_username(&form.username) {
-        return Ok(render_users_page(&state, Some(error.to_string()))
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-            .into_response());
+        return Ok(
+            render_users_page(&state, Some(error.to_string()), &actor.csrf_token)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+                .into_response(),
+        );
     }
     if form.password.trim().len() < 8 {
         return Ok(render_users_page(
             &state,
             Some("password must be at least 8 characters".to_string()),
+            &actor.csrf_token,
         )
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -64,6 +69,7 @@ async fn user_create_submit(
             return Ok(render_users_page(
                 &state,
                 Some("role must be admin, operator, or read_only".to_string()),
+                &actor.csrf_token,
             )
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -85,7 +91,7 @@ async fn user_create_submit(
             } else {
                 "failed to create user".to_string()
             };
-            return Ok(render_users_page(&state, Some(message))
+            return Ok(render_users_page(&state, Some(message), &actor.csrf_token)
                 .await
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
                 .into_response());
@@ -110,6 +116,7 @@ async fn user_create_submit(
 async fn render_users_page(
     state: &AppState,
     error_message: Option<String>,
+    csrf_token: &str,
 ) -> Result<Html<String>, sqlx::Error> {
     let users = list_users(&state.db).await?;
     let rows = users
@@ -128,6 +135,7 @@ async fn render_users_page(
     let view = UsersListView {
         title: "Users".to_string(),
         show_nav: true,
+        csrf_token: csrf_token.to_string(),
         users: rows,
         error_message,
     };

@@ -26,6 +26,8 @@ async fn main() -> anyhow::Result<()> {
         db,
         cookie_secure: config.cookie_secure,
         public_base_url: config.public_base_url,
+        backup_schedule: config.backup_schedule,
+        backup_destination_configured: config.backup_destination.is_some(),
     };
     let app = build_router(state);
     let listener = tokio::net::TcpListener::bind(config.listen_addr).await?;

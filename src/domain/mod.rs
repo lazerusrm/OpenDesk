@@ -7,6 +7,7 @@ pub mod device_list;
 pub mod enrollment_checkin;
 pub mod enrollment_token;
 pub mod health;
+pub mod migration;
 pub mod role;
 pub mod server_config;
 pub mod session;

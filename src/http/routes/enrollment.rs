@@ -20,7 +20,7 @@ use crate::domain::enrollment_token::{
     hash_enrollment_token_value, validate_enrollment_token_label, verify_enrollment_token_value,
 };
 use crate::http::routes::render::render_enrollment_tokens;
-use crate::http::session::{require_mutator, require_user};
+use crate::http::session::{require_csrf, require_mutator, require_user};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::devices::{
     create_device, find_device_by_hostname, find_device_by_rustdesk_id, touch_device_checkin,
@@ -47,8 +47,8 @@ async fn enrollment_tokens_page(
     State(state): State<AppState>,
     jar: CookieJar,
 ) -> Result<Response, Response> {
-    let _user = require_user(&state, &jar).await?;
-    Ok(render_enrollment_tokens(&state, None)
+    let user = require_user(&state, &jar).await?;
+    Ok(render_enrollment_tokens(&state, None, &user.csrf_token)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .into_response())
@@ -56,6 +56,7 @@ async fn enrollment_tokens_page(
 
 #[derive(Deserialize)]
 struct EnrollmentTokenForm {
+    csrf_token: String,
     label: String,
 }
 
@@ -65,8 +66,9 @@ async fn enrollment_token_create(
     Form(form): Form<EnrollmentTokenForm>,
 ) -> Result<Response, Response> {
     let user = require_mutator(&state, &jar).await?;
+    require_csrf(&user, &form.csrf_token)?;
     if let Err(_error) = validate_enrollment_token_label(&form.label) {
-        return Ok(render_enrollment_tokens(&state, None)
+        return Ok(render_enrollment_tokens(&state, None, &user.csrf_token)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
             .into_response());
@@ -90,18 +92,27 @@ async fn enrollment_token_create(
         detail: None,
     };
     let _ = insert_audit_event(&state.db, &audit).await;
-    Ok(render_enrollment_tokens(&state, Some(created.token_value))
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-        .into_response())
+    Ok(
+        render_enrollment_tokens(&state, Some(created.token_value), &user.csrf_token)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .into_response(),
+    )
+}
+
+#[derive(Deserialize)]
+struct EnrollmentTokenRevokeForm {
+    csrf_token: String,
 }
 
 async fn enrollment_token_revoke(
     State(state): State<AppState>,
     jar: CookieJar,
     Path(enrollment_token_uuid): Path<Uuid>,
+    Form(form): Form<EnrollmentTokenRevokeForm>,
 ) -> Result<Response, Response> {
     let user = require_mutator(&state, &jar).await?;
+    require_csrf(&user, &form.csrf_token)?;
     revoke_enrollment_token(&state.db, enrollment_token_uuid)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -115,7 +126,7 @@ async fn enrollment_token_revoke(
         detail: None,
     };
     let _ = insert_audit_event(&state.db, &audit).await;
-    Ok(render_enrollment_tokens(&state, None)
+    Ok(render_enrollment_tokens(&state, None, &user.csrf_token)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .into_response())

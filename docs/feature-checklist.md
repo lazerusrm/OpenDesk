@@ -89,7 +89,7 @@ Status legend:
 - [x] Check DNS resolution for `rd.example.com`.
 - [ ] Check public IP expectation.
 - [x] Show current server public key fingerprint.
-- [ ] Backup scheduler.
+- [~] Backup scheduler readiness/configuration (external runner; no in-process scheduler).
 - [x] Restore procedure.
 - [ ] Log rotation.
 - [ ] Upgrade procedure.

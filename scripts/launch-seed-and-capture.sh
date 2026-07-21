@@ -8,9 +8,9 @@ PORT=$((18080 + RUN_ID))
 DATA_DIR="$SCRATCH/launch-data-$RUN_ID"
 COOKIE_JAR="$SCRATCH/cookies-$RUN_ID.txt"
 BASE="http://127.0.0.1:$PORT"
-BINARY="$REPO/target/debug/opendesk"
+BINARY="$SCRATCH/target/debug/opendesk"
 
-pgrep -f "$REPO/target/debug/opendesk" | xargs -r kill 2>/dev/null || true
+pgrep -f "$BINARY" | xargs -r kill 2>/dev/null || true
 sleep 0.5
 
 rm -rf "$DATA_DIR"
@@ -18,11 +18,12 @@ mkdir -p "$DATA_DIR"
 : >"$COOKIE_JAR"
 
 cd "$REPO"
-cargo build --quiet
+CARGO_TARGET_DIR="$SCRATCH/target" cargo build --quiet
 
 OPENDESK_LISTEN_ADDR="127.0.0.1:$PORT" \
 OPENDESK_DATA_DIR="$DATA_DIR" \
 OPENDESK_PUBLIC_BASE_URL="$BASE" \
+OPENDESK_COOKIE_SECURE=false \
 OPENDESK_BOOTSTRAP_ADMIN_PASSWORD=test-pass \
 "$BINARY" 2>"$SCRATCH/launch-$RUN_ID-server.log" &
 SERVER_PID=$!
@@ -32,6 +33,7 @@ LOGIN_STATUS="000"
 for _ in $(seq 1 60); do
   if curl -sf "$BASE/health" >/dev/null 2>&1; then
     LOGIN_STATUS=$(curl -s -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
+      -H "Origin: $BASE" \
       -X POST "$BASE/login" \
       -d "username=admin&password=test-pass" \
       -o /dev/null -w "%{http_code}")
@@ -48,21 +50,34 @@ if [ "$LOGIN_STATUS" != "303" ]; then
   exit 1
 fi
 
+CSRF_TOKEN=$(python3 -c "
+import sqlite3
+con = sqlite3.connect('${DATA_DIR}/opendesk.sqlite')
+row = con.execute('SELECT csrf_token FROM sessions ORDER BY created_at DESC LIMIT 1').fetchone()
+if not row or len(row[0]) != 64:
+    raise SystemExit(1)
+print(row[0])
+")
+if [ -z "$CSRF_TOKEN" ]; then
+  echo "CSRF token missing from loopback session" >&2
+  exit 1
+fi
+
 curl -sf "$BASE/health" >"$SCRATCH/launch-$RUN_ID-health.txt"
 
 curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
   -X POST "$BASE/settings/server-config" \
-  -d "id_server=rd.example.com&relay_server=rd.example.com&public_key=launch-test-public-key" \
+  -d "csrf_token=${CSRF_TOKEN}&id_server=rd.example.com&relay_server=rd.example.com&public_key=launch-test-public-key" \
   -o /dev/null
 
 curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
   -X POST "$BASE/sites" \
-  -d "name=Main+Lab" \
+  -d "csrf_token=${CSRF_TOKEN}&name=Main+Lab" \
   -o /dev/null
 
 curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
   -X POST "$BASE/tags" \
-  -d "name=Production" \
+  -d "csrf_token=${CSRF_TOKEN}&name=Production" \
   -o /dev/null
 
 read -r SITE_UUID TAG_UUID <<EOF
@@ -78,12 +93,12 @@ EOF
 
 curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
   -X POST "$BASE/devices" \
-  -d "alias=Tagged+Workstation&rustdesk_id=123456789&notes=Operator+runbook+reference&site_uuid=${SITE_UUID}&tag_uuids=${TAG_UUID}" \
+  -d "csrf_token=${CSRF_TOKEN}&alias=Tagged+Workstation&rustdesk_id=123456789&notes=Operator+runbook+reference&site_uuid=${SITE_UUID}&tag_uuids=${TAG_UUID}" \
   -o /dev/null
 
 curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
   -X POST "$BASE/devices" \
-  -d "alias=Archived+Workstation" \
+  -d "csrf_token=${CSRF_TOKEN}&alias=Archived+Workstation" \
   -o /dev/null
 
 ARCHIVED_UUID=$(python3 -c "
@@ -95,6 +110,7 @@ print(con.execute(\"SELECT device_uuid FROM devices WHERE alias='Archived Workst
 
 curl -sf -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
   -X POST "$BASE/devices/${ARCHIVED_UUID}/archive" \
+  -d "csrf_token=${CSRF_TOKEN}" \
   -o /dev/null
 
 curl -sf -b "$COOKIE_JAR" "$BASE/devices" >"$SCRATCH/launch-$RUN_ID-devices.html"

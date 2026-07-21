@@ -12,7 +12,7 @@ use crate::app_state::AppState;
 use crate::auth;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::http::routes::render::render_login;
-use crate::http::session::{end_session, start_session};
+use crate::http::session::{end_session, require_csrf, require_present_same_origin, start_session};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::users::find_user_by_username;
 
@@ -33,11 +33,20 @@ struct LoginForm {
     password: String,
 }
 
+#[derive(Deserialize)]
+struct LogoutForm {
+    csrf_token: String,
+}
+
 async fn login_submit(
     State(state): State<AppState>,
     jar: CookieJar,
+    headers: axum::http::HeaderMap,
     Form(form): Form<LoginForm>,
 ) -> Result<Response, StatusCode> {
+    if !require_present_same_origin(&headers, &state.public_base_url) {
+        return Err(StatusCode::FORBIDDEN);
+    }
     let user = find_user_by_username(&state.db, form.username.trim())
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -63,7 +72,13 @@ async fn login_submit(
     Ok((jar, Redirect::to("/devices")).into_response())
 }
 
-async fn logout(State(state): State<AppState>, jar: CookieJar) -> impl IntoResponse {
+async fn logout(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    Form(form): Form<LogoutForm>,
+) -> Result<impl IntoResponse, Response> {
+    let user = crate::http::session::require_user(&state, &jar).await?;
+    require_csrf(&user, &form.csrf_token)?;
     let jar = end_session(&state, jar).await;
-    (jar, Redirect::to("/login"))
+    Ok((jar, Redirect::to("/login")))
 }

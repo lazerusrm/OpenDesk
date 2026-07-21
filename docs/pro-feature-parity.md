@@ -1,6 +1,6 @@
 # Pro Feature Parity Map
 
-This document tracks RustDesk Server Pro-style capabilities and how OpenDesk intends to cover them without depending on RustDesk Pro infrastructure.
+This document tracks RustDesk Server Pro-style capabilities and how OpenDesk intends to cover them without depending on RustDesk Pro infrastructure. The authorized read-only baseline confirms populated Pro data structures for peers, users, groups/mappings, address books/linked peers, and audit tables, and observes official `hbbs`/`hbbr` plus an admin web service. Those observations establish scope only; they do not prove weekly use, parity, or cutover acceptance.
 
 Status categories:
 
@@ -11,84 +11,49 @@ Status categories:
 
 ## Feature Map
 
-| Capability | OpenDesk Approach | Status | Notes |
+| Capability | OpenDesk Approach | Status | Evidence state / remaining gate |
 |---|---|---:|---|
-| Self-hosted ID server | Use OSS `hbbs` | Core | RustDesk owns the protocol behavior. OpenDesk monitors/configures it. |
-| Self-hosted relay server | Use OSS `hbbr` | Core | Same. |
-| Web admin console | Build OpenDesk web UI | Core | Core product surface. |
-| Device inventory | OpenDesk database | Core | Manual CRUD plus self-registration before cutover. |
-| Address book | OpenDesk device list/bookmarks | Core | External web address book first; native RustDesk address book remains research. |
-| Tags/groups/sites | OpenDesk metadata | Core | Used for search, filtering, ownership, and deployment targeting. |
-| Device notes | OpenDesk metadata | Core | Public-safe examples only in docs. |
-| Client config distribution | Generated scripts/download instructions | Core | Avoid executable renaming as the primary path. |
-| Download configured client | Serve generated per-OS install/config flows | Core | May include cached official binaries later. |
-| Filename-based client config | Generate `rustdesk-host=...` filename | Stage 2 | Fallback/convenience path; validate per OS/version. |
-| Endpoint self-registration | OpenDesk enrollment API/script | Core | Enrollment tokens scoped and revocable. |
-| `/api/devices/deploy` compatibility | Implement RustDesk-shaped endpoint | Research | Only if official clients can use it without Pro friction. |
-| Audit log | OpenDesk audit events | Core | Covers admin actions and endpoint enrollment, not full RustDesk session internals. |
-| Session audit | Client/server log ingestion if available | Research | Requires reliable source of session events. |
-| Access control | OpenDesk UI/API roles | Core | Controls dashboard visibility/actions. Does not enforce RustDesk session auth by itself. |
-| RustDesk session ACLs | Endpoint/network/client integration | Research | Must not be claimed until actually enforced. |
-| Central settings/policies | Generated config + endpoint registration service | Core | Use scripts/service first; native client policy later if required. |
-| Disable public server fallback | Scripted config where supported | Core | Hard enforcement may require client policy/fork. |
-| Managed unattended passwords | External secret manager integration | Research | ADR-008 applies if this becomes required. |
-| SSO/OIDC | Reverse proxy or app-native OIDC | Stage 2 | Required before cutover only if used today. |
-| LDAP | External IdP integration | Deferred | Prefer OIDC via Authentik/Authelia/etc. |
-| 2FA | Reverse proxy/IdP first | Stage 2 | Required before cutover only if used today. |
-| Passkeys | App-native WebAuthn/passkey support | Stage 2 | Desired as soft opt-in OpenDesk auth hardening, especially phone passkeys. Not RustDesk session enforcement. |
-| Custom client builder | Generated scripts/wrapper | Research | Full custom client builds are deferred. |
-| Branding | OpenDesk web UI branding | Core | RustDesk client branding deferred. |
-| Native RustDesk address book | Client fork or compatible API | Research | Required only if the external OpenDesk address book does not satisfy production workflow. |
-| Browser/web remote client | Do not build initially | Deferred | Large separate project. |
-| Mobile app operator workflow | Generated manual/QR config instructions | Core | Android and iOS RustDesk apps must work for operators before cutover. Official app distribution stays RustDesk-owned. |
-| Backups | OpenDesk backup/restore | Core | Include database/config, exclude runtime junk/secrets where possible. |
-| Health checks | DNS/port/service/key fingerprint checks | Core | Start with external reachability checks. |
+| Self-hosted ID server | Use OSS `hbbs`; OpenDesk monitors/configures it. | Core | Runtime component observed; health and cutover validation remain. |
+| Self-hosted relay server | Use OSS `hbbr`; OpenDesk monitors/configures it. | Core | Runtime component observed; client WAN/direct-vs-relay validation remains. |
+| Web admin console | Build OpenDesk web UI. | Core | Dashboard/API tests exist; operator evidence remains. |
+| Device inventory | OpenDesk database. | Core | Data model/tests exist; import and operator parity remain. |
+| Address book | OpenDesk device list/bookmarks. | Core | Populated Pro address-book/peer structures establish scope; workflow pilot remains. |
+| Tags/groups/sites | OpenDesk metadata. | Core | Current app tests cover metadata; replacement of Pro mappings needs owner inventory. |
+| Device notes | OpenDesk metadata. | Core | Current app tests cover notes; pilot evidence remains. |
+| Client config distribution | Generated scripts/download instructions. | Core | Linux evidence exists; Windows/Linux/macOS and mobile validation remains. |
+| Download configured client | Serve generated per-OS install/config flows. | Core | Implemented flows are not release acceptance; OS/version evidence remains. |
+| Filename-based client config | Generate `rustdesk-host=...` filename. | Stage 2 | Fallback requires per-OS/version validation. |
+| Endpoint self-registration | OpenDesk enrollment API/script with scoped, revocable tokens. | Core | Automated lifecycle coverage exists; endpoint matrix remains. |
+| `/api/devices/deploy` compatibility | Implement RustDesk-shaped endpoint only if client evidence warrants it. | Research | Linux controlled validation exists; Windows/macOS and adapter evidence remain. |
+| Audit log | OpenDesk audit events. | Core | Populated source audit structures establish requirement; tier decision and validation remain. |
+| Session audit | Client/server log ingestion if available. | Research | Source visibility observed; owner must choose tier; no session-enforcement claim. |
+| Access control | OpenDesk dashboard/API roles. | Core | Owner decision is dashboard/API RBAC only; permission tests exist; RustDesk sessions are out of scope. |
+| RustDesk session ACLs | Endpoint/network/client integration. | Research | Not selected; never claim enforcement without Tier 3 evidence. |
+| Central settings/policies | Generated config + endpoint registration service. | Core | Strategy/config rows establish scope; policy equivalence and OS validation remain. |
+| Disable public server fallback | Scripted config where supported. | Core | Must validate released clients; hard enforcement may require separate decision. |
+| Managed unattended passwords | External secret manager integration. | Research | Hashed secret material observed; owner must require, equate, or retire. |
+| SSO/OIDC | Reverse proxy or app-native OIDC. | Stage 2 | No inspected third-party auth dependency established; owner review remains. |
+| LDAP | External IdP integration. | Deferred | No current dependency established. |
+| 2FA | Reverse proxy/IdP first. | Stage 2 | No inspected enabled 2FA dependency; optional hardening. |
+| Passkeys | App-native WebAuthn/passkey support for OpenDesk login. | Stage 2 | Optional dashboard/API hardening; not RustDesk session enforcement. |
+| Custom client builder | Generated scripts/wrapper. | Research | Windows-only custom-client records observed; owner must classify current use. |
+| Branding | OpenDesk web UI branding. | Core | UI exists; owner parity review remains. |
+| Native RustDesk address book | Client fork or compatible API. | Research | Not proven necessary; web equivalent requires pilot acceptance. |
+| Browser/web remote client | Do not build initially. | Deferred | Out of scope. |
+| Mobile app operator workflow | Generated manual/QR config instructions. | Core | Android/iOS are required operator validations before cutover; not managed endpoint scope. |
+| Backups | OpenDesk backup/restore. | Core | Automated round-trip tests exist; fresh-instance drill remains. |
+| Health checks | DNS/port/service/key fingerprint checks. | Core | Controlled baseline/runtime evidence exists; real-client and cutover checks remain. |
 
-## Production Usage Inventory
+## Required Usage Inventory
 
-Read-only production-style evidence currently proves these populated Pro areas exist: users, groups, device assignments, personal address books, strategies with config options, Windows custom clients, sessions, and audit logs. No current user rows had 2FA enabled in the inspected database, and third-party auth rows were absent.
+For every capability above, the owner must record `Used Today` as `yes`, `no`, `unknown`, or `retired by owner decision`; replacement path; validation IDs; evidence; and blocker. Populated database rows are evidence that a structure exists, not `Used Today: yes` and not acceptance. Any unknown value blocks cutover. Any yes value needs passing validation or a signed retirement decision.
 
-Current replacement assumptions until owner review:
+## Required Client Scope
 
-- Windows generated install/config flow is required because current custom clients are Windows-only.
-- Strategy/policy replacement is required because active strategy config exists.
-- Native passwordless address-book parity remains undecided because address-book entries contain hashed secret material.
-- SSO/third-party auth and 2FA are not currently proven production dependencies, but may still be added as hardening features.
-- Passkeys are desired as optional OpenDesk login hardening and should not be treated as a replacement for endpoint password or session enforcement.
-
-Before cutover, the owner must inventory current RustDesk Server Pro usage from operator interviews and any available Pro exports/screenshots. For every capability above, record:
-
-| Field | Required Meaning |
-|---|---|
-| Used Today | `yes`, `no`, `unknown`, or `retired by owner decision`. |
-| Replacement Path | OpenDesk feature, equivalent workflow, or explicit retirement decision. |
-| Validation IDs | Validation cases proving the replacement path. |
-| Evidence | Link/path to test evidence, pilot notes, export comparison, or owner signoff. |
-| Blocker | Remaining gap, or `none`. |
-
-Any `unknown` Used Today value blocks cutover. Any `yes` value needs either passing validation evidence or a signed retirement decision before OpenDesk can be treated as a full Pro replacement.
+Before cutover, validate official clients on Windows, Linux, and macOS, and validate Android and iOS operator workflows. Preserve official-client delivery and OSS `hbbs`/`hbbr`; do not infer released-client behavior from source inspection alone.
 
 ## Replacement Acceptance
 
-OpenDesk can be considered a Pro replacement for the owner when:
+OpenDesk can be considered a Pro replacement only after the owner inventory is complete, required workflows pass, all research rows are accepted or explicitly retired, and cutover signoffs are recorded. Current implementation tests and authorized discovery are not those signoffs.
 
-- Daily device lookup works from the OpenDesk dashboard.
-- New Windows and Linux devices can be installed/configured from OpenDesk without manual RustDesk server entry.
-- Devices can self-register or be added with minimal manual metadata.
-- Operators can find and connect to devices reliably.
-- Server health and backups are visible.
-- Existing RustDesk remote sessions continue to use official clients and OSS relay/ID services.
-- No production secrets or site-specific values are committed.
-- Every Pro feature currently used in production is represented in this parity map with a passing implementation, a validated equivalent workflow, or an explicit decision that it is not needed.
-- Cutover remains blocked until the validation matrix passes for required operating systems and workflows.
-
-## Acceptable Gaps Before Cutover
-
-These are acceptable before cutover only if the owner confirms they are not required by the current production workflow:
-
-- Native address book inside the RustDesk app.
-- Full RustDesk session-level ACL enforcement.
-- Managed password injection.
-- Browser remote desktop.
-- Custom signed desktop/mobile clients.
-- Drop-in RustDesk Pro API compatibility.
+Acceptable only with explicit owner confirmation that they are not required: native in-app address book, RustDesk session-level ACL enforcement, managed password injection, browser remote desktop, custom signed clients, and drop-in Pro API compatibility.

@@ -24,7 +24,7 @@ use crate::domain::server_config::default_server_config;
 use crate::domain::tag::format_tag_names_display;
 use crate::http::routes::device_export::export_csv_href;
 use crate::http::routes::render::render_device_form;
-use crate::http::session::{require_mutator, require_user, AuthenticatedUser};
+use crate::http::session::{require_csrf, require_mutator, require_user, AuthenticatedUser};
 use crate::http::views::{DeviceRowView, DevicesListView};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::devices::{
@@ -60,7 +60,7 @@ async fn devices_list(
     jar: CookieJar,
     Query(query): Query<SearchQuery>,
 ) -> Result<Response, Response> {
-    let _user = require_user(&state, &jar).await?;
+    let user = require_user(&state, &jar).await?;
     let search_term = query.term.unwrap_or_default();
     let search = DeviceSearchQuery {
         term: search_term.clone(),
@@ -126,6 +126,7 @@ async fn devices_list(
     let view = DevicesListView {
         title: "Devices".to_string(),
         show_nav: true,
+        csrf_token: user.csrf_token.clone(),
         search_term: search_term.clone(),
         export_csv_href: export_csv_href(&search_term),
         devices: rows,
@@ -140,7 +141,7 @@ async fn device_new_page(
     State(state): State<AppState>,
     jar: CookieJar,
 ) -> Result<Response, Response> {
-    let _user = require_user(&state, &jar).await?;
+    let user = require_user(&state, &jar).await?;
     Ok(render_device_form(
         &state,
         "New device",
@@ -151,6 +152,7 @@ async fn device_new_page(
         None,
         false,
         false,
+        &user.csrf_token,
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -162,7 +164,7 @@ async fn device_edit_page(
     jar: CookieJar,
     Path(device_uuid): Path<Uuid>,
 ) -> Result<Response, Response> {
-    let _user = require_user(&state, &jar).await?;
+    let user = require_user(&state, &jar).await?;
     let device = find_device_by_uuid(&state.db, device_uuid)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -192,6 +194,7 @@ async fn device_edit_page(
         None,
         !device.archived,
         device.archived,
+        &user.csrf_token,
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -217,6 +220,8 @@ where
 
 #[derive(Deserialize)]
 pub struct DeviceForm {
+    #[serde(default)]
+    csrf_token: String,
     alias: String,
     rustdesk_id: Option<String>,
     hostname: Option<String>,
@@ -255,6 +260,7 @@ async fn device_create_submit(
     Form(form): Form<DeviceForm>,
 ) -> Result<Response, Response> {
     let user = require_mutator(&state, &jar).await?;
+    require_csrf(&user, &form.csrf_token)?;
     let tag_uuids = parse_tag_uuids_from_form(&form.tag_uuids);
     let draft = device_form_to_draft(form);
     if let Err(error) = validate_device_draft(&draft) {
@@ -268,6 +274,7 @@ async fn device_create_submit(
             Some(error.to_string()),
             false,
             false,
+            &user.csrf_token,
         )
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -290,6 +297,7 @@ async fn device_update_submit(
     Form(form): Form<DeviceForm>,
 ) -> Result<Response, Response> {
     let user = require_mutator(&state, &jar).await?;
+    require_csrf(&user, &form.csrf_token)?;
     let existing = find_device_by_uuid(&state.db, device_uuid)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -307,6 +315,7 @@ async fn device_update_submit(
             Some(error.to_string()),
             !existing.archived,
             existing.archived,
+            &user.csrf_token,
         )
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -322,12 +331,19 @@ async fn device_update_submit(
     Ok(Redirect::to(&format!("/devices/{}", device.device_uuid)).into_response())
 }
 
+#[derive(Deserialize)]
+struct ArchiveForm {
+    csrf_token: String,
+}
+
 async fn device_archive(
     State(state): State<AppState>,
     jar: CookieJar,
     Path(device_uuid): Path<Uuid>,
+    Form(form): Form<ArchiveForm>,
 ) -> Result<Response, Response> {
     let user = require_mutator(&state, &jar).await?;
+    require_csrf(&user, &form.csrf_token)?;
     set_device_archived(&state.db, device_uuid, true)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -339,8 +355,10 @@ async fn device_unarchive(
     State(state): State<AppState>,
     jar: CookieJar,
     Path(device_uuid): Path<Uuid>,
+    Form(form): Form<ArchiveForm>,
 ) -> Result<Response, Response> {
     let user = require_mutator(&state, &jar).await?;
+    require_csrf(&user, &form.csrf_token)?;
     set_device_archived(&state.db, device_uuid, false)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;

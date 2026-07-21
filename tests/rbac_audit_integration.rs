@@ -2,7 +2,9 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{login_and_get_session_cookie, session_cookie_from_response, test_state};
+use common::{
+    form_with_csrf, login_and_get_session_cookie, session_cookie_from_response, test_state,
+};
 use http_body_util::BodyExt;
 use opendesk::build_router;
 use opendesk::domain::role::Role;
@@ -17,6 +19,7 @@ async fn login_as(app: &axum::Router, username: &str, password: &str) -> String 
             Request::builder()
                 .method("POST")
                 .uri("/login")
+                .header("origin", "http://127.0.0.1:8080")
                 .header("content-type", "application/x-www-form-urlencoded")
                 .body(Body::from(format!(
                     "username={username}&password={password}"
@@ -59,7 +62,7 @@ async fn read_only_can_view_devices_but_cannot_mutate() {
                 .uri("/devices")
                 .header("cookie", &cookie)
                 .header("content-type", "application/x-www-form-urlencoded")
-                .body(Body::from("alias=Blocked+Device"))
+                .body(Body::from(form_with_csrf(&cookie, "alias=Blocked+Device")))
                 .unwrap(),
         )
         .await
@@ -71,9 +74,9 @@ async fn read_only_can_view_devices_but_cannot_mutate() {
             Request::builder()
                 .method("POST")
                 .uri("/sites")
-                .header("cookie", cookie)
+                .header("cookie", &cookie)
                 .header("content-type", "application/x-www-form-urlencoded")
-                .body(Body::from("name=Blocked+Site"))
+                .body(Body::from(form_with_csrf(&cookie, "name=Blocked+Site")))
                 .unwrap(),
         )
         .await
@@ -98,7 +101,7 @@ async fn operator_can_mutate_devices_but_not_manage_users_or_restore() {
                 .uri("/devices")
                 .header("cookie", &cookie)
                 .header("content-type", "application/x-www-form-urlencoded")
-                .body(Body::from("alias=Operator+Device"))
+                .body(Body::from(form_with_csrf(&cookie, "alias=Operator+Device")))
                 .unwrap(),
         )
         .await
@@ -123,9 +126,12 @@ async fn operator_can_mutate_devices_but_not_manage_users_or_restore() {
             Request::builder()
                 .method("POST")
                 .uri("/backup")
-                .header("cookie", cookie)
+                .header("cookie", &cookie)
                 .header("content-type", "application/x-www-form-urlencoded")
-                .body(Body::from("backup_json=%7B%7D&confirm=yes"))
+                .body(Body::from(form_with_csrf(
+                    &cookie,
+                    "backup_json=%7B%7D&confirm=yes",
+                )))
                 .unwrap(),
         )
         .await
@@ -147,9 +153,10 @@ async fn admin_can_create_user_and_list_users() {
                 .uri("/users")
                 .header("cookie", &cookie)
                 .header("content-type", "application/x-www-form-urlencoded")
-                .body(Body::from(
+                .body(Body::from(form_with_csrf(
+                    &cookie,
                     "username=newops&password=securepass1&role=operator",
-                ))
+                )))
                 .unwrap(),
         )
         .await
@@ -160,7 +167,7 @@ async fn admin_can_create_user_and_list_users() {
         .oneshot(
             Request::builder()
                 .uri("/users")
-                .header("cookie", cookie)
+                .header("cookie", &cookie)
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -189,7 +196,7 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
                 .uri("/enrollment-tokens")
                 .header("cookie", &cookie)
                 .header("content-type", "application/x-www-form-urlencoded")
-                .body(Body::from("label=fleet-a"))
+                .body(Body::from(form_with_csrf(&cookie, "label=fleet-a")))
                 .unwrap(),
         )
         .await
@@ -267,7 +274,7 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
         .oneshot(
             Request::builder()
                 .uri("/audit/export.csv")
-                .header("cookie", cookie)
+                .header("cookie", &cookie)
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -307,7 +314,7 @@ async fn read_only_can_view_audit_but_not_export_devices_csv() {
         .oneshot(
             Request::builder()
                 .uri("/devices/export.csv")
-                .header("cookie", cookie)
+                .header("cookie", &cookie)
                 .body(Body::empty())
                 .unwrap(),
         )

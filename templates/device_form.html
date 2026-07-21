@@ -6,6 +6,7 @@
   <p class="error">{{ error_message.as_ref().unwrap() }}</p>
   {% endif %}
   <form method="post" action="{{ form_action }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="alias">Alias</label>
     <input id="alias" name="alias" value="{{ alias }}" required>
 
@@ -55,11 +56,13 @@
   </form>
   {% if show_archive_actions %}
   <form method="post" action="/devices/{{ device_uuid }}/archive">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit">Archive</button>
   </form>
   {% endif %}
   {% if show_unarchive_actions %}
   <form method="post" action="/devices/{{ device_uuid }}/unarchive">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit">Unarchive</button>
   </form>
   {% endif %}

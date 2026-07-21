@@ -2,7 +2,7 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{login_and_get_session_cookie, test_state};
+use common::{form_with_csrf, login_and_get_session_cookie, test_state};
 use http_body_util::BodyExt;
 use opendesk::build_router;
 use tower::ServiceExt;
@@ -21,7 +21,10 @@ async fn tag_create_and_device_assignment_persist() {
                 .uri("/tags")
                 .header("content-type", "application/x-www-form-urlencoded")
                 .header("cookie", session_cookie.clone())
-                .body(Body::from("name=Production"))
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    "name=Production",
+                )))
                 .unwrap(),
         )
         .await
@@ -44,9 +47,9 @@ async fn tag_create_and_device_assignment_persist() {
                 .uri("/devices")
                 .header("content-type", "application/x-www-form-urlencoded")
                 .header("cookie", session_cookie.clone())
-                .body(Body::from(format!(
-                    "alias=Tagged+Workstation&tag_uuids={}",
-                    tag.tag_uuid
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    &format!("alias=Tagged+Workstation&tag_uuids={}", tag.tag_uuid),
                 )))
                 .unwrap(),
         )
@@ -71,7 +74,7 @@ async fn tag_create_and_device_assignment_persist() {
         .oneshot(
             Request::builder()
                 .uri("/devices")
-                .header("cookie", session_cookie)
+                .header("cookie", &session_cookie)
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -119,7 +122,7 @@ async fn device_search_matches_tag_name() {
         .oneshot(
             Request::builder()
                 .uri("/devices?term=warehouse")
-                .header("cookie", session_cookie)
+                .header("cookie", &session_cookie)
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -164,8 +167,11 @@ async fn device_update_clears_tags_when_none_selected() {
                 .method("POST")
                 .uri(format!("/devices/{}", device.device_uuid))
                 .header("content-type", "application/x-www-form-urlencoded")
-                .header("cookie", session_cookie)
-                .body(Body::from("alias=Clear+Tags+Device&site_uuid="))
+                .header("cookie", &session_cookie)
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    "alias=Clear+Tags+Device&site_uuid=",
+                )))
                 .unwrap(),
         )
         .await

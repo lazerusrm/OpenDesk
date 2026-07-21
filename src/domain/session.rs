@@ -1,3 +1,4 @@
+use rand::{rngs::OsRng, RngCore};
 use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 
@@ -5,6 +6,12 @@ pub const SESSION_DURATION_HOURS: i64 = 24;
 
 pub fn new_session_uuid() -> Uuid {
     Uuid::new_v4()
+}
+
+pub fn new_csrf_token() -> String {
+    let mut token = [0_u8; 32];
+    OsRng.fill_bytes(&mut token);
+    hex::encode(token)
 }
 
 pub fn session_expires_at(now: OffsetDateTime) -> OffsetDateTime {
@@ -38,5 +45,13 @@ mod tests {
             expires,
             datetime!(2026-06-24 12:00:01 UTC)
         ));
+    }
+
+    #[test]
+    fn csrf_tokens_are_random_and_32_bytes() {
+        let first = new_csrf_token();
+        let second = new_csrf_token();
+        assert_eq!(first.len(), 64);
+        assert_ne!(first, second);
     }
 }

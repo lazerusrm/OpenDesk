@@ -28,6 +28,7 @@ Production target:
 - [Threat Model](docs/threat-model.md)
 - [Architecture Decisions](docs/adr.md)
 - [Cutover Readiness](docs/cutover-readiness.md)
+- [Operations Runbook](docs/operations-runbook.md)
 - [CI Plan](docs/ci-plan.md)
 - [Traceability](docs/traceability.md)
 - [Engineering Standards](docs/engineering-standards.md)

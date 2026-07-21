@@ -24,6 +24,7 @@ pub fn render_login(error_message: Option<String>) -> Html<String> {
     let view = LoginView {
         title: "Login".to_string(),
         show_nav: false,
+        csrf_token: String::new(),
         error_message,
     };
     Html(view.render().expect("render login"))
@@ -40,6 +41,7 @@ pub async fn render_device_form(
     error_message: Option<String>,
     show_archive_actions: bool,
     show_unarchive_actions: bool,
+    csrf_token: &str,
 ) -> Result<Html<String>, sqlx::Error> {
     let sites = list_sites(&state.db).await?;
     let site_options = sites
@@ -65,6 +67,7 @@ pub async fn render_device_form(
     let view = DeviceFormView {
         title: heading.to_string(),
         show_nav: true,
+        csrf_token: csrf_token.to_string(),
         heading: heading.to_string(),
         form_action: form_action.to_string(),
         device_uuid: device_uuid.to_string(),
@@ -94,10 +97,12 @@ pub fn render_server_config(
     config: &ServerConfig,
     message: Option<String>,
     error_message: Option<String>,
+    csrf_token: &str,
 ) -> Html<String> {
     let view = ServerConfigView {
         title: "Server Config".to_string(),
         show_nav: true,
+        csrf_token: csrf_token.to_string(),
         id_server: config.id_server.clone(),
         relay_server: config.relay_server.clone(),
         api_server: config.api_server.clone(),
@@ -111,6 +116,7 @@ pub fn render_server_config(
 pub async fn render_enrollment_tokens(
     state: &AppState,
     created_token_value: Option<String>,
+    csrf_token: &str,
 ) -> Result<Html<String>, sqlx::Error> {
     let tokens = list_enrollment_tokens(&state.db).await?;
     let rows = tokens
@@ -128,6 +134,7 @@ pub async fn render_enrollment_tokens(
     let view = EnrollmentTokensView {
         title: "Enrollment Tokens".to_string(),
         show_nav: true,
+        csrf_token: csrf_token.to_string(),
         tokens: rows,
         created_token_value,
     };

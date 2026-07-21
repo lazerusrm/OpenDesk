@@ -8,13 +8,67 @@ use std::os::unix::fs::PermissionsExt;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{login_and_get_session_cookie, test_state};
+use common::{
+    form_with_csrf, login_and_get_session_cookie, login_and_get_session_cookie_with_origin,
+    test_state,
+};
 use http_body_util::BodyExt;
 use opendesk::build_router;
 use serde_json::json;
 use tokio::net::TcpListener;
 use tower::ServiceExt;
 
+#[tokio::test]
+async fn authenticated_mutation_rejects_missing_and_invalid_csrf_tokens() {
+    let state = test_state().await;
+    let app = build_router(state.clone());
+    let cookie = login_and_get_session_cookie(&app).await;
+
+    for (body, expected) in [
+        ("name=csrf-missing", StatusCode::UNPROCESSABLE_ENTITY),
+        (
+            "csrf_token=invalid&name=csrf-invalid",
+            StatusCode::FORBIDDEN,
+        ),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/sites")
+                    .header("cookie", &cookie)
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .expect("csrf response");
+        assert_eq!(response.status(), expected);
+    }
+    assert!(opendesk::repository::sites::list_sites(&state.db)
+        .await
+        .expect("sites")
+        .is_empty());
+}
+
+#[tokio::test]
+async fn login_rejects_cross_origin_submission() {
+    let app = build_router(test_state().await);
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/login")
+                .header("origin", "https://evil.example")
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from("username=admin&password=test-password"))
+                .unwrap(),
+        )
+        .await
+        .expect("login response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
 #[tokio::test]
 async fn health_endpoint_returns_ok() {
     let app = build_router(test_state().await);
@@ -100,10 +154,11 @@ async fn device_update_via_handler_preserves_enrollment_metadata() {
                 .method("POST")
                 .uri(format!("/devices/{}", device.device_uuid))
                 .header("content-type", "application/x-www-form-urlencoded")
-                .header("cookie", session_cookie)
-                .body(Body::from(
+                .header("cookie", &session_cookie)
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
                     "alias=Renamed+device&notes=operator+note&rustdesk_id=&hostname=&owner=",
-                ))
+                )))
                 .unwrap(),
         )
         .await
@@ -149,7 +204,11 @@ async fn linux_script_export_executes_check_in_against_running_server() {
     });
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let session_cookie = login_and_get_session_cookie(&build_router(state.clone())).await;
+    let session_cookie = login_and_get_session_cookie_with_origin(
+        &build_router(state.clone()),
+        &format!("http://{addr}"),
+    )
+    .await;
     let export_uri = format!(
         "/deployment/linux.sh?enrollment_token_value={}",
         created.token_value
@@ -158,7 +217,7 @@ async fn linux_script_export_executes_check_in_against_running_server() {
         .oneshot(
             Request::builder()
                 .uri(export_uri)
-                .header("cookie", session_cookie)
+                .header("cookie", &session_cookie)
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -262,8 +321,11 @@ async fn archived_device_validation_error_shows_unarchive_action() {
                 .method("POST")
                 .uri(format!("/devices/{}", device.device_uuid))
                 .header("content-type", "application/x-www-form-urlencoded")
-                .header("cookie", session_cookie)
-                .body(Body::from("alias=+&rustdesk_id=&hostname=&owner=&notes="))
+                .header("cookie", &session_cookie)
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    "alias=+&rustdesk_id=&hostname=&owner=&notes=",
+                )))
                 .unwrap(),
         )
         .await

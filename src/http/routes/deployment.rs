@@ -115,6 +115,7 @@ async fn deployment_page(
     let view = DeploymentView {
         title: "Deployment".to_string(),
         show_nav: true,
+        csrf_token: user.csrf_token.clone(),
         tokens: token_options,
         enrollment_token_value: token_value,
         public_base_url: state.public_base_url.clone(),

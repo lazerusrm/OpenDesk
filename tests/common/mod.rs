@@ -20,31 +20,57 @@ pub async fn test_state() -> AppState {
         db,
         cookie_secure: false,
         public_base_url: "http://127.0.0.1:8080".to_string(),
+        backup_schedule: None,
+        backup_destination_configured: false,
     }
 }
 
 pub fn session_cookie_from_response(response: &axum::http::Response<Body>) -> String {
-    let set_cookie = response
-        .headers()
-        .get_all("set-cookie")
-        .iter()
-        .map(|value| value.to_str().expect("cookie header"))
-        .find(|value| value.starts_with("opendesk_session="))
-        .expect("session cookie");
-    set_cookie
+    let mut cookies = Vec::new();
+    for name in ["opendesk_session", "opendesk_csrf"] {
+        let set_cookie = response
+            .headers()
+            .get_all("set-cookie")
+            .iter()
+            .map(|value| value.to_str().expect("cookie header"))
+            .find(|value| value.starts_with(&format!("{name}=")))
+            .expect("cookie");
+        cookies.push(
+            set_cookie
+                .split(';')
+                .next()
+                .expect("cookie pair")
+                .to_string(),
+        );
+    }
+    cookies.join("; ")
+}
+
+#[allow(dead_code)]
+pub fn csrf_token_from_cookie(cookie: &str) -> &str {
+    cookie
         .split(';')
-        .next()
-        .expect("cookie pair")
-        .to_string()
+        .find_map(|part| part.trim().strip_prefix("opendesk_csrf="))
+        .expect("csrf cookie")
+}
+
+#[allow(dead_code)]
+pub fn form_with_csrf(cookie: &str, body: &str) -> String {
+    format!("{body}&csrf_token={}", csrf_token_from_cookie(cookie))
 }
 
 pub async fn login_and_get_session_cookie(app: &axum::Router) -> String {
+    login_and_get_session_cookie_with_origin(app, "http://127.0.0.1:8080").await
+}
+
+pub async fn login_and_get_session_cookie_with_origin(app: &axum::Router, origin: &str) -> String {
     let response = app
         .clone()
         .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/login")
+                .header("origin", origin)
                 .header("content-type", "application/x-www-form-urlencoded")
                 .body(Body::from("username=admin&password=test-password"))
                 .unwrap(),
