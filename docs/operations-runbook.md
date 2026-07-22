@@ -63,6 +63,26 @@ and opaque installers, and strategy options can claim RustDesk session controls
 that OpenDesk does not enforce. Treat the resulting export as sensitive operational
 metadata even though it contains no credentials.
 
+## Migration preflight
+
+After creating a verified, WAL-free SQLite backup of an initialized staging
+OpenDesk database, bind the exact sanitized export to that target before seeking
+an apply approval:
+
+```text
+opendesk-migration-preflight \
+  --input sanitized-export.json \
+  --database staging-opendesk.sqlite \
+  --backup staging-opendesk-before-import.sqlite
+```
+
+The command is read-only. It has no `--apply` option, never runs schema
+migrations, and never creates a database. It rejects non-regular or active-WAL
+files, an uninitialized target, and a backup whose durable OpenDesk instance
+identity differs from the target. Its JSON result contains only source/target and
+backup SHA-256 bindings and must be included in the separately signed staging
+apply approval.
+
 ## Migration dry-run report
 
 The migration path is report-only. It does not provide an HTTP import endpoint and

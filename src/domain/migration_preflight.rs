@@ -26,6 +26,7 @@ pub struct MigrationPreflight {
     pub source_snapshot_sha256: String,
     pub target_instance_uuid: String,
     pub target_snapshot_sha256: String,
+    pub backup_instance_uuid: String,
     pub backup_sha256: String,
 }
 
@@ -37,6 +38,8 @@ pub enum MigrationPreflightError {
     InvalidTarget,
     #[error("migration preflight target has an active WAL sidecar")]
     ActiveWal,
+    #[error("migration preflight backup belongs to a different target instance")]
+    BackupTargetMismatch,
     #[error("migration preflight target is not initialized")]
     TargetUninitialized,
     #[error("migration preflight target identity is ambiguous")]
@@ -49,12 +52,16 @@ pub async fn capture_preflight(
     database: &Path,
     input: &[u8],
     export: &SanitizedMigrationExport,
-    backup_sha256: &str,
+    backup: &Path,
 ) -> Result<MigrationPreflight, MigrationPreflightError> {
-    validate_digest(backup_sha256)?;
+    let backup_sha256 = snapshot_digest(backup)?;
+    let backup_instance_uuid = instance_uuid_from_database(backup).await?;
     let target_snapshot_sha256 = snapshot_digest(database)?;
     let mut connection = open_immutable_preflight_connection(database).await?;
     let target_instance_uuid = target_instance_uuid(&mut connection).await?;
+    if backup_instance_uuid != target_instance_uuid {
+        return Err(MigrationPreflightError::BackupTargetMismatch);
+    }
     connection
         .close()
         .await
@@ -68,7 +75,8 @@ pub async fn capture_preflight(
         source_snapshot_sha256: export.provenance.snapshot_sha256.clone(),
         target_instance_uuid,
         target_snapshot_sha256,
-        backup_sha256: backup_sha256.to_string(),
+        backup_instance_uuid,
+        backup_sha256,
     })
 }
 
@@ -88,14 +96,30 @@ pub async fn target_instance_uuid(
     }
 }
 
+pub async fn instance_uuid_from_database(
+    database: &Path,
+) -> Result<String, MigrationPreflightError> {
+    let mut connection = open_immutable_preflight_connection(database).await?;
+    let instance_uuid = target_instance_uuid(&mut connection).await?;
+    connection
+        .close()
+        .await
+        .map_err(|_| MigrationPreflightError::Database)?;
+    Ok(instance_uuid)
+}
+
 pub fn snapshot_digest(database: &Path) -> Result<String, MigrationPreflightError> {
-    let metadata = fs::symlink_metadata(database).map_err(|_| MigrationPreflightError::InvalidTarget)?;
+    let metadata =
+        fs::symlink_metadata(database).map_err(|_| MigrationPreflightError::InvalidTarget)?;
     if !metadata.file_type().is_file() || metadata.len() == 0 {
         return Err(MigrationPreflightError::InvalidTarget);
     }
     let wal = database.with_file_name(format!(
         "{}-wal",
-        database.file_name().and_then(|value| value.to_str()).ok_or(MigrationPreflightError::InvalidTarget)?
+        database
+            .file_name()
+            .and_then(|value| value.to_str())
+            .ok_or(MigrationPreflightError::InvalidTarget)?
     ));
     if let Ok(metadata) = fs::symlink_metadata(wal) {
         if !metadata.file_type().is_file() || metadata.len() != 0 {
@@ -119,16 +143,6 @@ pub async fn open_immutable_preflight_connection(
         .map_err(|_| MigrationPreflightError::Database)
 }
 
-fn validate_digest(value: &str) -> Result<(), MigrationPreflightError> {
-    if value.len() != 64
-        || !value.bytes().all(|byte| byte.is_ascii_hexdigit())
-        || value.bytes().any(|byte| byte.is_ascii_uppercase())
-    {
-        return Err(MigrationPreflightError::InvalidValue);
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -143,11 +157,17 @@ mod tests {
     #[test]
     fn snapshot_digest_rejects_missing_and_active_wal_targets() {
         let database = temporary_path("database.sqlite");
-        assert_eq!(snapshot_digest(&database), Err(MigrationPreflightError::InvalidTarget));
+        assert_eq!(
+            snapshot_digest(&database),
+            Err(MigrationPreflightError::InvalidTarget)
+        );
         std::fs::write(&database, b"sqlite snapshot").expect("write target");
         let wal = std::path::PathBuf::from(format!("{}-wal", database.display()));
         std::fs::write(&wal, b"active WAL").expect("write wal");
-        assert_eq!(snapshot_digest(&database), Err(MigrationPreflightError::ActiveWal));
+        assert_eq!(
+            snapshot_digest(&database),
+            Err(MigrationPreflightError::ActiveWal)
+        );
         std::fs::remove_file(wal).expect("remove wal");
         assert_eq!(snapshot_digest(&database).expect("digest").len(), 64);
         std::fs::remove_file(database).expect("remove target");

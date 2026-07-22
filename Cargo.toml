@@ -51,3 +51,7 @@ path = "src/main.rs"
 [[bin]]
 name = "opendesk-migration-dry-run"
 path = "src/bin/opendesk-migration-dry-run.rs"
+
+[[bin]]
+name = "opendesk-migration-preflight"
+path = "src/bin/opendesk-migration-preflight.rs"
