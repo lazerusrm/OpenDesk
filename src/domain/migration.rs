@@ -5,6 +5,7 @@
 //! has no credential, session, key, or secret fields.
 
 use serde::Deserialize;
+use std::collections::HashSet;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -106,7 +107,49 @@ pub fn parse_rustdesk_pro_import_json(
     if document.schema_version != RUSTDESK_PRO_IMPORT_SCHEMA_VERSION {
         return Err(ImportParseError::UnsupportedSchemaVersion);
     }
+    validate_external_references(&document)?;
     Ok(document)
+}
+
+fn validate_external_references(
+    document: &RustDeskProImportDocument,
+) -> Result<(), ImportParseError> {
+    let groups: HashSet<&str> = document
+        .groups
+        .iter()
+        .map(|group| group.group_id.as_str())
+        .collect();
+    for (index, device) in document.devices.iter().enumerate() {
+        for (group_index, group_id) in device.group_ids.iter().enumerate() {
+            if !groups.contains(group_id.as_str()) {
+                return Err(ImportParseError::InvalidJson(format!(
+                    "unknown group reference at $.devices[{index}].group_ids[{group_index}]"
+                )));
+            }
+        }
+    }
+    for (index, book) in document.address_books.iter().enumerate() {
+        if let Some(group_id) = book.group_id.as_deref() {
+            if !groups.contains(group_id) {
+                return Err(ImportParseError::InvalidJson(format!(
+                    "unknown group reference at $.address_books[{index}].group_id"
+                )));
+            }
+        }
+    }
+    let books: HashSet<&str> = document
+        .address_books
+        .iter()
+        .map(|book| book.address_book_id.as_str())
+        .collect();
+    for (index, entry) in document.address_book_entries.iter().enumerate() {
+        if !books.contains(entry.address_book_id.as_str()) {
+            return Err(ImportParseError::InvalidJson(format!(
+                "unknown address-book reference at $.address_book_entries[{index}].address_book_id"
+            )));
+        }
+    }
+    Ok(())
 }
 
 fn find_sensitive_field(value: &serde_json::Value, path: String) -> Option<String> {
@@ -143,6 +186,13 @@ fn is_sensitive_field(name: &str) -> bool {
         || name == "api_key"
         || name.ends_with("_secret")
 }
+
+#[path = "migration_operator.rs"]
+mod migration_operator;
+pub use migration_operator::{
+    load_migration_snapshot, parse_scope_site_mapping, validate_scope_site_mappings,
+    ScopeMappingParseError, ScopeMappingValidationError, SnapshotLoadError,
+};
 
 #[path = "migration_reconciliation.rs"]
 mod migration_reconciliation;
@@ -240,6 +290,33 @@ mod tests {
             Err(ImportParseError::SensitiveField {
                 path: "$.users[0].password_hash".to_string()
             })
+        );
+    }
+
+    #[test]
+    fn parser_rejects_dangling_external_references() {
+        let json = r#"{
+            "schema_version": 1, "users": [],
+            "groups": [{"group_id":"known", "name":"Known"}],
+            "devices": [{"rustdesk_id":"1", "alias":"Device", "hostname":null, "group_ids":["missing"]}],
+            "address_books": [{"address_book_id":"book", "name":"Book", "group_id":"known"}],
+            "address_book_entries": [{"address_book_id":"missing-book", "rustdesk_id":"1", "alias":"Entry", "notes":null}]
+        }"#;
+        let error = parse_rustdesk_pro_import_json(json).expect_err("dangling reference");
+        assert!(
+            matches!(error, ImportParseError::InvalidJson(message) if message.contains("unknown group reference"))
+        );
+
+        let json = r#"{
+            "schema_version": 1, "users": [],
+            "groups": [{"group_id":"known", "name":"Known"}],
+            "devices": [],
+            "address_books": [{"address_book_id":"book", "name":"Book", "group_id":"known"}],
+            "address_book_entries": [{"address_book_id":"missing-book", "rustdesk_id":"1", "alias":"Entry", "notes":null}]
+        }"#;
+        let error = parse_rustdesk_pro_import_json(json).expect_err("dangling book reference");
+        assert!(
+            matches!(error, ImportParseError::InvalidJson(message) if message.contains("unknown address-book reference"))
         );
     }
 

@@ -34,7 +34,44 @@ external runner is configured to invoke the authenticated export and protect
 its output. `/status` must report `configured_external_runner`; otherwise the
 state is `manual_only` or `incomplete` and is not a production backup claim.
 
-## Upgrade and rollback
+## Migration dry-run report
+
+The migration path is report-only. It does not provide an HTTP import endpoint and
+there is no write operation. Run the separate binary against a copied or otherwise
+approved current SQLite file and a sanitized export:
+
+```text
+opendesk-migration-dry-run \
+  --input sanitized-export.json \
+  --database opendesk.sqlite \
+  --map GROUP_ID:SITE_UUID
+```
+
+Repeat `--map` for each group that has explicit operator evidence for its target
+site. Group IDs accept only ASCII letters, digits, `.`, `_`, and `-`; the site ID
+must be a lowercase canonical UUID. Unknown groups, unknown site UUIDs, duplicate
+mappings, unsafe mapping values, unknown JSON fields, unsupported schema versions,
+and any credential/token/hash/key/secret field are rejected. The report is JSON on
+stdout and failure is JSON on stdout with a non-zero exit status. It contains
+reconciliation actions and reasons only; it does not print credentials, password
+or enrollment-token hashes, sessions, audit events, endpoint check-ins, keys, or
+server configuration.
+
+The operator command requires a stable SQLite artifact without an active WAL
+sidecar. Do not point it at an in-use database. Create a staging copy using the
+SQLite backup API, for example:
+
+```text
+sqlite3 source.db '.backup staging-copy.sqlite'
+opendesk-migration-dry-run --input sanitized-export.json --database staging-copy.sqlite
+```
+
+Alternatively, perform a verified checkpoint and offline copy under your
+approved maintenance procedure, then confirm `staging-copy.sqlite-wal` is absent
+or empty before running the command. An existing nonempty `-wal` sidecar is
+rejected to prevent an incomplete snapshot. The command reports a generic JSON
+error directing the operator to a verified backup artifact.
+
 
 1. Export and verify a backup before changing the image.
 2. Record the candidate image/version and confirm the persistent data volume is

@@ -44,3 +44,7 @@ path = "src/lib.rs"
 [[bin]]
 name = "opendesk"
 path = "src/main.rs"
+
+[[bin]]
+name = "opendesk-migration-dry-run"
+path = "src/bin/opendesk-migration-dry-run.rs"

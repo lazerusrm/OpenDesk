@@ -51,6 +51,11 @@ Local upstream reference clones may exist in `upstream/`, which is intentionally
 
 The first build slice is a Rust control plane service (Axum, Askama, sqlx/SQLite).
 
+For the separate report-only migration review, build and run
+`opendesk-migration-dry-run`; it accepts only a sanitized JSON export, an existing
+SQLite file, and explicit `GROUP_ID:SITE_UUID` mappings. It uses a read-only
+snapshot and never imports or mutates state. See the [Operations Runbook](docs/operations-runbook.md).
+
 ```bash
 cargo test
 OPENDESK_LISTEN_ADDR=127.0.0.1:8080 cargo run

@@ -5,12 +5,13 @@ COPY migrations ./migrations
 COPY src ./src
 COPY templates ./templates
 COPY static ./static
-RUN cargo build --release
+RUN cargo build --release --bins
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/target/release/opendesk /usr/local/bin/opendesk
+COPY --from=builder /app/target/release/opendesk-migration-dry-run /usr/local/bin/opendesk-migration-dry-run
 COPY migrations ./migrations
 COPY templates ./templates
 COPY static ./static
