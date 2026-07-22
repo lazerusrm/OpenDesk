@@ -14,6 +14,7 @@ pub mod enrollment_token;
 pub mod health;
 pub mod migration;
 pub mod migration_contract;
+pub mod migration_preflight;
 pub mod role;
 pub mod server_config;
 pub mod session;
