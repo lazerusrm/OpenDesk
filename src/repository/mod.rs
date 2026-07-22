@@ -1,5 +1,8 @@
+pub mod access_groups;
+pub mod address_books;
 pub mod audit_events;
 pub mod backup;
+pub mod device_visibility;
 pub mod devices;
 pub mod enrollment_tokens;
 pub mod server_config;

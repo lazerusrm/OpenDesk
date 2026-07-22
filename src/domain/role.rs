@@ -20,10 +20,10 @@ impl Role {
     pub const READ_ONLY: &'static str = "read_only";
 
     pub fn parse(value: &str) -> Result<Self, RoleParseError> {
-        match value.trim() {
+        match value {
             Self::ADMIN => Ok(Self::Admin),
             Self::OPERATOR => Ok(Self::Operator),
-            Self::READ_ONLY | "read-only" | "readonly" => Ok(Self::ReadOnly),
+            Self::READ_ONLY => Ok(Self::ReadOnly),
             _ => Err(RoleParseError::Unknown),
         }
     }
@@ -73,12 +73,19 @@ mod tests {
         assert_eq!(Role::parse("admin"), Ok(Role::Admin));
         assert_eq!(Role::parse("operator"), Ok(Role::Operator));
         assert_eq!(Role::parse("read_only"), Ok(Role::ReadOnly));
-        assert_eq!(Role::parse("read-only"), Ok(Role::ReadOnly));
     }
 
     #[test]
     fn parse_rejects_unknown() {
-        assert_eq!(Role::parse("superuser"), Err(RoleParseError::Unknown));
+        for value in [
+            "superuser",
+            "read-only",
+            "readonly",
+            " read_only",
+            "read_only ",
+        ] {
+            assert_eq!(Role::parse(value), Err(RoleParseError::Unknown));
+        }
     }
 
     #[test]
