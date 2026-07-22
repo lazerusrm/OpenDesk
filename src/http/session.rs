@@ -5,6 +5,7 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::app_state::AppState;
+use crate::domain::access_policy::{is_action_allowed_for_values, Action};
 use crate::domain::role::Role;
 use crate::domain::session::session_is_valid;
 use crate::repository::sessions::{create_session, delete_session, find_session};
@@ -55,6 +56,18 @@ pub async fn require_user(
         role: user.role,
         csrf_token: session.csrf_token,
     })
+}
+
+pub async fn require_action(
+    state: &AppState,
+    jar: &CookieJar,
+    action: Action,
+) -> Result<AuthenticatedUser, Response> {
+    let user = require_user(state, jar).await?;
+    if !is_action_allowed_for_values(&user.role, action.as_str()) {
+        return Err(forbidden_response());
+    }
+    Ok(user)
 }
 
 /// Authenticated users with admin or operator role (mutations and exports).

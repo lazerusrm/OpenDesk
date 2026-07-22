@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Address book: {{ name }}</h1>
+  <p><code>{{ address_book_uuid }}</code></p>
+  {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
+</section>
+<section class="card">
+  {% if can_update %}
+  <h2>Add entry</h2>
+  <form method="post" action="/address-books/{{ address_book_uuid }}/entries">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Device <select name="device_uuid" required>{% for device in device_options %}<option value="{{ device.device_uuid }}">{{ device.alias }}</option>{% endfor %}</select></label>
+    <label>Alias <input name="alias" required maxlength="128"></label>
+    <label>Notes <textarea name="notes"></textarea></label>
+    <label>Position <input name="position" type="number" min="0" value="0" required></label>
+    <button type="submit">Add entry</button>
+  </form>
+  {% endif %}
+</section>
+<section class="card">
+  <h2>Entries</h2>
+  {% for entry in entries %}
+  <article>
+    <h3>{{ entry.alias }}</h3><p><code>{{ entry.device_uuid }}</code></p>
+    {% if can_update %}
+    <form method="post" action="/address-books/{{ address_book_uuid }}/entries/{{ entry.address_book_entry_uuid }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="device_uuid" value="{{ entry.device_uuid }}">
+      <label>Alias <input name="alias" value="{{ entry.alias }}" required maxlength="128"></label>
+      <label>Notes <textarea name="notes">{{ entry.notes }}</textarea></label>
+      <label>Position <input name="position" type="number" min="0" value="{{ entry.position }}" required></label>
+      <button type="submit">Save entry</button>
+    </form>
+    {% endif %}
+    {% if can_delete %}
+    <form method="post" action="/address-books/{{ address_book_uuid }}/entries/{{ entry.address_book_entry_uuid }}/delete">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Delete entry</button>
+    </form>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

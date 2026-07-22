@@ -31,6 +31,17 @@ async fn default_device_list_hides_archived_devices() {
     opendesk::repository::devices::set_device_archived(&state.db, archived.device_uuid, true)
         .await
         .expect("archive device");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        opendesk::repository::users::find_user_by_username(&state.db, "admin")
+            .await
+            .expect("lookup admin")
+            .expect("admin")
+            .user_uuid,
+        &[active.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
 
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;

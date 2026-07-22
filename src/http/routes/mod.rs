@@ -1,3 +1,5 @@
+mod access_groups;
+mod address_books;
 mod audit;
 mod auth;
 mod backup;
@@ -21,6 +23,8 @@ pub fn build_router(state: AppState) -> Router {
     Router::new()
         .merge(auth::routes())
         .merge(audit::routes())
+        .merge(access_groups::routes())
+        .merge(address_books::routes())
         .merge(backup::routes())
         .merge(devices::routes())
         .merge(settings::routes())

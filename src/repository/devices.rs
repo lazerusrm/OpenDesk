@@ -119,6 +119,47 @@ pub async fn create_device(pool: &SqlitePool, draft: &DeviceDraft) -> Result<Dev
         .ok_or_else(|| sqlx::Error::RowNotFound)
 }
 
+pub async fn create_device_with_visibility(
+    pool: &SqlitePool,
+    draft: &DeviceDraft,
+    user_uuid: Uuid,
+) -> Result<Device, sqlx::Error> {
+    let draft = normalize_device_draft(draft.clone());
+    let device_uuid = Uuid::new_v4();
+    let now = format_timestamp(OffsetDateTime::now_utc());
+    let mut tx = pool.begin().await?;
+    sqlx::query(
+        "INSERT INTO devices (
+            device_uuid, rustdesk_id, alias, hostname, os_family, os_version, architecture,
+            rustdesk_version, site_uuid, owner, notes, archived, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)",
+    )
+    .bind(device_uuid.to_string())
+    .bind(draft.rustdesk_id.as_deref())
+    .bind(&draft.alias)
+    .bind(draft.hostname.as_deref())
+    .bind(draft.os_family.as_deref())
+    .bind(draft.os_version.as_deref())
+    .bind(draft.architecture.as_deref())
+    .bind(draft.rustdesk_version.as_deref())
+    .bind(draft.site_uuid.map(|value| value.to_string()))
+    .bind(draft.owner.as_deref())
+    .bind(draft.notes.as_deref())
+    .bind(&now)
+    .bind(&now)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("INSERT INTO user_device_visibility_grants (user_uuid, device_uuid) VALUES (?, ?)")
+        .bind(user_uuid.to_string())
+        .bind(device_uuid.to_string())
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    find_device_by_uuid(pool, device_uuid)
+        .await?
+        .ok_or_else(|| sqlx::Error::RowNotFound)
+}
+
 pub async fn update_device(
     pool: &SqlitePool,
     device_uuid: Uuid,

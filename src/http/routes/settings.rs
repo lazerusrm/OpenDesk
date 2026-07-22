@@ -9,10 +9,11 @@ use axum_extra::extract::cookie::CookieJar;
 use serde::Deserialize;
 
 use crate::app_state::AppState;
+use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::server_config::{default_server_config, validate_server_config, ServerConfig};
 use crate::http::routes::render::render_server_config;
-use crate::http::session::{require_admin, require_csrf, require_user};
+use crate::http::session::{require_action, require_csrf};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::server_config::{load_server_config, save_server_config};
 
@@ -27,12 +28,15 @@ async fn server_config_page(
     State(state): State<AppState>,
     jar: CookieJar,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::ServerConfigView).await?;
     let config = load_server_config(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .unwrap_or_else(default_server_config);
-    Ok(render_server_config(&config, None, None, &user.csrf_token).into_response())
+    Ok(
+        render_server_config(&config, None, None, &user.csrf_token, user.parsed_role())
+            .into_response(),
+    )
 }
 
 #[derive(Deserialize)]
@@ -49,7 +53,7 @@ async fn server_config_submit(
     jar: CookieJar,
     Form(form): Form<ServerConfigForm>,
 ) -> Result<Response, Response> {
-    let user = require_admin(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::ServerConfigUpdate).await?;
     require_csrf(&user, &form.csrf_token)?;
     let config = ServerConfig {
         id_server: form.id_server,
@@ -58,10 +62,14 @@ async fn server_config_submit(
         public_key: form.public_key.unwrap_or_default(),
     };
     if let Err(error) = validate_server_config(&config) {
-        return Ok(
-            render_server_config(&config, None, Some(error.to_string()), &user.csrf_token)
-                .into_response(),
-        );
+        return Ok(render_server_config(
+            &config,
+            None,
+            Some(error.to_string()),
+            &user.csrf_token,
+            user.parsed_role(),
+        )
+        .into_response());
     }
     save_server_config(&state.db, &config, Some(user.user_uuid))
         .await
@@ -81,6 +89,7 @@ async fn server_config_submit(
         Some("Server config saved".to_string()),
         None,
         &user.csrf_token,
+        user.parsed_role(),
     )
     .into_response())
 }

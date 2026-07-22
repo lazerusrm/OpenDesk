@@ -9,11 +9,13 @@ use axum_extra::extract::cookie::CookieJar;
 use serde::Deserialize;
 
 use crate::app_state::AppState;
+use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::device_csv::render_devices_csv;
 use crate::domain::device_list::DeviceSearchQuery;
-use crate::http::session::{require_mutator, AuthenticatedUser};
+use crate::http::session::{require_action, AuthenticatedUser};
 use crate::repository::audit_events::insert_audit_event;
+use crate::repository::device_visibility::list_visible_device_uuids_for_user;
 use crate::repository::devices::list_devices;
 use crate::repository::sites::list_sites;
 use crate::repository::tags::list_device_tag_names_map;
@@ -49,7 +51,10 @@ async fn devices_csv_export(
     jar: CookieJar,
     Query(query): Query<ExportSearchQuery>,
 ) -> Result<Response, Response> {
-    let user = require_mutator(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::DeviceExport).await?;
+    let visible_device_uuids = list_visible_device_uuids_for_user(&state.db, user.user_uuid)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     let search = DeviceSearchQuery {
         term: query.term.unwrap_or_default(),
     };
@@ -66,7 +71,15 @@ async fn devices_csv_export(
     let devices = list_devices(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
-    let csv = render_devices_csv(&devices, &search, &site_names, &device_tag_names);
+    let csv = render_devices_csv(
+        &devices
+            .into_iter()
+            .filter(|device| visible_device_uuids.contains(&device.device_uuid))
+            .collect::<Vec<_>>(),
+        &search,
+        &site_names,
+        &device_tag_names,
+    );
     write_csv_export_audit(&state, &user).await;
     Ok((
         [

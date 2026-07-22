@@ -10,11 +10,12 @@ use axum_extra::extract::cookie::CookieJar;
 use serde::Deserialize;
 
 use crate::app_state::AppState;
+use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::role::{validate_role_value, Role};
 use crate::domain::user::validate_username;
-use crate::http::session::{require_admin, require_csrf};
-use crate::http::views::{UserRowView, UsersListView};
+use crate::http::session::{require_action, require_csrf};
+use crate::http::views::{nav_permissions_for_role, UserRowView, UsersListView};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::users::{create_user, list_users};
 
@@ -23,11 +24,13 @@ pub fn routes() -> Router<AppState> {
 }
 
 async fn users_list(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
-    let actor = require_admin(&state, &jar).await?;
-    Ok(render_users_page(&state, None, &actor.csrf_token)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-        .into_response())
+    let actor = require_action(&state, &jar, Action::UserList).await?;
+    Ok(
+        render_users_page(&state, None, &actor.csrf_token, actor.parsed_role())
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .into_response(),
+    )
 }
 
 #[derive(Deserialize)]
@@ -43,21 +46,25 @@ async fn user_create_submit(
     jar: CookieJar,
     Form(form): Form<UserCreateForm>,
 ) -> Result<Response, Response> {
-    let actor = require_admin(&state, &jar).await?;
+    let actor = require_action(&state, &jar, Action::UserCreate).await?;
     require_csrf(&actor, &form.csrf_token)?;
     if let Err(error) = validate_username(&form.username) {
-        return Ok(
-            render_users_page(&state, Some(error.to_string()), &actor.csrf_token)
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-                .into_response(),
-        );
+        return Ok(render_users_page(
+            &state,
+            Some(error.to_string()),
+            &actor.csrf_token,
+            actor.parsed_role(),
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+        .into_response());
     }
     if form.password.trim().len() < 8 {
         return Ok(render_users_page(
             &state,
             Some("password must be at least 8 characters".to_string()),
             &actor.csrf_token,
+            actor.parsed_role(),
         )
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -70,6 +77,7 @@ async fn user_create_submit(
                 &state,
                 Some("role must be admin, operator, or read_only".to_string()),
                 &actor.csrf_token,
+                actor.parsed_role(),
             )
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -91,10 +99,15 @@ async fn user_create_submit(
             } else {
                 "failed to create user".to_string()
             };
-            return Ok(render_users_page(&state, Some(message), &actor.csrf_token)
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-                .into_response());
+            return Ok(render_users_page(
+                &state,
+                Some(message),
+                &actor.csrf_token,
+                actor.parsed_role(),
+            )
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .into_response());
         }
     };
     let audit = AuditEventDraft {
@@ -117,6 +130,7 @@ async fn render_users_page(
     state: &AppState,
     error_message: Option<String>,
     csrf_token: &str,
+    role: crate::domain::role::Role,
 ) -> Result<Html<String>, sqlx::Error> {
     let users = list_users(&state.db).await?;
     let rows = users
@@ -135,6 +149,7 @@ async fn render_users_page(
     let view = UsersListView {
         title: "Users".to_string(),
         show_nav: true,
+        nav: nav_permissions_for_role(role),
         csrf_token: csrf_token.to_string(),
         users: rows,
         error_message,

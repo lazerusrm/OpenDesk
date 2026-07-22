@@ -40,6 +40,10 @@ pub enum Action {
     ServerConfigView,
     ServerConfigUpdate,
     StatusView,
+    AccessGroupList,
+    AccessGroupView,
+    AccessGroupCreate,
+    AccessGroupUpdate,
     AddressBookList,
     AddressBookView,
     AddressBookCreate,
@@ -85,6 +89,10 @@ impl Action {
         Self::ServerConfigView,
         Self::ServerConfigUpdate,
         Self::StatusView,
+        Self::AccessGroupList,
+        Self::AccessGroupView,
+        Self::AccessGroupCreate,
+        Self::AccessGroupUpdate,
         Self::AddressBookList,
         Self::AddressBookView,
         Self::AddressBookCreate,
@@ -136,6 +144,10 @@ impl Action {
             Self::ServerConfigView => "server_config_view",
             Self::ServerConfigUpdate => "server_config_update",
             Self::StatusView => "status_view",
+            Self::AccessGroupList => "access_group_list",
+            Self::AccessGroupView => "access_group_view",
+            Self::AccessGroupCreate => "access_group_create",
+            Self::AccessGroupUpdate => "access_group_update",
             Self::AddressBookList => "address_book_list",
             Self::AddressBookView => "address_book_view",
             Self::AddressBookCreate => "address_book_create",
@@ -247,7 +259,7 @@ mod tests {
 
     #[test]
     fn every_allowlisted_action_round_trips_and_unknowns_fail_closed() {
-        assert_eq!(Action::ALL.len(), 37);
+        assert_eq!(Action::ALL.len(), 41);
         for action in Action::ALL {
             assert_eq!(Action::parse(action.as_str()), Ok(*action));
         }

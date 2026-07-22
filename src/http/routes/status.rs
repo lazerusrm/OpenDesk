@@ -11,11 +11,12 @@ use serde::Serialize;
 use time::OffsetDateTime;
 
 use crate::app_state::AppState;
+use crate::domain::access_policy::Action;
 use crate::domain::backup::backup_readiness;
 use crate::domain::health::{build_health_checks, public_key_fingerprint};
 use crate::domain::server_config::default_server_config;
-use crate::http::session::require_user;
-use crate::http::views::{HealthCheckRowView, StatusView};
+use crate::http::session::require_action;
+use crate::http::views::{nav_permissions_for_role, HealthCheckRowView, StatusView};
 use crate::repository::server_config::load_server_config;
 use crate::time_format::format_timestamp;
 
@@ -51,7 +52,7 @@ pub fn routes() -> Router<AppState> {
 }
 
 async fn status_page(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::StatusView).await?;
     let config = load_server_config(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -72,6 +73,7 @@ async fn status_page(State(state): State<AppState>, jar: CookieJar) -> Result<Re
     let view = StatusView {
         title: "Status".to_string(),
         show_nav: true,
+        nav: nav_permissions_for_role(user.parsed_role()),
         csrf_token: user.csrf_token.clone(),
         id_server: config.id_server.clone(),
         relay_server: config.relay_server.clone(),
@@ -90,7 +92,7 @@ async fn diagnostics_json(
     State(state): State<AppState>,
     jar: CookieJar,
 ) -> Result<Json<DiagnosticResponse>, Response> {
-    let _user = require_user(&state, &jar).await?;
+    let _user = require_action(&state, &jar, Action::StatusView).await?;
     let config = load_server_config(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?

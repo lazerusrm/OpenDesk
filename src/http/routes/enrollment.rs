@@ -11,6 +11,7 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::app_state::AppState;
+use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::device::{normalize_device_draft, validate_device_draft, DeviceDraft};
 use crate::domain::enrollment_checkin::{
@@ -20,7 +21,7 @@ use crate::domain::enrollment_token::{
     hash_enrollment_token_value, validate_enrollment_token_label, verify_enrollment_token_value,
 };
 use crate::http::routes::render::render_enrollment_tokens;
-use crate::http::session::{require_csrf, require_mutator, require_user};
+use crate::http::session::{require_action, require_csrf};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::devices::{
     create_device, find_device_by_hostname, find_device_by_rustdesk_id, touch_device_checkin,
@@ -47,11 +48,13 @@ async fn enrollment_tokens_page(
     State(state): State<AppState>,
     jar: CookieJar,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
-    Ok(render_enrollment_tokens(&state, None, &user.csrf_token)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-        .into_response())
+    let user = require_action(&state, &jar, Action::EnrollmentTokenList).await?;
+    Ok(
+        render_enrollment_tokens(&state, None, &user.csrf_token, user.parsed_role())
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .into_response(),
+    )
 }
 
 #[derive(Deserialize)]
@@ -65,13 +68,15 @@ async fn enrollment_token_create(
     jar: CookieJar,
     Form(form): Form<EnrollmentTokenForm>,
 ) -> Result<Response, Response> {
-    let user = require_mutator(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::EnrollmentTokenCreate).await?;
     require_csrf(&user, &form.csrf_token)?;
     if let Err(_error) = validate_enrollment_token_label(&form.label) {
-        return Ok(render_enrollment_tokens(&state, None, &user.csrf_token)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-            .into_response());
+        return Ok(
+            render_enrollment_tokens(&state, None, &user.csrf_token, user.parsed_role())
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+                .into_response(),
+        );
     }
     let created = create_enrollment_token(
         &state.db,
@@ -92,12 +97,15 @@ async fn enrollment_token_create(
         detail: None,
     };
     let _ = insert_audit_event(&state.db, &audit).await;
-    Ok(
-        render_enrollment_tokens(&state, Some(created.token_value), &user.csrf_token)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-            .into_response(),
+    Ok(render_enrollment_tokens(
+        &state,
+        Some(created.token_value),
+        &user.csrf_token,
+        user.parsed_role(),
     )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+    .into_response())
 }
 
 #[derive(Deserialize)]
@@ -111,7 +119,7 @@ async fn enrollment_token_revoke(
     Path(enrollment_token_uuid): Path<Uuid>,
     Form(form): Form<EnrollmentTokenRevokeForm>,
 ) -> Result<Response, Response> {
-    let user = require_mutator(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::EnrollmentTokenRevoke).await?;
     require_csrf(&user, &form.csrf_token)?;
     revoke_enrollment_token(&state.db, enrollment_token_uuid)
         .await
@@ -126,10 +134,12 @@ async fn enrollment_token_revoke(
         detail: None,
     };
     let _ = insert_audit_event(&state.db, &audit).await;
-    Ok(render_enrollment_tokens(&state, None, &user.csrf_token)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-        .into_response())
+    Ok(
+        render_enrollment_tokens(&state, None, &user.csrf_token, user.parsed_role())
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .into_response(),
+    )
 }
 
 #[derive(Deserialize)]

@@ -59,6 +59,17 @@ async fn devices_csv_export_includes_expected_fields() {
     opendesk::repository::tags::set_device_tags(&state.db, device.device_uuid, &[tag.tag_uuid])
         .await
         .expect("assign tag");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        opendesk::repository::users::find_user_by_username(&state.db, "admin")
+            .await
+            .expect("lookup admin")
+            .expect("admin")
+            .user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
     opendesk::repository::devices::create_device(
         &state.db,
         &opendesk::domain::device::DeviceDraft {

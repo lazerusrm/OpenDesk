@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Access groups</h1>
+  {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
+  <form method="post" action="/access-groups">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="name">New access group name</label>
+    <input id="name" name="name" required maxlength="128">
+    <button type="submit">Create access group</button>
+  </form>
+</section>
+<section class="card">
+  <table><thead><tr><th>Name</th><th>Access group UUID</th></tr></thead><tbody>
+  {% for group in groups %}<tr><td><a href="/access-groups/{{ group.access_group_uuid }}">{{ group.name }}</a></td><td><code>{{ group.access_group_uuid }}</code></td></tr>{% endfor %}
+  </tbody></table>
+</section>
+{% endblock %}

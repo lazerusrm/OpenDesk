@@ -146,6 +146,17 @@ async fn device_update_via_handler_preserves_enrollment_metadata() {
         .await
         .expect("lookup")
         .expect("device");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
 
     let session_cookie = login_and_get_session_cookie(&app).await;
     let update = app
@@ -312,6 +323,17 @@ async fn archived_device_validation_error_shows_unarchive_action() {
     opendesk::repository::devices::set_device_archived(&state.db, device.device_uuid, true)
         .await
         .expect("archive");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
 
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;

@@ -112,6 +112,18 @@ async fn device_search_matches_tag_name() {
     )
     .await
     .expect("create device");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
+
     opendesk::repository::tags::set_device_tags(&state.db, device.device_uuid, &[tag.tag_uuid])
         .await
         .expect("assign tag");
@@ -155,6 +167,17 @@ async fn device_update_clears_tags_when_none_selected() {
     )
     .await
     .expect("create device");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
     opendesk::repository::tags::set_device_tags(&state.db, device.device_uuid, &[tag.tag_uuid])
         .await
         .expect("assign tag");

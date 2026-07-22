@@ -233,7 +233,7 @@ async fn devices_list_shows_last_checkin_column() {
     )
     .await
     .expect("create token");
-    let app = build_router(state);
+    let app = build_router(state.clone());
     app.clone()
         .oneshot(
             Request::builder()
@@ -253,6 +253,23 @@ async fn devices_list_shows_last_checkin_column() {
         )
         .await
         .expect("checkin");
+    let checkin_device = opendesk::repository::devices::list_devices(&state.db)
+        .await
+        .expect("list enrolled devices")
+        .into_iter()
+        .find(|device| device.rustdesk_id.as_deref() == Some("556677889"))
+        .expect("enrolled device");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[checkin_device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
     let session_cookie = login_and_get_session_cookie(&app).await;
     let response = app
         .oneshot(

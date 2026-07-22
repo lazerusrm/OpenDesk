@@ -1,3 +1,8 @@
+#[path = "devices_form.rs"]
+mod devices_form;
+
+use devices_form::{device_form_to_draft, parse_tag_uuids_from_form, DeviceForm};
+
 use askama::Template;
 use axum::{
     extract::{Path, Query, State},
@@ -11,11 +16,12 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::app_state::AppState;
+use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::connection_helper::{
     explicit_server_helper_for_device, generate_default_server_helper,
 };
-use crate::domain::device::{merge_device_update, validate_device_draft, DeviceDraft};
+use crate::domain::device::{merge_device_update, validate_device_draft, Device, DeviceDraft};
 use crate::domain::device_list::{
     devices_for_default_list, format_notes_display, notes_list_title, rustdesk_id_copy_text,
     DeviceSearchQuery,
@@ -24,11 +30,15 @@ use crate::domain::server_config::default_server_config;
 use crate::domain::tag::format_tag_names_display;
 use crate::http::routes::device_export::export_csv_href;
 use crate::http::routes::render::render_device_form;
-use crate::http::session::{require_csrf, require_mutator, require_user, AuthenticatedUser};
-use crate::http::views::{DeviceRowView, DevicesListView};
+use crate::http::session::{require_action, require_csrf, AuthenticatedUser};
+use crate::http::views::{nav_permissions_for_role, DeviceRowView, DevicesListView};
 use crate::repository::audit_events::insert_audit_event;
+use crate::repository::device_visibility::{
+    is_device_visible_to_user, list_visible_device_uuids_for_user,
+};
 use crate::repository::devices::{
-    create_device, find_device_by_uuid, list_devices, set_device_archived, update_device,
+    create_device_with_visibility, find_device_by_uuid, list_devices, set_device_archived,
+    update_device,
 };
 use crate::repository::server_config::load_server_config;
 use crate::repository::sites::list_sites;
@@ -55,12 +65,33 @@ struct SearchQuery {
     term: Option<String>,
 }
 
+async fn find_visible_device(
+    state: &AppState,
+    user_uuid: Uuid,
+    device_uuid: Uuid,
+) -> Result<Device, Response> {
+    let device = find_device_by_uuid(&state.db, device_uuid)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+        .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
+    if !is_device_visible_to_user(&state.db, user_uuid, device_uuid)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+    {
+        return Err(StatusCode::NOT_FOUND.into_response());
+    }
+    Ok(device)
+}
+
 async fn devices_list(
     State(state): State<AppState>,
     jar: CookieJar,
     Query(query): Query<SearchQuery>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::DeviceList).await?;
+    let visible_device_uuids = list_visible_device_uuids_for_user(&state.db, user.user_uuid)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     let search_term = query.term.unwrap_or_default();
     let search = DeviceSearchQuery {
         term: search_term.clone(),
@@ -82,7 +113,12 @@ async fn devices_list(
     let devices = list_devices(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
-    let listed = devices_for_default_list(&devices, &search, &site_names, &device_tag_names);
+    let filtered_devices: Vec<_> = devices
+        .into_iter()
+        .filter(|device| visible_device_uuids.contains(&device.device_uuid))
+        .collect();
+    let listed =
+        devices_for_default_list(&filtered_devices, &search, &site_names, &device_tag_names);
     let rows = listed
         .into_iter()
         .map(|device| {
@@ -126,6 +162,7 @@ async fn devices_list(
     let view = DevicesListView {
         title: "Devices".to_string(),
         show_nav: true,
+        nav: nav_permissions_for_role(user.parsed_role()),
         csrf_token: user.csrf_token.clone(),
         search_term: search_term.clone(),
         export_csv_href: export_csv_href(&search_term),
@@ -141,7 +178,7 @@ async fn device_new_page(
     State(state): State<AppState>,
     jar: CookieJar,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::DeviceCreate).await?;
     Ok(render_device_form(
         &state,
         "New device",
@@ -153,6 +190,7 @@ async fn device_new_page(
         false,
         false,
         &user.csrf_token,
+        user.parsed_role(),
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -164,11 +202,8 @@ async fn device_edit_page(
     jar: CookieJar,
     Path(device_uuid): Path<Uuid>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
-    let device = find_device_by_uuid(&state.db, device_uuid)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-        .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
+    let user = require_action(&state, &jar, Action::DeviceView).await?;
+    let device = find_visible_device(&state, user.user_uuid, device_uuid).await?;
     let draft = DeviceDraft {
         rustdesk_id: device.rustdesk_id,
         alias: device.alias,
@@ -195,63 +230,11 @@ async fn device_edit_page(
         !device.archived,
         device.archived,
         &user.csrf_token,
+        user.parsed_role(),
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
     .into_response())
-}
-
-fn deserialize_form_string_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrVec {
-        One(String),
-        Many(Vec<String>),
-    }
-
-    Ok(match StringOrVec::deserialize(deserializer)? {
-        StringOrVec::One(value) => vec![value],
-        StringOrVec::Many(values) => values,
-    })
-}
-
-#[derive(Deserialize)]
-pub struct DeviceForm {
-    #[serde(default)]
-    csrf_token: String,
-    alias: String,
-    rustdesk_id: Option<String>,
-    hostname: Option<String>,
-    owner: Option<String>,
-    notes: Option<String>,
-    site_uuid: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_form_string_vec")]
-    tag_uuids: Vec<String>,
-}
-
-pub fn parse_tag_uuids_from_form(tag_uuids: &[String]) -> Vec<Uuid> {
-    tag_uuids
-        .iter()
-        .filter_map(|value| Uuid::parse_str(value.trim()).ok())
-        .collect()
-}
-
-pub fn device_form_to_draft(form: DeviceForm) -> DeviceDraft {
-    DeviceDraft {
-        rustdesk_id: form.rustdesk_id.filter(|value| !value.trim().is_empty()),
-        alias: form.alias,
-        hostname: form.hostname.filter(|value| !value.trim().is_empty()),
-        owner: form.owner.filter(|value| !value.trim().is_empty()),
-        notes: form.notes.filter(|value| !value.trim().is_empty()),
-        site_uuid: form
-            .site_uuid
-            .filter(|value| !value.trim().is_empty())
-            .and_then(|value| Uuid::parse_str(value.trim()).ok()),
-        ..Default::default()
-    }
 }
 
 async fn device_create_submit(
@@ -259,7 +242,7 @@ async fn device_create_submit(
     jar: CookieJar,
     Form(form): Form<DeviceForm>,
 ) -> Result<Response, Response> {
-    let user = require_mutator(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::DeviceCreate).await?;
     require_csrf(&user, &form.csrf_token)?;
     let tag_uuids = parse_tag_uuids_from_form(&form.tag_uuids);
     let draft = device_form_to_draft(form);
@@ -275,12 +258,13 @@ async fn device_create_submit(
             false,
             false,
             &user.csrf_token,
+            user.parsed_role(),
         )
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .into_response());
     }
-    let device = create_device(&state.db, &draft)
+    let device = create_device_with_visibility(&state.db, &draft, user.user_uuid)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     set_device_tags(&state.db, device.device_uuid, &tag_uuids)
@@ -296,12 +280,9 @@ async fn device_update_submit(
     Path(device_uuid): Path<Uuid>,
     Form(form): Form<DeviceForm>,
 ) -> Result<Response, Response> {
-    let user = require_mutator(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::DeviceUpdate).await?;
+    let existing = find_visible_device(&state, user.user_uuid, device_uuid).await?;
     require_csrf(&user, &form.csrf_token)?;
-    let existing = find_device_by_uuid(&state.db, device_uuid)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-        .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
     let tag_uuids = parse_tag_uuids_from_form(&form.tag_uuids);
     let draft = merge_device_update(device_form_to_draft(form), &existing);
     if let Err(error) = validate_device_draft(&draft) {
@@ -316,6 +297,7 @@ async fn device_update_submit(
             !existing.archived,
             existing.archived,
             &user.csrf_token,
+            user.parsed_role(),
         )
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -342,7 +324,8 @@ async fn device_archive(
     Path(device_uuid): Path<Uuid>,
     Form(form): Form<ArchiveForm>,
 ) -> Result<Response, Response> {
-    let user = require_mutator(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::DeviceArchive).await?;
+    let _existing = find_visible_device(&state, user.user_uuid, device_uuid).await?;
     require_csrf(&user, &form.csrf_token)?;
     set_device_archived(&state.db, device_uuid, true)
         .await
@@ -357,7 +340,8 @@ async fn device_unarchive(
     Path(device_uuid): Path<Uuid>,
     Form(form): Form<ArchiveForm>,
 ) -> Result<Response, Response> {
-    let user = require_mutator(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::DeviceUnarchive).await?;
+    let _existing = find_visible_device(&state, user.user_uuid, device_uuid).await?;
     require_csrf(&user, &form.csrf_token)?;
     set_device_archived(&state.db, device_uuid, false)
         .await

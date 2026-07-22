@@ -21,6 +21,18 @@ async fn device_list_shows_notes_and_search_matches_them() {
     .await
     .expect("create device");
 
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
+
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;
 

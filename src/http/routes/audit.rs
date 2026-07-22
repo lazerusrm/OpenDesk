@@ -9,9 +9,10 @@ use axum::{
 use axum_extra::extract::cookie::CookieJar;
 
 use crate::app_state::AppState;
+use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
-use crate::http::session::require_user;
-use crate::http::views::{AuditEventRowView, AuditLogView};
+use crate::http::session::require_action;
+use crate::http::views::{nav_permissions_for_role, AuditEventRowView, AuditLogView};
 use crate::repository::audit_events::{
     insert_audit_event, list_audit_events, render_audit_events_csv,
 };
@@ -28,7 +29,7 @@ async fn audit_list_page(
     State(state): State<AppState>,
     jar: CookieJar,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::AuditView).await?;
     let events = list_audit_events(&state.db, AUDIT_LIST_LIMIT)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -51,6 +52,7 @@ async fn audit_list_page(
     let view = AuditLogView {
         title: "Audit Log".to_string(),
         show_nav: true,
+        nav: nav_permissions_for_role(user.parsed_role()),
         csrf_token: user.csrf_token.clone(),
         events: rows,
     };
@@ -64,7 +66,7 @@ async fn audit_export_csv(
     State(state): State<AppState>,
     jar: CookieJar,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::AuditExport).await?;
     let events = list_audit_events(&state.db, AUDIT_LIST_LIMIT)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;

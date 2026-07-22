@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Address books</h1>
+  {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
+  {% if can_create %}
+  <form method="post" action="/address-books">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="name">New address book name</label>
+    <input id="name" name="name" required maxlength="128">
+    <button type="submit">Create address book</button>
+  </form>
+  {% endif %}
+</section>
+<section class="card">
+  <table><thead><tr><th>Name</th><th>Address book UUID</th></tr></thead><tbody>
+  {% for book in books %}<tr><td><a href="/address-books/{{ book.address_book_uuid }}">{{ book.name }}</a></td><td><code>{{ book.address_book_uuid }}</code></td></tr>{% endfor %}
+  </tbody></table>
+</section>
+{% endblock %}

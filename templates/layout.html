@@ -11,16 +11,18 @@
     <div class="brand">OpenDesk</div>
     {% if show_nav %}
     <nav>
-      <a href="/devices">Devices</a>
-      <a href="/sites">Sites</a>
-      <a href="/tags">Tags</a>
-      <a href="/settings/server-config">Server Config</a>
-      <a href="/deployment">Deployment</a>
-      <a href="/status">Status</a>
-      <a href="/backup">Backup</a>
-      <a href="/enrollment-tokens">Enrollment Tokens</a>
-      <a href="/audit">Audit</a>
-      <a href="/users">Users</a>
+      {% if nav.devices %}<a href="/devices">Devices</a>{% endif %}
+      {% if nav.sites %}<a href="/sites">Sites</a>{% endif %}
+      {% if nav.tags %}<a href="/tags">Tags</a>{% endif %}
+      {% if nav.server_config %}<a href="/settings/server-config">Server Config</a>{% endif %}
+      {% if nav.deployment %}<a href="/deployment">Deployment</a>{% endif %}
+      {% if nav.status %}<a href="/status">Status</a>{% endif %}
+      {% if nav.backup %}<a href="/backup">Backup</a>{% endif %}
+      {% if nav.enrollment %}<a href="/enrollment-tokens">Enrollment Tokens</a>{% endif %}
+      {% if nav.audit %}<a href="/audit">Audit</a>{% endif %}
+      {% if nav.users %}<a href="/users">Users</a>{% endif %}
+      {% if nav.access_groups %}<a href="/access-groups">Access Groups</a>{% endif %}
+      {% if nav.address_books %}<a href="/address-books">Address Books</a>{% endif %}
       <form method="post" action="/logout" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button type="submit">Logout</button>

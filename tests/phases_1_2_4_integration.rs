@@ -22,7 +22,7 @@ async fn seed_server_config(state: &opendesk::AppState) {
 async fn device_list_renders_connection_helper_copy_buttons() {
     let state = test_state().await;
     seed_server_config(&state).await;
-    opendesk::repository::devices::create_device(
+    let device = opendesk::repository::devices::create_device(
         &state.db,
         &opendesk::domain::device::DeviceDraft {
             alias: "Helper Workstation".to_string(),
@@ -32,6 +32,17 @@ async fn device_list_renders_connection_helper_copy_buttons() {
     )
     .await
     .expect("create device");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
 
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;

@@ -17,11 +17,12 @@ use crate::deployment::macos_script::{render_macos_deployment_script, MacosDeplo
 use crate::deployment::windows_script::{
     render_windows_deployment_script, WindowsDeploymentScriptInput,
 };
+use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::server_config::{default_server_config, ServerConfig};
 use crate::http::routes::render::enrollment_token_status;
-use crate::http::session::{require_mutator, require_user, AuthenticatedUser};
-use crate::http::views::{DeploymentView, EnrollmentTokenOptionView};
+use crate::http::session::{require_action, AuthenticatedUser};
+use crate::http::views::{nav_permissions_for_role, DeploymentView, EnrollmentTokenOptionView};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::enrollment_tokens::list_enrollment_tokens;
 use crate::repository::server_config::load_server_config;
@@ -63,7 +64,7 @@ async fn deployment_page(
     jar: CookieJar,
     Query(query): Query<DeploymentQuery>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::DeploymentView).await?;
     let config = load_server_config(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -115,6 +116,7 @@ async fn deployment_page(
     let view = DeploymentView {
         title: "Deployment".to_string(),
         show_nav: true,
+        nav: nav_permissions_for_role(user.parsed_role()),
         csrf_token: user.csrf_token.clone(),
         tokens: token_options,
         enrollment_token_value: token_value,
@@ -135,7 +137,7 @@ async fn linux_script_export(
     jar: CookieJar,
     Query(query): Query<DeploymentQuery>,
 ) -> Result<Response, Response> {
-    let user = require_mutator(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::DeploymentScriptExport).await?;
     let config = load_server_config(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
