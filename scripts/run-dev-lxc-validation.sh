@@ -48,7 +48,11 @@ OPENDESK_DATA_DIR=/opt/opendesk-dev/data \\
 OPENDESK_PUBLIC_BASE_URL=http://127.0.0.1:18080 \\
 OPENDESK_BOOTSTRAP_ADMIN_PASSWORD='${dev_admin_password}' \\
 nohup ./target/release/opendesk > /tmp/opendesk.log 2>&1 &
-sleep 2
+for attempt in \$(seq 1 30); do
+  curl -fsS http://127.0.0.1:18080/health >/dev/null 2>&1 && break
+  sleep 1
+done
+curl -fsS http://127.0.0.1:18080/health >/dev/null
 COOKIE=/tmp/opendesk-cookies.txt
 rm -f "\$COOKIE"
 LOGIN_STATUS="\$(curl -fsS -c "\$COOKIE" -b "\$COOKIE" -X POST http://127.0.0.1:18080/login \\
