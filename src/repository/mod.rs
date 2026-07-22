@@ -5,6 +5,7 @@ pub mod backup;
 pub mod device_visibility;
 pub mod devices;
 pub mod enrollment_tokens;
+pub mod migration_instance;
 pub mod server_config;
 pub mod sessions;
 pub mod sites;

@@ -20,6 +20,7 @@ async fn main() -> anyhow::Result<()> {
         .connect(&config.database_url)
         .await?;
     sqlx::migrate!("./migrations").run(&db).await?;
+    opendesk::repository::migration_instance::ensure_instance_uuid(&db).await?;
     bootstrap_admin(&db, &config).await?;
 
     let state = AppState {
