@@ -41,6 +41,18 @@ def hex_id(value: bytes | None) -> str:
 def text(value: object, field: str) -> str:
     if not isinstance(value, str) or not value.strip() or any(c in value for c in "\r\n\t\x00"):
         fail(f"source contains an invalid {field}")
+    lowered = value.lower()
+    if (
+        "-----begin" in lowered
+        or lowered.startswith("$2a$")
+        or lowered.startswith("$2b$")
+        or lowered.startswith("$argon2")
+        or "password=" in lowered
+        or "token=" in lowered
+        or "secret=" in lowered
+        or "private_key" in lowered
+    ):
+        fail(f"source contains sensitive content in {field}")
     return value
 
 
