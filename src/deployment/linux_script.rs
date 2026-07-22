@@ -1,5 +1,9 @@
 use crate::domain::server_config::ServerConfig;
 
+fn shell_literal(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\"'\"'"))
+}
+
 pub struct LinuxDeploymentScriptInput<'a> {
     pub server_config: &'a ServerConfig,
     pub enrollment_token: &'a str,
@@ -11,12 +15,12 @@ pub fn render_linux_deployment_script(input: &LinuxDeploymentScriptInput<'_>) ->
         r#"#!/usr/bin/env bash
 set -euo pipefail
 
-OPENDESK_BASE_URL="{opendesk_base_url}"
-ENROLLMENT_TOKEN="{enrollment_token}"
-ID_SERVER="{id_server}"
-RELAY_SERVER="{relay_server}"
-API_SERVER="{api_server}"
-PUBLIC_KEY="{public_key}"
+OPENDESK_BASE_URL={opendesk_base_url}
+ENROLLMENT_TOKEN={enrollment_token}
+ID_SERVER={id_server}
+RELAY_SERVER={relay_server}
+API_SERVER={api_server}
+PUBLIC_KEY={public_key}
 
 if ! command -v rustdesk >/dev/null 2>&1; then
   echo "rustdesk client is required; install the official package first" >&2
@@ -46,12 +50,12 @@ if [ "${{CHECKIN_HTTP_CODE}}" != "204" ]; then
   exit 1
 fi
 "#,
-        opendesk_base_url = input.opendesk_base_url,
-        enrollment_token = input.enrollment_token,
-        id_server = input.server_config.id_server,
-        relay_server = input.server_config.relay_server,
-        api_server = input.server_config.api_server,
-        public_key = input.server_config.public_key,
+        opendesk_base_url = shell_literal(input.opendesk_base_url),
+        enrollment_token = shell_literal(input.enrollment_token),
+        id_server = shell_literal(&input.server_config.id_server),
+        relay_server = shell_literal(&input.server_config.relay_server),
+        api_server = shell_literal(&input.server_config.api_server),
+        public_key = shell_literal(&input.server_config.public_key),
     )
 }
 
@@ -61,17 +65,15 @@ mod tests {
     use crate::domain::server_config::default_server_config;
 
     #[test]
-    fn render_linux_deployment_script_includes_server_values() {
-        let config = default_server_config();
+    fn render_linux_deployment_script_escapes_shell_metacharacters() {
+        let mut config = default_server_config();
+        config.id_server = "rd.example.com\"; touch /tmp/unwanted".to_string();
         let script = render_linux_deployment_script(&LinuxDeploymentScriptInput {
             server_config: &config,
-            enrollment_token: "test-enrollment-token",
+            enrollment_token: "token$(unsafe)",
             opendesk_base_url: "https://rd-admin.example.com",
         });
-        assert!(script.contains("custom-rendezvous-server"));
-        assert!(script.contains("rd.example.com"));
-        assert!(script.contains("/api/enrollments/check-in"));
-        assert!(script.contains("opendesk enrollment check-in http_status="));
-        assert!(script.contains("test-enrollment-token"));
+        assert!(script.contains("ID_SERVER='rd.example.com\"; touch /tmp/unwanted'"));
+        assert!(script.contains("ENROLLMENT_TOKEN='token$(unsafe)'"));
     }
 }

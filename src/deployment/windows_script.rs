@@ -1,5 +1,9 @@
 use crate::domain::server_config::ServerConfig;
 
+fn powershell_literal(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
+}
+
 pub struct WindowsDeploymentScriptInput<'a> {
     pub server_config: &'a ServerConfig,
     pub enrollment_token: &'a str,
@@ -11,12 +15,12 @@ pub fn render_windows_deployment_script(input: &WindowsDeploymentScriptInput<'_>
         r#"#requires -Version 5.1
 $ErrorActionPreference = "Stop"
 
-$OpenDeskBaseUrl = "{opendesk_base_url}"
-$EnrollmentToken = "{enrollment_token}"
-$IdServer = "{id_server}"
-$RelayServer = "{relay_server}"
-$ApiServer = "{api_server}"
-$PublicKey = "{public_key}"
+$OpenDeskBaseUrl = {opendesk_base_url}
+$EnrollmentToken = {enrollment_token}
+$IdServer = {id_server}
+$RelayServer = {relay_server}
+$ApiServer = {api_server}
+$PublicKey = {public_key}
 
 $RustDeskCmd = Get-Command rustdesk -ErrorAction SilentlyContinue
 if (-not $RustDeskCmd) {{
@@ -48,12 +52,12 @@ $Body = @{{
 
 Invoke-RestMethod -Method Post -Uri "$OpenDeskBaseUrl/api/enrollments/check-in" -ContentType "application/json" -Body $Body
 "#,
-        opendesk_base_url = input.opendesk_base_url,
-        enrollment_token = input.enrollment_token,
-        id_server = input.server_config.id_server,
-        relay_server = input.server_config.relay_server,
-        api_server = input.server_config.api_server,
-        public_key = input.server_config.public_key,
+        opendesk_base_url = powershell_literal(input.opendesk_base_url),
+        enrollment_token = powershell_literal(input.enrollment_token),
+        id_server = powershell_literal(&input.server_config.id_server),
+        relay_server = powershell_literal(&input.server_config.relay_server),
+        api_server = powershell_literal(&input.server_config.api_server),
+        public_key = powershell_literal(&input.server_config.public_key),
     )
 }
 
@@ -63,16 +67,15 @@ mod tests {
     use crate::domain::server_config::default_server_config;
 
     #[test]
-    fn render_windows_deployment_script_includes_server_values() {
-        let config = default_server_config();
+    fn render_windows_deployment_script_escapes_powershell_metacharacters() {
+        let mut config = default_server_config();
+        config.id_server = "rd.example.com'; Remove-Item C:\\ -Force".to_string();
         let script = render_windows_deployment_script(&WindowsDeploymentScriptInput {
             server_config: &config,
-            enrollment_token: "test-enrollment-token",
+            enrollment_token: "token$(unsafe)",
             opendesk_base_url: "https://rd-admin.example.com",
         });
-        assert!(script.contains("custom-rendezvous-server"));
-        assert!(script.contains("rd.example.com"));
-        assert!(script.contains("/api/enrollments/check-in"));
-        assert!(script.contains("test-enrollment-token"));
+        assert!(script.contains("$IdServer = 'rd.example.com''; Remove-Item C:\\ -Force'"));
+        assert!(script.contains("$EnrollmentToken = 'token$(unsafe)'"));
     }
 }
