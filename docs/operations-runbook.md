@@ -34,6 +34,35 @@ external runner is configured to invoke the authenticated export and protect
 its output. `/status` must report `configured_external_runner`; otherwise the
 state is `manual_only` or `incomplete` and is not a production backup claim.
 
+## Sanitized RustDesk Pro source export
+
+`export-rustdesk-pro-sanitized.py` is a read-only external-boundary adapter for a
+verified RustDesk Pro SQLite snapshot. It writes the versioned sanitized contract
+to stdout; redirect it only to protected, non-repository storage. It never exports
+password hashes, TFA, sessions, keys, tokens, setting values, free-form notes, or
+endpoint metadata other than a peer's `device_name` alias.
+
+```text
+python3 scripts/export-rustdesk-pro-sanitized.py \
+  --database pro-snapshot.sqlite \
+  --source-instance approved-source-instance \
+  --source-export-id approved-export-id \
+  --source-schema-version 1.7.5 \
+  --role-map 0:admin \
+  --role-map 1:operator \
+  > sanitized-export.json
+```
+
+The adapter opens the database with SQLite immutable read-only mode. It rejects
+unmapped source roles, dangling user/group or address-book/device references,
+ownerless books, source device-group assignments, populated address-book rules,
+control-role mappings, custom clients, strategies, role scopes, user roles, and
+unreviewed setting values. It does not interpret those records or silently broaden
+access. This is deliberate: custom-client definitions can carry endpoint passwords
+and opaque installers, and strategy options can claim RustDesk session controls
+that OpenDesk does not enforce. Treat the resulting export as sensitive operational
+metadata even though it contains no credentials.
+
 ## Migration dry-run report
 
 The migration path is report-only. It does not provide an HTTP import endpoint and
