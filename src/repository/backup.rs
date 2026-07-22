@@ -2,10 +2,14 @@ use sqlx::SqlitePool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use crate::domain::access_group::AccessGroup;
+use crate::domain::access_group_membership::AccessGroupMembership;
+use crate::domain::address_book::{AddressBook, AddressBookEntry};
 use crate::domain::backup::{
     BackupDeviceTag, BackupDocument, BackupEnrollmentToken, BackupSensitivity, BackupUser,
     BACKUP_SCHEMA_VERSION,
 };
+use crate::domain::device_visibility::{DeviceVisibilityGrant, UserDeviceVisibilityGrant};
 use crate::time_format::format_timestamp;
 
 use super::devices::list_devices;
@@ -35,6 +39,88 @@ pub async fn export_backup_document(pool: &SqlitePool) -> Result<BackupDocument,
             device_uuid,
             tag_uuid,
         })
+        .collect();
+    let access_groups = sqlx::query_as::<_, (String, String)>(
+        "SELECT access_group_uuid, name FROM access_groups ORDER BY access_group_uuid ASC",
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|(access_group_uuid, name)| AccessGroup {
+        access_group_uuid: Uuid::parse_str(&access_group_uuid).expect("stored uuid"),
+        name,
+    })
+    .collect();
+    let access_group_memberships = sqlx::query_as::<_, (String, String)>(
+        "SELECT access_group_uuid, user_uuid
+         FROM access_group_memberships ORDER BY access_group_uuid ASC, user_uuid ASC",
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|(access_group_uuid, user_uuid)| AccessGroupMembership {
+        access_group_uuid: Uuid::parse_str(&access_group_uuid).expect("stored uuid"),
+        user_uuid: Uuid::parse_str(&user_uuid).expect("stored uuid"),
+    })
+    .collect();
+    let device_visibility_grants = sqlx::query_as::<_, (String, String)>(
+        "SELECT access_group_uuid, device_uuid
+         FROM device_visibility_grants ORDER BY access_group_uuid ASC, device_uuid ASC",
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|(access_group_uuid, device_uuid)| DeviceVisibilityGrant {
+        access_group_uuid: Uuid::parse_str(&access_group_uuid).expect("stored uuid"),
+        device_uuid: Uuid::parse_str(&device_uuid).expect("stored uuid"),
+    })
+    .collect();
+    let user_device_visibility_grants = sqlx::query_as::<_, (String, String)>(
+        "SELECT user_uuid, device_uuid
+         FROM user_device_visibility_grants ORDER BY user_uuid ASC, device_uuid ASC",
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|(user_uuid, device_uuid)| UserDeviceVisibilityGrant {
+        user_uuid: Uuid::parse_str(&user_uuid).expect("stored uuid"),
+        device_uuid: Uuid::parse_str(&device_uuid).expect("stored uuid"),
+    })
+    .collect();
+    let address_books = sqlx::query_as::<_, (String, String, String)>(
+        "SELECT address_book_uuid, owner_user_uuid, name
+         FROM address_books ORDER BY address_book_uuid ASC",
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|(address_book_uuid, owner_user_uuid, name)| AddressBook {
+        address_book_uuid: Uuid::parse_str(&address_book_uuid).expect("stored uuid"),
+        owner_user_uuid: Uuid::parse_str(&owner_user_uuid).expect("stored uuid"),
+        name,
+    })
+    .collect();
+    let address_book_entries =
+        sqlx::query_as::<_, (String, String, String, String, Option<String>, i64)>(
+            "SELECT address_book_entry_uuid, address_book_uuid, device_uuid, alias, notes, position
+         FROM address_book_entries ORDER BY address_book_uuid ASC, position ASC",
+        )
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(
+            |(address_book_entry_uuid, address_book_uuid, device_uuid, alias, notes, position)| {
+                AddressBookEntry {
+                    address_book_entry_uuid: Uuid::parse_str(&address_book_entry_uuid)
+                        .expect("stored uuid"),
+                    address_book_uuid: Uuid::parse_str(&address_book_uuid).expect("stored uuid"),
+                    device_uuid: Uuid::parse_str(&device_uuid).expect("stored uuid"),
+                    alias,
+                    notes,
+                    position: u32::try_from(position).expect("stored nonnegative position"),
+                }
+            },
+        )
         .collect();
     let server_config = load_server_config(pool).await?;
     let enrollment_tokens = list_enrollment_tokens(pool)
@@ -67,6 +153,12 @@ pub async fn export_backup_document(pool: &SqlitePool) -> Result<BackupDocument,
         tags,
         devices,
         device_tags,
+        access_groups,
+        access_group_memberships,
+        device_visibility_grants,
+        user_device_visibility_grants,
+        address_books,
+        address_book_entries,
         server_config,
         enrollment_tokens,
         users,
@@ -81,6 +173,24 @@ pub async fn restore_backup_document(
     let now = format_timestamp(OffsetDateTime::now_utc());
     let mut tx = pool.begin().await?;
     sqlx::query("DELETE FROM device_tags")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM address_book_entries")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM address_books")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM user_device_visibility_grants")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM device_visibility_grants")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM access_group_memberships")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM access_groups")
         .execute(&mut *tx)
         .await?;
     sqlx::query("DELETE FROM endpoint_checkins")
@@ -155,6 +265,83 @@ pub async fn restore_backup_document(
             .execute(&mut *tx)
             .await?;
     }
+    for user in &document.users {
+        sqlx::query(
+            "INSERT INTO users (user_uuid, username, password_hash, role, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .bind(user.user_uuid.to_string())
+        .bind(&user.username)
+        .bind(&user.password_hash)
+        .bind(&user.role)
+        .bind(&now)
+        .bind(&now)
+        .execute(&mut *tx)
+        .await?;
+    }
+    for group in &document.access_groups {
+        sqlx::query("INSERT INTO access_groups (access_group_uuid, name) VALUES (?, ?)")
+            .bind(group.access_group_uuid.to_string())
+            .bind(&group.name)
+            .execute(&mut *tx)
+            .await?;
+    }
+    for book in &document.address_books {
+        sqlx::query(
+            "INSERT INTO address_books (address_book_uuid, owner_user_uuid, name)
+             VALUES (?, ?, ?)",
+        )
+        .bind(book.address_book_uuid.to_string())
+        .bind(book.owner_user_uuid.to_string())
+        .bind(&book.name)
+        .execute(&mut *tx)
+        .await?;
+    }
+    for membership in &document.access_group_memberships {
+        sqlx::query(
+            "INSERT INTO access_group_memberships (access_group_uuid, user_uuid)
+             VALUES (?, ?)",
+        )
+        .bind(membership.access_group_uuid.to_string())
+        .bind(membership.user_uuid.to_string())
+        .execute(&mut *tx)
+        .await?;
+    }
+    for grant in &document.device_visibility_grants {
+        sqlx::query(
+            "INSERT INTO device_visibility_grants (access_group_uuid, device_uuid)
+             VALUES (?, ?)",
+        )
+        .bind(grant.access_group_uuid.to_string())
+        .bind(grant.device_uuid.to_string())
+        .execute(&mut *tx)
+        .await?;
+    }
+    for grant in &document.user_device_visibility_grants {
+        sqlx::query(
+            "INSERT INTO user_device_visibility_grants (user_uuid, device_uuid)
+             VALUES (?, ?)",
+        )
+        .bind(grant.user_uuid.to_string())
+        .bind(grant.device_uuid.to_string())
+        .execute(&mut *tx)
+        .await?;
+    }
+    for entry in &document.address_book_entries {
+        sqlx::query(
+            "INSERT INTO address_book_entries (
+                address_book_entry_uuid, address_book_uuid, device_uuid, alias, notes, position
+             ) VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .bind(entry.address_book_entry_uuid.to_string())
+        .bind(entry.address_book_uuid.to_string())
+        .bind(entry.device_uuid.to_string())
+        .bind(&entry.alias)
+        .bind(entry.notes.as_deref())
+        .bind(i64::from(entry.position))
+        .execute(&mut *tx)
+        .await?;
+    }
     if let Some(config) = &document.server_config {
         sqlx::query(
             "INSERT INTO server_configs (
@@ -183,20 +370,6 @@ pub async fn restore_backup_document(
         .bind(token.site_uuid.map(|value| value.to_string()))
         .bind(token.expires_at.as_deref())
         .bind(token.revoked_at.as_deref())
-        .bind(&now)
-        .execute(&mut *tx)
-        .await?;
-    }
-    for user in &document.users {
-        sqlx::query(
-            "INSERT INTO users (user_uuid, username, password_hash, role, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?)",
-        )
-        .bind(user.user_uuid.to_string())
-        .bind(&user.username)
-        .bind(&user.password_hash)
-        .bind(&user.role)
-        .bind(&now)
         .bind(&now)
         .execute(&mut *tx)
         .await?;

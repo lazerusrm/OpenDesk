@@ -247,6 +247,7 @@ mod tests {
             devices: vec![],
             address_books: vec![],
             address_book_entries: vec![],
+            cross_group_edges: vec![],
         };
         let snapshot = MigrationSnapshot {
             sites: vec![Site {

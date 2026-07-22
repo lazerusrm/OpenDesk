@@ -54,7 +54,7 @@ The first build slice is a Rust control plane service (Axum, Askama, sqlx/SQLite
 For the separate report-only migration review, build and run
 `opendesk-migration-dry-run`; it accepts only a sanitized JSON export, an existing
 SQLite file, and explicit `GROUP_ID:SITE_UUID` mappings. It uses a read-only
-snapshot and never imports or mutates state. See the [Operations Runbook](docs/operations-runbook.md).
+snapshot and never imports or mutates state. Pass `--manifest approved-migration-manifest.json` to require the strict versioned approval, source/report digest, count, and expiry preconditions; the command still exposes no apply/write operation. See the [Operations Runbook](docs/operations-runbook.md).
 
 ```bash
 cargo test

@@ -11,11 +11,13 @@ use std::{
 };
 
 use opendesk::domain::migration::{
-    dry_run_import, load_migration_snapshot, parse_rustdesk_pro_import_json,
-    parse_scope_site_mapping, validate_scope_site_mappings, ScopeSiteMapping,
+    dry_run_import, load_migration_snapshot, parse_approved_migration_manifest_json,
+    parse_rustdesk_pro_import_json, parse_scope_site_mapping, validate_manifest_preconditions,
+    validate_scope_site_mappings, ScopeSiteMapping,
 };
 use serde::Serialize;
 use sqlx::{sqlite::SqliteConnectOptions, Connection};
+use time::OffsetDateTime;
 
 const MAX_INPUT_BYTES: u64 = 16 * 1024 * 1024;
 
@@ -24,6 +26,7 @@ struct Cli {
     input: PathBuf,
     database: PathBuf,
     mappings: Vec<String>,
+    manifest: Option<PathBuf>,
 }
 
 #[derive(Debug, Serialize)]
@@ -32,7 +35,7 @@ struct CliError {
 }
 
 fn usage() -> &'static str {
-    "usage: opendesk-migration-dry-run --input FILE --database SQLITE_FILE [--map GROUP_ID:SITE_UUID]..."
+    "usage: opendesk-migration-dry-run --input FILE --database SQLITE_FILE [--map GROUP_ID:SITE_UUID]... [--manifest FILE]"
 }
 
 fn parse_cli<I>(arguments: I) -> Result<Cli, &'static str>
@@ -42,6 +45,7 @@ where
     let mut input = None;
     let mut database = None;
     let mut mappings = Vec::new();
+    let mut manifest = None;
     let mut arguments = arguments.into_iter();
     while let Some(argument) = arguments.next() {
         match argument.as_str() {
@@ -66,6 +70,12 @@ where
                     .next()
                     .ok_or("--map requires GROUP_ID:SITE_UUID")?,
             ),
+            "--manifest" => {
+                if manifest.is_some() {
+                    return Err("duplicate --manifest");
+                }
+                manifest = Some(arguments.next().ok_or("--manifest requires a file")?);
+            }
             "--help" | "-h" => return Err(usage()),
             _ => return Err("unknown argument"),
         }
@@ -74,6 +84,7 @@ where
         input: input.ok_or("--input is required")?.into(),
         database: database.ok_or("--database is required")?.into(),
         mappings,
+        manifest: manifest.map(PathBuf::from),
     })
 }
 
@@ -134,13 +145,42 @@ async fn main() -> ExitCode {
         return print_error(error);
     }
 
-    let input = match fs::read_to_string(&cli.input) {
+    let input = match fs::read(&cli.input) {
+        Ok(input) => input,
+        Err(_) => return print_error("input file cannot be read"),
+    };
+    let input_text = match std::str::from_utf8(&input) {
         Ok(input) => input,
         Err(_) => return print_error("input file cannot be read as UTF-8"),
     };
-    let document = match parse_rustdesk_pro_import_json(&input) {
+    let document = match parse_rustdesk_pro_import_json(input_text) {
         Ok(document) => document,
         Err(_) => return print_error("input is not a valid sanitized export"),
+    };
+    let manifest = match cli.manifest.as_deref() {
+        Some(path) => {
+            let metadata = match regular_file(path, "invalid manifest file") {
+                Ok(metadata) => metadata,
+                Err(error) => return print_error(error),
+            };
+            if metadata.len() > MAX_INPUT_BYTES {
+                return print_error("manifest file is too large");
+            }
+            let manifest_text = match fs::read_to_string(path) {
+                Ok(value) => value,
+                Err(_) => return print_error("manifest file cannot be read as UTF-8"),
+            };
+            match parse_approved_migration_manifest_json(&manifest_text) {
+                Ok(manifest) => {
+                    if manifest.validate_against_source(&document).is_err() {
+                        return print_error("manifest does not cover the exact source export");
+                    }
+                    Some(manifest)
+                }
+                Err(_) => return print_error("manifest is not a valid approved manifest"),
+            }
+        }
+        None => None,
     };
     let mappings: Vec<ScopeSiteMapping> = match cli
         .mappings
@@ -171,13 +211,31 @@ async fn main() -> ExitCode {
     snapshot.scope_site_mappings = mappings;
 
     let report = dry_run_import(&document, &snapshot);
-    match serde_json::to_string_pretty(&report) {
-        Ok(json) => {
-            println!("{json}");
-            ExitCode::SUCCESS
+    let report_json = match serde_json::to_string_pretty(&report) {
+        Ok(json) => json,
+        Err(_) => return print_error("report could not be serialized"),
+    };
+    if let Some(manifest) = manifest {
+        if validate_manifest_preconditions(
+            &manifest,
+            &input,
+            &document,
+            report_json.as_bytes(),
+            OffsetDateTime::now_utc(),
+        )
+        .is_err()
+        {
+            return print_error("approved manifest preconditions are not satisfied");
         }
-        Err(_) => print_error("report could not be serialized"),
+        if manifest
+            .validate_against_snapshot_and_report(&snapshot, &report)
+            .is_err()
+        {
+            return print_error("approved manifest contradicts snapshot or report");
+        }
     }
+    println!("{report_json}");
+    ExitCode::SUCCESS
 }
 
 #[cfg(test)]

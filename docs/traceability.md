@@ -30,7 +30,7 @@ Required client scope is Windows, Linux, and macOS endpoints plus Android and iO
 | PR-012 Official clients | D-006, D-010 | required signatures/checksums/update evidence on released clients. |
 | PR-013 No Pro dependency | CUT-003 | required owner inventory and equivalent/retired workflow decisions. |
 | PR-014 Mobile operator apps | D-011, D-012, R-002 | required Android and iOS operator validation. |
-| PR-015 Migration dry-run reconciliation | MIG-001 through MIG-004 | established strict, report-only external-boundary parser and reconciliation tests; required authorized export, mapping evidence, review, and any separately approved write-path design remain. |
+| PR-015 Migration dry-run reconciliation | MIG-001 through MIG-005 | established strict, report-only external-boundary parser, explicit approved-manifest preconditions, and reconciliation tests; required authorized export, mapping evidence, review, and any separately approved write-path design remain. |
 | SR-001 Public repo privacy | SEC-006, CI-002 | established current scans; required cutover-candidate scan remains. |
 | SR-002 Runtime secrets outside Git | SEC-006, CI-002 | established public scan boundary; required deployment/config review remains. |
 | SR-003 Enrollment token protection | E-001, E-005, SEC-004 | established lifecycle/scope/permission tests; required release evidence remains. |

@@ -98,7 +98,9 @@ Status legend:
 
 - [x] Multi-user admin accounts.
 - [x] Role model: admin, operator, read-only.
-- [ ] Device visibility by site/tag.
+- [x] Canonical dashboard/API action allowlist and role predicate.
+- [x] Default-deny device visibility predicate for direct/access-group grants.
+- [ ] Device visibility integration by access group/direct grant.
 - [x] Audit log UI.
 - [x] Export audit log.
 - [ ] Optional reverse proxy SSO.

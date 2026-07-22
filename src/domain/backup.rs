@@ -1,18 +1,26 @@
-use std::collections::HashSet;
-
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
+use super::access_group::AccessGroup;
+use super::access_group_membership::AccessGroupMembership;
+use super::address_book::{AddressBook, AddressBookEntry};
 use super::device::Device;
-use super::role::Role;
-use super::server_config::{validate_server_config, ServerConfig};
+use super::device_visibility::{DeviceVisibilityGrant, UserDeviceVisibilityGrant};
+use super::server_config::ServerConfig;
 use super::site::Site;
 use super::tag::Tag;
 
-pub const BACKUP_SCHEMA_VERSION: u32 = 1;
+#[path = "backup_scoped_validation.rs"]
+mod backup_scoped_validation;
+#[path = "backup_v1_conversion.rs"]
+mod backup_v1_conversion;
+use backup_v1_conversion::BackupDocumentV1;
+
+pub const BACKUP_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct BackupSensitivity {
     pub contains_password_hashes: bool,
     pub contains_enrollment_token_hashes: bool,
@@ -34,12 +42,14 @@ impl Default for BackupSensitivity {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct BackupDeviceTag {
     pub device_uuid: Uuid,
     pub tag_uuid: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct BackupUser {
     pub user_uuid: Uuid,
     pub username: String,
@@ -48,6 +58,7 @@ pub struct BackupUser {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct BackupEnrollmentToken {
     pub enrollment_token_uuid: Uuid,
     pub token_hash: String,
@@ -58,6 +69,7 @@ pub struct BackupEnrollmentToken {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct BackupDocument {
     pub schema_version: u32,
     pub exported_at: String,
@@ -66,6 +78,12 @@ pub struct BackupDocument {
     pub tags: Vec<Tag>,
     pub devices: Vec<Device>,
     pub device_tags: Vec<BackupDeviceTag>,
+    pub access_groups: Vec<AccessGroup>,
+    pub access_group_memberships: Vec<AccessGroupMembership>,
+    pub device_visibility_grants: Vec<DeviceVisibilityGrant>,
+    pub user_device_visibility_grants: Vec<UserDeviceVisibilityGrant>,
+    pub address_books: Vec<AddressBook>,
+    pub address_book_entries: Vec<AddressBookEntry>,
     pub server_config: Option<ServerConfig>,
     pub enrollment_tokens: Vec<BackupEnrollmentToken>,
     pub users: Vec<BackupUser>,
@@ -106,107 +124,56 @@ pub enum BackupValidationError {
     DuplicateIdentifier { collection: &'static str },
     #[error("backup contains an invalid {relation} reference")]
     InvalidReference { relation: &'static str },
+    #[error("backup contains an invalid {field}")]
+    InvalidValue { field: &'static str },
+    #[error("backup contains a noncanonical {field}")]
+    NonCanonicalValue { field: &'static str },
     #[error("backup contains an invalid user role")]
     InvalidRole,
     #[error("backup contains an invalid server configuration")]
     InvalidServerConfig,
 }
 
-pub fn validate_backup_document(document: &BackupDocument) -> Result<(), BackupValidationError> {
-    if document.schema_version != BACKUP_SCHEMA_VERSION {
-        return Err(BackupValidationError::UnsupportedSchemaVersion);
-    }
-    if document.users.is_empty() {
-        return Err(BackupValidationError::EmptyUsers);
-    }
-
-    let site_ids = unique_ids(document.sites.iter().map(|site| site.site_uuid), "site")?;
-    let tag_ids = unique_ids(document.tags.iter().map(|tag| tag.tag_uuid), "tag")?;
-    let device_ids = unique_ids(
-        document.devices.iter().map(|device| device.device_uuid),
-        "device",
-    )?;
-    unique_ids(
-        document
-            .enrollment_tokens
-            .iter()
-            .map(|token| token.enrollment_token_uuid),
-        "enrollment token",
-    )?;
-    unique_ids(document.users.iter().map(|user| user.user_uuid), "user")?;
-
-    let mut usernames = HashSet::new();
-    for user in &document.users {
-        if !matches!(
-            user.role.as_str(),
-            Role::ADMIN | Role::OPERATOR | Role::READ_ONLY
-        ) {
-            return Err(BackupValidationError::InvalidRole);
-        }
-        if !usernames.insert(&user.username) {
-            return Err(BackupValidationError::DuplicateIdentifier {
-                collection: "username",
-            });
-        }
-    }
-    for device in &document.devices {
-        if let Some(site_uuid) = device.site_uuid {
-            if !site_ids.contains(&site_uuid) {
-                return Err(BackupValidationError::InvalidReference {
-                    relation: "device site",
-                });
-            }
-        }
-    }
-    for token in &document.enrollment_tokens {
-        if let Some(site_uuid) = token.site_uuid {
-            if !site_ids.contains(&site_uuid) {
-                return Err(BackupValidationError::InvalidReference {
-                    relation: "enrollment token site",
-                });
-            }
-        }
-    }
-    let mut links = HashSet::new();
-    for link in &document.device_tags {
-        if !device_ids.contains(&link.device_uuid) || !tag_ids.contains(&link.tag_uuid) {
-            return Err(BackupValidationError::InvalidReference {
-                relation: "device tag",
-            });
-        }
-        if !links.insert((link.device_uuid, link.tag_uuid)) {
-            return Err(BackupValidationError::DuplicateIdentifier {
-                collection: "device tag",
-            });
-        }
-    }
-    if let Some(config) = &document.server_config {
-        if validate_server_config(config).is_err() {
-            return Err(BackupValidationError::InvalidServerConfig);
-        }
-    }
-    Ok(())
-}
-
-fn unique_ids(
-    values: impl Iterator<Item = Uuid>,
-    collection: &'static str,
-) -> Result<HashSet<Uuid>, BackupValidationError> {
-    let mut ids = HashSet::new();
-    for id in values {
-        if !ids.insert(id) {
-            return Err(BackupValidationError::DuplicateIdentifier { collection });
-        }
-    }
-    Ok(ids)
-}
+pub use backup_scoped_validation::validate_backup_document;
 
 pub fn render_backup_json(document: &BackupDocument) -> Result<String, serde_json::Error> {
     serde_json::to_string_pretty(document)
 }
 
+/// Parse current backups and convert the released v1 shape at this external boundary.
+/// Current exports and serialized restores are always v2; v1 conversion adds only
+/// the new empty collections and validates the resulting current document.
 pub fn parse_backup_json(value: &str) -> Result<BackupDocument, serde_json::Error> {
-    serde_json::from_str(value)
+    let raw: serde_json::Value = serde_json::from_str(value)?;
+    let version = raw
+        .get("schema_version")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| {
+            serde_json::Error::io(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "backup schema_version is required",
+            ))
+        })? as u32;
+    match version {
+        1 => serde_json::from_value::<BackupDocumentV1>(raw)?
+            .into_current()
+            .map_err(backup_validation_error),
+        BACKUP_SCHEMA_VERSION => {
+            let document: BackupDocument = serde_json::from_value(raw)?;
+            validate_backup_document(&document).map_err(backup_validation_error)?;
+            Ok(document)
+        }
+        _ => Err(backup_validation_error(
+            BackupValidationError::UnsupportedSchemaVersion,
+        )),
+    }
+}
+
+fn backup_validation_error(error: BackupValidationError) -> serde_json::Error {
+    serde_json::Error::io(std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
+        error.to_string(),
+    ))
 }
 
 #[cfg(test)]
@@ -222,6 +189,12 @@ mod tests {
             tags: vec![],
             devices: vec![],
             device_tags: vec![],
+            access_groups: vec![],
+            access_group_memberships: vec![],
+            device_visibility_grants: vec![],
+            user_device_visibility_grants: vec![],
+            address_books: vec![],
+            address_book_entries: vec![],
             server_config: None,
             enrollment_tokens: vec![],
             users: vec![BackupUser {
@@ -239,6 +212,29 @@ mod tests {
         let json = render_backup_json(&document).expect("serialize");
         let parsed = parse_backup_json(&json).expect("parse");
         assert_eq!(parsed, document);
+    }
+
+    #[test]
+    fn parse_backup_json_converts_v1_boundary_document() {
+        let document = sample_document();
+        let v1 = BackupDocumentV1 {
+            schema_version: 1,
+            exported_at: document.exported_at.clone(),
+            sensitivity: document.sensitivity.clone(),
+            sites: document.sites.clone(),
+            tags: document.tags.clone(),
+            devices: document.devices.clone(),
+            device_tags: document.device_tags.clone(),
+            server_config: document.server_config.clone(),
+            enrollment_tokens: document.enrollment_tokens.clone(),
+            users: document.users.clone(),
+        };
+        let json = serde_json::to_string(&v1).expect("serialize v1 backup");
+        let converted = parse_backup_json(&json).expect("convert v1 backup");
+        assert_eq!(converted.schema_version, BACKUP_SCHEMA_VERSION);
+        assert!(converted.access_groups.is_empty());
+        assert!(converted.address_books.is_empty());
+        assert_eq!(converted.users, document.users);
     }
 
     #[test]

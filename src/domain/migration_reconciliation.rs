@@ -13,6 +13,7 @@ pub enum ReconciliationAction {
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct ReconciliationItem {
     pub external_id: String,
+    pub source_parent_id: Option<String>,
     pub action: ReconciliationAction,
     pub reason: Option<String>,
 }
@@ -25,6 +26,7 @@ pub struct ImportDryRunReport {
     pub devices: Vec<ReconciliationItem>,
     pub address_books: Vec<ReconciliationItem>,
     pub address_book_entries: Vec<ReconciliationItem>,
+    pub cross_group_edges: Vec<ReconciliationItem>,
     pub blocked: bool,
 }
 
@@ -37,13 +39,25 @@ impl ImportDryRunReport {
             devices: Vec::new(),
             address_books: Vec::new(),
             address_book_entries: Vec::new(),
+            cross_group_edges: Vec::new(),
             blocked: false,
         }
     }
 
     fn push_blocked(&mut self, target: ReconciliationTarget, id: String, reason: &str) {
+        self.push_blocked_with_parent(target, id, None, reason);
+    }
+
+    fn push_blocked_with_parent(
+        &mut self,
+        target: ReconciliationTarget,
+        id: String,
+        source_parent_id: Option<String>,
+        reason: &str,
+    ) {
         let item = ReconciliationItem {
             external_id: id,
+            source_parent_id,
             action: ReconciliationAction::Blocked,
             reason: Some(reason.to_string()),
         };
@@ -80,6 +94,7 @@ pub fn dry_run_import(
     reconcile_devices(document, snapshot, &mut report);
     reconcile_address_books(document, &mut report);
     reconcile_address_book_entries(document, snapshot, &mut report);
+    reconcile_cross_group_edges(document, &mut report);
     report
 }
 
@@ -112,6 +127,7 @@ fn reconcile_identities(
         match snapshot_names.get(&name_key).copied() {
             Some(1) => report.identities.push(ReconciliationItem {
                 external_id: user.user_id.clone(),
+                source_parent_id: None,
                 action: ReconciliationAction::MatchedExisting,
                 reason: Some(
                     "matched by username; credentials and role are not imported".to_string(),
@@ -160,6 +176,7 @@ fn reconcile_scopes(
             Some(Some(site_uuid)) if site_ids.contains(site_uuid) => {
                 report.scopes.push(ReconciliationItem {
                     external_id: group.group_id.clone(),
+                    source_parent_id: None,
                     action: ReconciliationAction::Mapped,
                     reason: Some(format!("explicit operator mapping to site {site_uuid}")),
                 })
@@ -208,6 +225,7 @@ fn reconcile_devices(
         match snapshot_ids.get(device.rustdesk_id.as_str()).copied() {
             Some(1) => report.devices.push(ReconciliationItem {
                 external_id: device.rustdesk_id.clone(),
+                source_parent_id: None,
                 action: ReconciliationAction::MatchedExisting,
                 reason: Some("matched by rustdesk_id".to_string()),
             }),
@@ -218,6 +236,7 @@ fn reconcile_devices(
             ),
             None => report.devices.push(ReconciliationItem {
                 external_id: device.rustdesk_id.clone(),
+                source_parent_id: None,
                 action: ReconciliationAction::WouldCreate,
                 reason: Some("device has no matching rustdesk_id".to_string()),
             }),
@@ -239,6 +258,7 @@ fn reconcile_address_books(document: &RustDeskProImportDocument, report: &mut Im
         } else {
             report.address_books.push(ReconciliationItem {
                 external_id: book.address_book_id.clone(),
+                source_parent_id: None,
                 action: ReconciliationAction::WouldCreate,
                 reason: Some(
                     "address-book container is report-only; no native OpenDesk entity is written"
@@ -269,41 +289,62 @@ fn reconcile_address_book_entries(
         });
     let mut imported_keys = HashSet::new();
     for entry in &document.address_book_entries {
-        let key = format!("{}:{}", entry.address_book_id, entry.rustdesk_id);
+        let key = (entry.address_book_id.clone(), entry.rustdesk_id.clone());
         if !imported_keys.insert(key.clone()) {
-            report.push_blocked(
+            report.push_blocked_with_parent(
                 ReconciliationTarget::AddressBookEntries,
-                key,
+                entry.rustdesk_id.clone(),
+                Some(entry.address_book_id.clone()),
                 "duplicate address-book entry",
             );
             continue;
         }
         if !books.contains(entry.address_book_id.as_str()) {
-            report.push_blocked(
+            report.push_blocked_with_parent(
                 ReconciliationTarget::AddressBookEntries,
-                key,
+                entry.rustdesk_id.clone(),
+                Some(entry.address_book_id.clone()),
                 "address book does not exist in import",
             );
             continue;
         }
         match devices.get(entry.rustdesk_id.as_str()).copied() {
             Some(1) => report.address_book_entries.push(ReconciliationItem {
-                external_id: key,
+                external_id: entry.rustdesk_id.clone(),
+                source_parent_id: Some(entry.address_book_id.clone()),
                 action: ReconciliationAction::Mapped,
                 reason: Some(
                     "mapped to existing device by rustdesk_id; secrets excluded".to_string(),
                 ),
             }),
-            Some(_) => report.push_blocked(
+            Some(_) => report.push_blocked_with_parent(
                 ReconciliationTarget::AddressBookEntries,
-                key,
+                entry.rustdesk_id.clone(),
+                Some(entry.address_book_id.clone()),
                 "rustdesk_id is ambiguous in the OpenDesk snapshot",
             ),
-            None => report.push_blocked(
+            None => report.push_blocked_with_parent(
                 ReconciliationTarget::AddressBookEntries,
-                key,
+                entry.rustdesk_id.clone(),
+                Some(entry.address_book_id.clone()),
                 "no matching device; address-book entry is not imported",
             ),
         }
+    }
+}
+
+fn reconcile_cross_group_edges(
+    document: &RustDeskProImportDocument,
+    report: &mut ImportDryRunReport,
+) {
+    for edge in &document.cross_group_edges {
+        report.cross_group_edges.push(ReconciliationItem {
+            external_id: edge.edge_id.clone(),
+            source_parent_id: None,
+            action: ReconciliationAction::WouldCreate,
+            reason: Some(
+                "cross-group edge is report-only; no native entity is written".to_string(),
+            ),
+        });
     }
 }

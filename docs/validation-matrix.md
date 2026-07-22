@@ -177,6 +177,7 @@ Research rows count as complete only when `docs/research-roadmap.md` contains th
 | MIG-002 | Import safety | Parse export containing credential hash, JWT, private key, or secret fields | Parse is rejected before deserialization and no report contains sensitive values. |
 | MIG-003 | Reconciliation dry run | Compare export against an OpenDesk snapshot | Report is deterministic and report-only; duplicate identity/rustdesk_id values and ambiguous snapshot matches are blocked. |
 | MIG-004 | Scope mapping | Reconcile external groups/scopes to sites | Name similarity alone never maps a scope; only explicit operator mapping evidence can produce a mapping. |
+| MIG-005 | Approved manifest boundary | Parse and validate a version-1 approved manifest and bind it to exact source/report digests | Unknown or recursively sensitive fields, missing counts/digests/approver/expiry, duplicate source dispositions, implicit matches, invalid action targets, and expired manifests are rejected; validation exposes no apply/write operation. |
 
 ## Cutover Validation
 

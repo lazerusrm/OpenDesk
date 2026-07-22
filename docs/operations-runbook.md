@@ -57,9 +57,31 @@ reconciliation actions and reasons only; it does not print credentials, password
 or enrollment-token hashes, sessions, audit events, endpoint check-ins, keys, or
 server configuration.
 
-The operator command requires a stable SQLite artifact without an active WAL
-sidecar. Do not point it at an in-use database. Create a staging copy using the
-SQLite backup API, for example:
+The report can be checked against an owner-approved manifest before it is reviewed:
+
+```text
+opendesk-migration-dry-run \
+  --input sanitized-export.json \
+  --database staging-copy.sqlite \
+  --manifest approved-migration-manifest.json
+```
+
+Manifest version 1 requires lowercase SHA-256 digests for the exact source export
+and serialized dry-run report, expected counts for users, groups, devices,
+address books, entries, and explicit cross-group edges, a non-empty approver, canonical
+approval and expiry timestamps, and explicit source-ID dispositions. Import/map/
+merge dispositions require a canonical target UUID; imports for address books
+and cross-group edges use a deterministic planned UUID derived from structured
+source identity, and that planned UUID must not exist in the snapshot. Arbitrary
+and wrong-kind targets are rejected. Retire/defer dispositions require an
+explicit JSON `null` target. User dispositions must state role and credential
+paths; those fields are rejected for every other source kind. The CLI
+requires every source entity and explicit cross-group edge ID to appear exactly
+once; edge counts are never inferred from memberships. Unknown or recursively
+sensitive fields (password/hash/token/secret/key/session/audit/topology) are
+rejected. The manifest is only a report precondition: this command has no apply
+or database-write operation.
+
 
 ```text
 sqlite3 source.db '.backup staging-copy.sqlite'
