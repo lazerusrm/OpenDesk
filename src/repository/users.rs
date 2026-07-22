@@ -10,11 +10,12 @@ pub struct UserRow {
     pub username: String,
     pub password_hash: String,
     pub role: String,
+    pub activation_state: String,
 }
 
 pub async fn list_users(pool: &SqlitePool) -> Result<Vec<UserRow>, sqlx::Error> {
-    let rows = sqlx::query_as::<_, (String, String, String, String)>(
-        "SELECT user_uuid, username, password_hash, role FROM users ORDER BY username ASC",
+    let rows = sqlx::query_as::<_, (String, String, String, String, String)>(
+        "SELECT user_uuid, username, password_hash, role, activation_state FROM users ORDER BY username ASC",
     )
     .fetch_all(pool)
     .await?;
@@ -25,6 +26,7 @@ pub async fn list_users(pool: &SqlitePool) -> Result<Vec<UserRow>, sqlx::Error> 
             username: row.1,
             password_hash: row.2,
             role: row.3,
+            activation_state: row.4,
         })
         .collect())
 }
@@ -62,6 +64,7 @@ pub async fn create_user(
         username: username.to_string(),
         password_hash: String::new(),
         role: role.to_string(),
+        activation_state: "active".to_string(),
     })
 }
 
@@ -69,18 +72,19 @@ pub async fn find_user_by_username(
     pool: &SqlitePool,
     username: &str,
 ) -> Result<Option<UserRow>, sqlx::Error> {
-    let row = sqlx::query_as::<_, (String, String, String, String)>(
-        "SELECT user_uuid, username, password_hash, role FROM users WHERE username = ?",
+    let row = sqlx::query_as::<_, (String, String, String, String, String)>(
+        "SELECT user_uuid, username, password_hash, role, activation_state FROM users WHERE username = ?",
     )
     .bind(username)
     .fetch_optional(pool)
     .await?;
     Ok(
-        row.map(|(user_uuid, username, password_hash, role)| UserRow {
+        row.map(|(user_uuid, username, password_hash, role, activation_state)| UserRow {
             user_uuid: Uuid::parse_str(&user_uuid).expect("stored uuid"),
             username,
             password_hash,
             role,
+            activation_state,
         }),
     )
 }
@@ -89,18 +93,19 @@ pub async fn find_user_by_uuid(
     pool: &SqlitePool,
     user_uuid: Uuid,
 ) -> Result<Option<UserRow>, sqlx::Error> {
-    let row = sqlx::query_as::<_, (String, String, String, String)>(
-        "SELECT user_uuid, username, password_hash, role FROM users WHERE user_uuid = ?",
+    let row = sqlx::query_as::<_, (String, String, String, String, String)>(
+        "SELECT user_uuid, username, password_hash, role, activation_state FROM users WHERE user_uuid = ?",
     )
     .bind(user_uuid.to_string())
     .fetch_optional(pool)
     .await?;
     Ok(
-        row.map(|(user_uuid, username, password_hash, role)| UserRow {
+        row.map(|(user_uuid, username, password_hash, role, activation_state)| UserRow {
             user_uuid: Uuid::parse_str(&user_uuid).expect("stored uuid"),
             username,
             password_hash,
             role,
+            activation_state,
         }),
     )
 }

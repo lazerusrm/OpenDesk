@@ -53,7 +53,9 @@ async fn login_submit(
     let Some(user) = user else {
         return Ok(render_login(Some("Invalid username or password".to_string())).into_response());
     };
-    if auth::verify_password(&form.password, &user.password_hash).is_err() {
+    if user.activation_state != "active"
+        || auth::verify_password(&form.password, &user.password_hash).is_err()
+    {
         return Ok(render_login(Some("Invalid username or password".to_string())).into_response());
     }
     let (jar, _) = start_session(&state, jar, user.user_uuid)

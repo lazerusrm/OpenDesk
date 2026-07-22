@@ -53,6 +53,33 @@ async fn authenticated_mutation_rejects_missing_and_invalid_csrf_tokens() {
 }
 
 #[tokio::test]
+async fn disabled_user_cannot_log_in() {
+    let state = test_state().await;
+    sqlx::query("UPDATE users SET activation_state = 'disabled' WHERE username = 'admin'")
+        .execute(&state.db)
+        .await
+        .expect("disable user");
+    let app = build_router(state);
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/login")
+                .header("origin", "http://127.0.0.1:8080")
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from("username=admin&password=test-password"))
+                .unwrap(),
+        )
+        .await
+        .expect("login response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    assert!(String::from_utf8(body.to_vec())
+        .expect("utf8")
+        .contains("Invalid username or password"));
+}
+
+#[tokio::test]
 async fn login_rejects_cross_origin_submission() {
     let app = build_router(test_state().await);
     let response = app
