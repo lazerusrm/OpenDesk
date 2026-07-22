@@ -91,8 +91,7 @@ def require_supported_source(connection: sqlite3.Connection) -> None:
 
 
 def export_snapshot(connection: sqlite3.Connection, role_map: dict[int, str], source_instance: str,
-                    source_export_id: str, source_schema_version: str,
-                    settings_disposition: str) -> dict[str, object]:
+                    source_export_id: str, source_schema_version: str) -> dict[str, object]:
     require_supported_source(connection)
     users = []
     memberships = []
@@ -184,10 +183,8 @@ def export_snapshot(connection: sqlite3.Connection, role_map: dict[int, str], so
             "credential_reset_required": True,
         })
 
-    settings = []
-    if table_exists(connection, "settings"):
-        for (key,) in connection.execute("SELECT key FROM settings ORDER BY key"):
-            settings.append({"key": text(key, "setting key"), "disposition": settings_disposition})
+    if table_exists(connection, "settings") and table_count(connection, "settings"):
+        fail("source settings require an explicit reviewed mapping")
 
     snapshot = {
         "users": users,
@@ -196,7 +193,7 @@ def export_snapshot(connection: sqlite3.Connection, role_map: dict[int, str], so
         "devices": devices,
         "address_books": books,
         "address_book_entries": entries,
-        "settings": settings,
+        "settings": [],
     }
     snapshot_sha256 = hashlib.sha256(canonical_bytes(snapshot)).hexdigest()
     now = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
@@ -229,11 +226,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-export-id", required=True)
     parser.add_argument("--source-schema-version", required=True)
     parser.add_argument("--role-map", action="append", default=[])
-    parser.add_argument(
-        "--settings-disposition",
-        choices=("exclude", "manual_review", "map", "retire"),
-        default="manual_review",
-    )
     return parser.parse_args()
 
 
@@ -249,7 +241,7 @@ def main() -> None:
         document = export_snapshot(
             connection, role_map, text(args.source_instance, "source instance"),
             text(args.source_export_id, "source export ID"),
-            text(args.source_schema_version, "source schema version"), args.settings_disposition,
+            text(args.source_schema_version, "source schema version"),
         )
     except (json.JSONDecodeError, sqlite3.Error):
         fail("source database cannot be read safely")
