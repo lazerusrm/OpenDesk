@@ -10,6 +10,7 @@ use axum_extra::extract::cookie::CookieJar;
 use serde::Deserialize;
 
 use crate::app_state::AppState;
+use crate::auth::password_meets_policy;
 use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::role::{validate_role_value, Role};
@@ -17,10 +18,12 @@ use crate::domain::user::validate_username;
 use crate::http::session::{require_action, require_csrf};
 use crate::http::views::{nav_permissions_for_role, UserRowView, UsersListView};
 use crate::repository::audit_events::insert_audit_event;
-use crate::repository::users::{create_user, list_users};
+use crate::repository::users::{activate_imported_user, create_user, list_users};
 
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/users", get(users_list).post(user_create_submit))
+    Router::new()
+        .route("/users", get(users_list).post(user_create_submit))
+        .route("/users/activate", axum::routing::post(user_activate_submit))
 }
 
 async fn users_list(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
@@ -41,6 +44,53 @@ struct UserCreateForm {
     role: String,
 }
 
+#[derive(Deserialize)]
+struct UserActivationForm {
+    csrf_token: String,
+    user_uuid: String,
+    password: String,
+}
+
+async fn user_activate_submit(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    Form(form): Form<UserActivationForm>,
+) -> Result<Response, Response> {
+    let actor = require_action(&state, &jar, Action::UserActivate).await?;
+    require_csrf(&actor, &form.csrf_token)?;
+    let user_uuid = match uuid::Uuid::parse_str(&form.user_uuid) {
+        Ok(value) => value,
+        Err(_) => return Ok(Redirect::to("/users").into_response()),
+    };
+    if !password_meets_policy(&form.password) {
+        return Ok(render_users_page(
+            &state,
+            Some("password must be at least 8 characters".to_string()),
+            &actor.csrf_token,
+            actor.parsed_role(),
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+        .into_response());
+    }
+    let activated = activate_imported_user(&state.db, user_uuid, form.password.trim())
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    if activated {
+        let audit = AuditEventDraft {
+            actor_user_uuid: Some(actor.user_uuid),
+            action: "user_activate".to_string(),
+            object_type: "user".to_string(),
+            object_uuid: Some(user_uuid),
+            outcome: "success".to_string(),
+            source: "web".to_string(),
+            detail: None,
+        };
+        let _ = insert_audit_event(&state.db, &audit).await;
+    }
+    Ok(Redirect::to("/users").into_response())
+}
+
 async fn user_create_submit(
     State(state): State<AppState>,
     jar: CookieJar,
@@ -59,7 +109,7 @@ async fn user_create_submit(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
         .into_response());
     }
-    if form.password.trim().len() < 8 {
+    if !password_meets_policy(&form.password) {
         return Ok(render_users_page(
             &state,
             Some("password must be at least 8 characters".to_string()),
@@ -143,6 +193,8 @@ async fn render_users_page(
                 user_uuid: user.user_uuid.to_string(),
                 username: user.username,
                 role_display: role_label,
+                activation_state: user.activation_state.clone(),
+                can_activate: user.activation_state == "disabled",
             }
         })
         .collect();

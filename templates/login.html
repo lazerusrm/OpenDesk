@@ -2,6 +2,7 @@
 {% block content %}
 <section class="card">
   <h1>Admin Login</h1>
+  <p class="muted">Sign in to manage your OpenDesk installation.</p>
   {% if error_message.is_some() %}
   <p class="error">{{ error_message.as_ref().unwrap() }}</p>
   {% endif %}

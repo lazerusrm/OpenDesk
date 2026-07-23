@@ -8,13 +8,18 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="name">New address book name</label>
     <input id="name" name="name" required maxlength="128">
+    <label for="book_kind">Kind</label>
+    <select id="book_kind" name="book_kind" required>
+      <option value="personal">Personal</option>
+      <option value="shared">Shared</option>
+    </select>
     <button type="submit">Create address book</button>
   </form>
   {% endif %}
 </section>
 <section class="card">
-  <table><thead><tr><th>Name</th><th>Address book UUID</th></tr></thead><tbody>
-  {% for book in books %}<tr><td><a href="/address-books/{{ book.address_book_uuid }}">{{ book.name }}</a></td><td><code>{{ book.address_book_uuid }}</code></td></tr>{% endfor %}
+  <table><thead><tr><th>Name</th><th>Manage</th></tr></thead><tbody>
+  {% for book in books %}<tr><td>{{ book.name }}</td><td><a href="/address-books/{{ book.address_book_uuid }}">View entries</a></td></tr>{% endfor %}
   </tbody></table>
 </section>
 {% endblock %}

@@ -9,7 +9,7 @@ use http_body_util::BodyExt;
 use opendesk::build_router;
 use opendesk::domain::role::Role;
 use opendesk::repository::audit_events::list_audit_events;
-use opendesk::repository::users::create_user;
+use opendesk::repository::users::{create_user, find_user_by_username};
 use tower::ServiceExt;
 
 async fn login_as(app: &axum::Router, username: &str, password: &str) -> String {
@@ -121,6 +121,24 @@ async fn operator_can_mutate_devices_but_not_manage_users_or_restore() {
         .expect("users");
     assert_eq!(users.status(), StatusCode::FORBIDDEN);
 
+    let activate = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/users/activate")
+                .header("cookie", &cookie)
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from(form_with_csrf(
+                    &cookie,
+                    "user_uuid=00000000-0000-0000-0000-000000000000&password=blocked-password",
+                )))
+                .unwrap(),
+        )
+        .await
+        .expect("activate");
+    assert_eq!(activate.status(), StatusCode::FORBIDDEN);
+
     let restore = app
         .oneshot(
             Request::builder()
@@ -178,6 +196,56 @@ async fn admin_can_create_user_and_list_users() {
     let html = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(html.contains("newops"));
     assert!(html.contains("operator"));
+}
+
+#[tokio::test]
+async fn admin_can_reset_and_activate_a_disabled_imported_user() {
+    let state = test_state().await;
+    create_user(&state.db, "imported", "temporary-password", Role::OPERATOR)
+        .await
+        .expect("create imported user");
+    let user = find_user_by_username(&state.db, "imported")
+        .await
+        .expect("find")
+        .expect("user");
+    sqlx::query("UPDATE users SET activation_state = 'disabled' WHERE user_uuid = ?")
+        .bind(user.user_uuid.to_string())
+        .execute(&state.db)
+        .await
+        .expect("disable");
+    let db = state.db.clone();
+    let app = build_router(state);
+    let cookie = login_and_get_session_cookie(&app).await;
+    let activate = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/users/activate")
+                .header("cookie", &cookie)
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from(form_with_csrf(
+                    &cookie,
+                    &format!("user_uuid={}&password=recovered-password", user.user_uuid),
+                )))
+                .unwrap(),
+        )
+        .await
+        .expect("activate");
+    assert_eq!(activate.status(), StatusCode::SEE_OTHER);
+    let activated = find_user_by_username(&db, "imported")
+        .await
+        .expect("find")
+        .expect("user");
+    assert_eq!(activated.activation_state, "active");
+    let events = list_audit_events(&db, 100).await.expect("audit");
+    assert!(events.iter().any(|event| {
+        event.action == "user_activate"
+            && event.outcome == "success"
+            && event.object_uuid == Some(user.user_uuid)
+    }));
+    let login = login_as(&app, "imported", "recovered-password").await;
+    assert!(!login.is_empty());
 }
 
 #[tokio::test]

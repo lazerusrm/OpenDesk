@@ -22,6 +22,12 @@ pub async fn test_state() -> AppState {
         public_base_url: "http://127.0.0.1:8080".to_string(),
         backup_schedule: None,
         backup_destination_configured: false,
+        client_token_hmac_key: vec![7; 32],
+        transport_introspection_key: Some(vec![9; 32]),
+        rustdesk_download_windows_url: None,
+        rustdesk_download_macos_url: None,
+        rustdesk_download_linux_url: None,
+        rustdesk_download_android_url: None,
     }
 }
 

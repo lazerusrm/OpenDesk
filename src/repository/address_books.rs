@@ -19,6 +19,8 @@ pub enum AddressBookRepositoryError {
     Validation(#[from] AddressBookValidationError),
     #[error("address book or entry not found")]
     NotFound,
+    #[error("address book access is read-only")]
+    Forbidden,
     #[error("address book or entry conflicts with an existing record")]
     Conflict,
 }
@@ -127,25 +129,179 @@ pub async fn find_address_book_for_owner(
     Ok(address_book_from_row(row))
 }
 
-pub async fn create_address_book(
+pub async fn find_address_book_for_client_access(
+    pool: &SqlitePool,
+    user_uuid: Uuid,
+    address_book_uuid: Uuid,
+) -> Result<(AddressBook, String), AddressBookRepositoryError> {
+    let row = sqlx::query_as::<_, (String, String, String, String)>(
+        "SELECT book.address_book_uuid, book.owner_user_uuid, book.name,
+                CASE WHEN book.owner_user_uuid = ? THEN 'admin'
+                     WHEN MAX(CASE rule.permission
+                         WHEN 'read' THEN 1 WHEN 'write' THEN 2 WHEN 'admin' THEN 3 ELSE 0 END) = 3
+                         THEN 'admin'
+                     WHEN MAX(CASE rule.permission
+                         WHEN 'read' THEN 1 WHEN 'write' THEN 2 WHEN 'admin' THEN 3 ELSE 0 END) = 2
+                         THEN 'write'
+                     ELSE 'read' END
+         FROM address_books book
+         LEFT JOIN address_book_access_rules rule
+           ON rule.address_book_uuid = book.address_book_uuid
+          AND (
+              (rule.principal_type = 'user' AND rule.principal_uuid = ?)
+              OR (rule.principal_type = 'group' AND EXISTS (
+                  SELECT 1 FROM access_group_memberships membership
+                  WHERE membership.user_uuid = ?
+                    AND membership.access_group_uuid = rule.principal_uuid
+              ))
+          )
+         WHERE book.address_book_uuid = ?
+           AND (book.owner_user_uuid = ? OR rule.address_book_uuid IS NOT NULL)
+         GROUP BY book.address_book_uuid, book.owner_user_uuid, book.name",
+    )
+    .bind(user_uuid.to_string())
+    .bind(user_uuid.to_string())
+    .bind(user_uuid.to_string())
+    .bind(address_book_uuid.to_string())
+    .bind(user_uuid.to_string())
+    .fetch_optional(pool)
+    .await
+    .map_err(map_sql_error)?
+    .ok_or(AddressBookRepositoryError::NotFound)?;
+    Ok((address_book_from_row((row.0, row.1, row.2)), row.3))
+}
+
+pub async fn find_personal_address_book(
+    pool: &SqlitePool,
+    owner_user_uuid: Uuid,
+) -> Result<AddressBook, AddressBookRepositoryError> {
+    let row = sqlx::query_as::<_, (String, String, String)>(
+        "SELECT address_book_uuid, owner_user_uuid, name
+         FROM address_books
+         WHERE owner_user_uuid = ? AND book_kind = 'personal'",
+    )
+    .bind(owner_user_uuid.to_string())
+    .fetch_optional(pool)
+    .await
+    .map_err(map_sql_error)?
+    .ok_or(AddressBookRepositoryError::NotFound)?;
+    Ok(address_book_from_row(row))
+}
+
+pub async fn list_shared_address_books_for_user(
+    pool: &SqlitePool,
+    user_uuid: Uuid,
+) -> Result<Vec<(AddressBook, String, String)>, AddressBookRepositoryError> {
+    let rows = sqlx::query_as::<_, (String, String, String, String, String)>(
+        "SELECT book.address_book_uuid, book.owner_user_uuid, book.name,
+                owner.username,
+                CASE WHEN book.owner_user_uuid = ? THEN 'admin'
+                     ELSE CASE MAX(CASE rule.permission
+                         WHEN 'read' THEN 1 WHEN 'write' THEN 2 WHEN 'admin' THEN 3 ELSE 0 END)
+                         WHEN 3 THEN 'admin' WHEN 2 THEN 'write' ELSE 'read' END
+                END
+         FROM address_books book
+         JOIN users owner ON owner.user_uuid = book.owner_user_uuid
+         LEFT JOIN address_book_access_rules rule ON rule.address_book_uuid = book.address_book_uuid
+         WHERE book.book_kind = 'shared'
+           AND (
+               book.owner_user_uuid = ?
+               OR (rule.principal_type = 'user' AND rule.principal_uuid = ?)
+               OR (rule.principal_type = 'group' AND EXISTS (
+                   SELECT 1 FROM access_group_memberships membership
+                   WHERE membership.user_uuid = ?
+                     AND membership.access_group_uuid = rule.principal_uuid
+               ))
+           )
+         GROUP BY book.address_book_uuid, book.owner_user_uuid, book.name, owner.username
+         ORDER BY book.name ASC, book.address_book_uuid ASC",
+    )
+    .bind(user_uuid.to_string())
+    .bind(user_uuid.to_string())
+    .bind(user_uuid.to_string())
+    .bind(user_uuid.to_string())
+    .fetch_all(pool)
+    .await
+    .map_err(map_sql_error)?;
+    Ok(rows
+        .into_iter()
+        .map(|(book, owner, name, owner_name, permission)| {
+            (
+                address_book_from_row((book, owner, name)),
+                owner_name,
+                permission,
+            )
+        })
+        .collect())
+}
+
+pub async fn list_address_book_tags_for_client(
+    pool: &SqlitePool,
+    user_uuid: Uuid,
+    address_book_uuid: Uuid,
+) -> Result<Vec<(String, i64)>, AddressBookRepositoryError> {
+    find_address_book_for_client_access(pool, user_uuid, address_book_uuid).await?;
+    sqlx::query_as(
+        "SELECT name, color FROM address_book_tags
+         WHERE address_book_uuid = ? ORDER BY name ASC",
+    )
+    .bind(address_book_uuid.to_string())
+    .fetch_all(pool)
+    .await
+    .map_err(map_sql_error)
+}
+
+async fn create_address_book_with_kind(
     pool: &SqlitePool,
     owner_user_uuid: Uuid,
     name: &str,
+    book_kind: &str,
 ) -> Result<AddressBook, AddressBookRepositoryError> {
     let book = AddressBook::new(Uuid::new_v4(), owner_user_uuid, name)?;
     let mut tx = pool.begin().await.map_err(map_sql_error)?;
     require_user(&mut tx, owner_user_uuid).await?;
+    if book_kind == "personal" {
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM address_books
+             WHERE owner_user_uuid = ? AND book_kind = 'personal')",
+        )
+        .bind(owner_user_uuid.to_string())
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(map_sql_error)?;
+        if exists {
+            return Err(AddressBookRepositoryError::Conflict);
+        }
+    }
     sqlx::query(
-        "INSERT INTO address_books (address_book_uuid, owner_user_uuid, name) VALUES (?, ?, ?)",
+        "INSERT INTO address_books (address_book_uuid, owner_user_uuid, name, book_kind)
+         VALUES (?, ?, ?, ?)",
     )
     .bind(book.address_book_uuid.to_string())
     .bind(book.owner_user_uuid.to_string())
     .bind(&book.name)
+    .bind(book_kind)
     .execute(&mut *tx)
     .await
     .map_err(map_sql_error)?;
     tx.commit().await.map_err(map_sql_error)?;
     Ok(book)
+}
+
+pub async fn create_personal_address_book(
+    pool: &SqlitePool,
+    owner_user_uuid: Uuid,
+    name: &str,
+) -> Result<AddressBook, AddressBookRepositoryError> {
+    create_address_book_with_kind(pool, owner_user_uuid, name, "personal").await
+}
+
+pub async fn create_shared_address_book(
+    pool: &SqlitePool,
+    owner_user_uuid: Uuid,
+    name: &str,
+) -> Result<AddressBook, AddressBookRepositoryError> {
+    create_address_book_with_kind(pool, owner_user_uuid, name, "shared").await
 }
 
 pub async fn rename_address_book(

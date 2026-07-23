@@ -36,7 +36,7 @@ The row criteria below remain the acceptance contract. This classification preve
 
 | Class | Validation IDs | Meaning in this baseline |
 |---|---|---|
-| Established implementation evidence | C-001 through C-010, E-001 through E-008, MIG-001 through MIG-004, SEC-002 through SEC-005, SEC-007 through SEC-008, S-005, S-006, S-008 | Current-repository tests or controlled probes cover the stated behavior. Record environment/date/operator evidence before cutover. |
+| Established implementation evidence | C-001 through C-015, E-001 through E-008, MIG-001 through MIG-004, SEC-002 through SEC-005, SEC-007 through SEC-008, S-005, S-006, S-008 | Current-repository tests or controlled probes cover the stated behavior. Record environment/date/operator evidence before cutover. |
 | Established discovery, validation still required | S-001 through S-004, S-009, D-003 through D-004, R-001, R-006, RS-001 through RS-009 | Authorized read-only discovery or partial Linux/config evidence supports scope only. Execute the required endpoint, network, version, or owner decision tests. |
 | Required client/operator validation | D-001 through D-016, R-002 through R-006, RS-001 through RS-009 | Windows/Linux/macOS endpoint tests and Android/iOS operator workflows remain required; generated artifacts and source inspection do not substitute for released-client evidence. |
 | Required cutover evidence | CUT-001 through CUT-006, RS-003 through RS-009 | Pilot, parallel-run, owner inventory/decisions, network scenarios, and cutover drills remain open. |
@@ -80,6 +80,11 @@ Research rows count as complete only when `docs/research-roadmap.md` contains th
 | C-008 | Health page | Open health dashboard | Shows DNS, ports, service status, and timestamp |
 | C-009 | User administration | Create, disable, and role-assign test users | Login and permissions change according to the selected role |
 | C-010 | Deployment page | Generate deployment artifact from UI | Artifact matches selected OS/site/tags/scope and records an audit event |
+| C-011 | Official-client account API | Exercise login, current-user, rotation, expiry, binding, and logout | Opaque keyed-digest tokens obey identity, activation, expiry, rotation, and revocation rules without raw-token storage. |
+| C-012 | Scoped client synchronization | Query accessible groups, users, and peers with bearer auth | Only explicitly granted active users and non-archived devices are returned with canonical pagination. |
+| C-013 | Client address-book reads | Read personal/shared profiles, peers, and tags | Book access and device visibility are both enforced; owners without share rules retain admin access. |
+| C-014 | Client address-book mutations | Add/update/delete peers and add/rename/recolor/delete tags | Read principals are denied, write/admin principals succeed transactionally, hidden devices are denied, and non-empty password/hash fields are rejected. |
+| C-015 | Transport token admission | Authorize direct/relay requests through the internal token/device endpoint and transport fork | Internal HMAC authentication, active token state, default-deny visibility, bounded fail-closed HTTP behavior, allow/deny responses, binary build, and loopback startup pass; real official-client sessions remain required. |
 
 ## Client Delivery Validation
 

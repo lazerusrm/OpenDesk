@@ -9,12 +9,18 @@ license = "Apache-2.0"
 anyhow = "1"
 argon2 = "0.5"
 askama = "0.12"
+base64 = "0.22"
+bcrypt = "0.15.1"
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 
 axum = { version = "0.8", features = ["macros"] }
 axum-extra = { version = "0.10", features = ["cookie"] }
 cookie = "0.18"
+ed25519-dalek = "2"
 hex = "0.4"
+hmac = "0.12"
 rand = "0.8"
+terminal-input = { package = "rpassword", version = "7.4" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
@@ -55,3 +61,15 @@ path = "src/bin/opendesk-migration-dry-run.rs"
 [[bin]]
 name = "opendesk-migration-preflight"
 path = "src/bin/opendesk-migration-preflight.rs"
+
+[[bin]]
+name = "opendesk-migration-apply"
+path = "src/bin/opendesk-migration-apply.rs"
+
+[[bin]]
+name = "opendesk-migration-credentials-attach"
+path = "src/bin/opendesk-migration-credentials-attach.rs"
+
+[[bin]]
+name = "opendesk-user-password-reset"
+path = "src/bin/opendesk-user-password-reset.rs"

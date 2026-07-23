@@ -92,12 +92,13 @@ async fn backup_export_and_restore_round_trip() {
     .execute(&source.db)
     .await
     .expect("create address book");
+    let entry_uuid = uuid::Uuid::new_v4();
     sqlx::query(
         "INSERT INTO address_book_entries
          (address_book_entry_uuid, address_book_uuid, device_uuid, alias, notes, position)
          VALUES (?, ?, ?, ?, ?, ?)",
     )
-    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(entry_uuid.to_string())
     .bind(address_book_uuid.to_string())
     .bind(device.device_uuid.to_string())
     .bind("Backup Device")
@@ -106,6 +107,27 @@ async fn backup_export_and_restore_round_trip() {
     .execute(&source.db)
     .await
     .expect("create address book entry");
+    sqlx::query(
+        "INSERT INTO address_book_tags (address_book_uuid, name, color) VALUES (?, 'Critical', 7)",
+    )
+    .bind(address_book_uuid.to_string())
+    .execute(&source.db)
+    .await
+    .expect("address book tag");
+    sqlx::query(
+        "INSERT INTO address_book_entry_tags
+         (address_book_entry_uuid, address_book_uuid, tag_name) VALUES (?, ?, 'Critical')",
+    )
+    .bind(entry_uuid.to_string())
+    .bind(address_book_uuid.to_string())
+    .execute(&source.db)
+    .await
+    .expect("entry tag");
+    sqlx::query("UPDATE users SET activation_state = 'disabled' WHERE user_uuid = ?")
+        .bind(admin.user_uuid.to_string())
+        .execute(&source.db)
+        .await
+        .expect("disable user");
 
     let exported = export_backup_document(&source.db)
         .await
@@ -115,6 +137,20 @@ async fn backup_export_and_restore_round_trip() {
     let parsed = parse_backup_json(&json).expect("parse backup");
 
     let target = test_state().await;
+    let target_admin = opendesk::repository::users::find_user_by_username(&target.db, "admin")
+        .await
+        .expect("target admin")
+        .expect("target admin");
+    opendesk::repository::client_access_tokens::issue_client_access_token(
+        &target.db,
+        &target.client_token_hmac_key,
+        target_admin.user_uuid,
+        "111111",
+        "restore-client",
+        time::OffsetDateTime::now_utc(),
+    )
+    .await
+    .expect("client token");
     restore_backup_document(&target.db, &parsed)
         .await
         .expect("restore backup");
@@ -145,6 +181,25 @@ async fn backup_export_and_restore_round_trip() {
         .await
         .expect("restored access group");
     assert_eq!(restored_group_count, 1);
+    let client_token_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM client_access_tokens")
+        .fetch_one(&target.db)
+        .await
+        .expect("client tokens");
+    assert_eq!(client_token_count, 0);
+    let restored_activation: String =
+        sqlx::query_scalar("SELECT activation_state FROM users WHERE user_uuid = ?")
+            .bind(admin.user_uuid.to_string())
+            .fetch_one(&target.db)
+            .await
+            .expect("activation state");
+    assert_eq!(restored_activation, "disabled");
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM address_book_entry_tags")
+            .fetch_one(&target.db)
+            .await
+            .expect("entry tags"),
+        1
+    );
 }
 
 #[tokio::test]
@@ -165,6 +220,6 @@ async fn backup_export_json_endpoint_returns_schema_version() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let json = String::from_utf8(body.to_vec()).expect("utf8");
-    assert!(json.contains("\"schema_version\": 2"));
+    assert!(json.contains("\"schema_version\": 3"));
     assert!(json.contains("\"excludes_sessions\": true"));
 }

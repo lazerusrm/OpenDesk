@@ -46,6 +46,7 @@ pkill -x opendesk 2>/dev/null || true
 OPENDESK_LISTEN_ADDR=0.0.0.0:18080 \\
 OPENDESK_DATA_DIR=/opt/opendesk-dev/data \\
 OPENDESK_PUBLIC_BASE_URL=http://127.0.0.1:18080 \\
+OPENDESK_CLIENT_TOKEN_HMAC_KEY=0707070707070707070707070707070707070707070707070707070707070707 \\
 OPENDESK_BOOTSTRAP_ADMIN_PASSWORD='${dev_admin_password}' \\
 nohup ./target/release/opendesk > /tmp/opendesk.log 2>&1 &
 for attempt in \$(seq 1 30); do

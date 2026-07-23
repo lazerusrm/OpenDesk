@@ -16,6 +16,13 @@ function copyTextValue(text, button) {
 }
 
 document.addEventListener("click", (event) => {
+  const navToggle = event.target.closest("[data-nav-toggle]");
+  if (navToggle) {
+    const nav = document.getElementById(navToggle.getAttribute("aria-controls"));
+    const open = nav?.classList.toggle("is-open") ?? false;
+    navToggle.setAttribute("aria-expanded", String(open));
+    return;
+  }
   const button = event.target.closest("[data-copy-text], [data-copy-input]");
   if (!button) {
     return;

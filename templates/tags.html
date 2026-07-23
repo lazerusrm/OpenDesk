@@ -17,14 +17,12 @@
     <thead>
       <tr>
         <th>Name</th>
-        <th>Tag UUID</th>
       </tr>
     </thead>
     <tbody>
       {% for tag in tags %}
       <tr>
         <td>{{ tag.name }}</td>
-        <td><code>{{ tag.tag_uuid }}</code></td>
       </tr>
       {% endfor %}
     </tbody>

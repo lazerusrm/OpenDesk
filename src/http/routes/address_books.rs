@@ -20,9 +20,10 @@ use crate::http::views::{
     AddressBookEntryRowView, AddressBookRowView, AddressBooksListView,
 };
 use crate::repository::address_books::{
-    create_address_book, create_address_book_entry, delete_address_book_entry,
-    find_address_book_entry, find_address_book_for_owner, list_address_book_entries,
-    list_address_books_for_owner, update_address_book_entry, AddressBookRepositoryError,
+    create_address_book_entry, create_personal_address_book, create_shared_address_book,
+    delete_address_book_entry, find_address_book_entry, find_address_book_for_owner,
+    list_address_book_entries, list_address_books_for_owner, update_address_book_entry,
+    AddressBookRepositoryError,
 };
 use crate::repository::device_visibility::is_device_visible_to_user;
 use crate::repository::device_visibility::list_visible_device_uuids_for_user;
@@ -56,6 +57,7 @@ pub fn routes() -> Router<AppState> {
 struct AddressBookCreateForm {
     csrf_token: String,
     name: String,
+    book_kind: String,
 }
 
 #[derive(Deserialize)]
@@ -79,6 +81,7 @@ fn parse_entry(form: &AddressBookEntryForm) -> Option<(Uuid, String, Option<Stri
 
 fn repository_error_response(error: AddressBookRepositoryError) -> Response {
     match error {
+        AddressBookRepositoryError::Forbidden => StatusCode::FORBIDDEN.into_response(),
         AddressBookRepositoryError::NotFound => StatusCode::NOT_FOUND.into_response(),
         AddressBookRepositoryError::Validation(_) | AddressBookRepositoryError::Conflict => {
             StatusCode::BAD_REQUEST.into_response()
@@ -165,9 +168,14 @@ async fn address_book_create_submit(
 ) -> Result<Response, Response> {
     let actor = require_action(&state, &jar, Action::AddressBookCreate).await?;
     require_csrf(&actor, &form.csrf_token)?;
-    let book = create_address_book(&state.db, actor.user_uuid, form.name.trim())
-        .await
-        .map_err(repository_error_response)?;
+    let book = match form.book_kind.as_str() {
+        "personal" => {
+            create_personal_address_book(&state.db, actor.user_uuid, form.name.trim()).await
+        }
+        "shared" => create_shared_address_book(&state.db, actor.user_uuid, form.name.trim()).await,
+        _ => return Err(StatusCode::BAD_REQUEST.into_response()),
+    }
+    .map_err(repository_error_response)?;
     Ok(Redirect::to(&format!("/address-books/{}", book.address_book_uuid)).into_response())
 }
 

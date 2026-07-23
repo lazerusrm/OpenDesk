@@ -17,14 +17,12 @@
     <thead>
       <tr>
         <th>Name</th>
-        <th>Site UUID</th>
       </tr>
     </thead>
     <tbody>
       {% for site in sites %}
       <tr>
         <td>{{ site.name }}</td>
-        <td><code>{{ site.site_uuid }}</code></td>
       </tr>
       {% endfor %}
     </tbody>

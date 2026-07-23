@@ -159,9 +159,10 @@ async fn address_books_are_owner_scoped_and_entries_require_real_devices() {
     )
     .await
     .expect("owner visibility");
-    let book = address_books::create_address_book(&state.db, owner.user_uuid, " Favorites ")
-        .await
-        .expect("book");
+    let book =
+        address_books::create_personal_address_book(&state.db, owner.user_uuid, " Favorites ")
+            .await
+            .expect("book");
     assert_eq!(book.name, "Favorites");
     assert!(
         address_books::list_address_books_for_owner(&state.db, other_owner.user_uuid)

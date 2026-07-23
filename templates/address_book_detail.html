@@ -2,7 +2,7 @@
 {% block content %}
 <section class="card">
   <h1>Address book: {{ name }}</h1>
-  <p><code>{{ address_book_uuid }}</code></p>
+  <p class="muted">Manage the devices and labels synchronized to this address book.</p>
   {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
 </section>
 <section class="card">
@@ -22,7 +22,7 @@
   <h2>Entries</h2>
   {% for entry in entries %}
   <article>
-    <h3>{{ entry.alias }}</h3><p><code>{{ entry.device_uuid }}</code></p>
+    <h3>{{ entry.alias }}</h3>
     {% if can_update %}
     <form method="post" action="/address-books/{{ address_book_uuid }}/entries/{{ entry.address_book_entry_uuid }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

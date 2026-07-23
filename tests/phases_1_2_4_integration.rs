@@ -88,7 +88,7 @@ async fn deployment_page_renders_macos_script_and_filename_fallback() {
     assert!(html.contains("macOS shell script"));
     assert!(html.contains("OS_FAMILY=") && html.contains("macos"));
     assert!(html.contains("rustdesk-host=rd.example.com,"));
-    assert!(html.contains("Official RustDesk clients"));
+    assert!(html.contains("official RustDesk clients"));
     assert!(html.contains("https://github.com/rustdesk/rustdesk/releases"));
 }
 

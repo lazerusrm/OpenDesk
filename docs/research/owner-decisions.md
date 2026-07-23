@@ -23,12 +23,12 @@ Every row still needs an owner decision and the validation IDs listed in the par
 
 | Area | Current Evidence | Required Decision | Default Until Decided |
 |---|---|---|---|
-| Windows custom clients | Read-only inventory shows Windows-only custom-client records; existence is not proof of current use. | Required, equivalent, or retired. | Required: generated Windows install/config flow. |
-| Strategies/policies | Strategy rows include configuration options. | Required, equivalent, or retired. | Required: OpenDesk policy model. |
-| Personal address books | Address-book records and linked peers are populated. | Required, equivalent, or retired. | Required: OpenDesk address book/device list. |
+| Windows custom clients | Read-only inventory shows five Windows-only custom-client records with opaque installer/config fields and password field; existence is not proof of current use. | Required, equivalent, or retired. | Required: generated Windows install/config flow. |
+| Strategies/policies | Three strategy rows use `config_options` but are unassigned to users, groups, and peers. | Required, equivalent, or retired. | Required: OpenDesk policy model. |
+| Personal address books | Source inventory shows 13 address books and 7 active peer links; all referenced peers resolve. | Required, equivalent, or retired. | Required: OpenDesk address book/device list. |
 | Native RustDesk address book | Native app parity is not yet proven necessary. | Required, equivalent, or retired. | Equivalent: OpenDesk web address book, including mobile operator workflow. |
 | Managed/passwordless address-book access | Address-book entries contain hashed secret material. | Required, equivalent, or retired. | Unknown; blocks cutover until owner decides. |
-| Device/user assignments | Peer, user, and group associations are populated. | Required, equivalent, or retired. | Required: OpenDesk ownership metadata. |
+| Device/user assignments | Read-only source inventory shows 12 users, 14 groups, 40 active peers, and every user-group/address-book-peer reference resolves; no peer group assignments exist. | Required, equivalent, or retired. | Required: OpenDesk ownership metadata. |
 | Control roles | Group and cross-group mapping structures are populated; this does not establish effective operator permissions. | Required, equivalent, or retired. | Equivalent: OpenDesk dashboard/API role model. |
 | 2FA | No inspected user rows had 2FA enabled. | Required hardening or retired. | Retired for parity, optional for hardening. |
 | Third-party auth | No inspected third-party auth rows were identified. | Required hardening or retired. | Retired for parity, optional for hardening. |

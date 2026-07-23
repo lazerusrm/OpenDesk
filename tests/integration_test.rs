@@ -227,6 +227,13 @@ async fn linux_script_export_executes_check_in_against_running_server() {
     )
     .await
     .expect("create token");
+    opendesk::repository::server_config::save_server_config(
+        &state.db,
+        &opendesk::domain::server_config::default_server_config(),
+        None,
+    )
+    .await
+    .expect("save server config");
 
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
@@ -247,14 +254,10 @@ async fn linux_script_export_executes_check_in_against_running_server() {
         &format!("http://{addr}"),
     )
     .await;
-    let export_uri = format!(
-        "/deployment/linux.sh?enrollment_token_value={}",
-        created.token_value
-    );
     let response = build_router(state.clone())
         .oneshot(
             Request::builder()
-                .uri(export_uri)
+                .uri("/deployment/linux.sh")
                 .header("cookie", &session_cookie)
                 .body(Body::empty())
                 .unwrap(),
@@ -265,8 +268,10 @@ async fn linux_script_export_executes_check_in_against_running_server() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let script = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(script.contains("#!/usr/bin/env bash"));
-    assert!(script.contains(&created.token_value));
+    assert!(!script.contains(&created.token_value));
+    assert!(script.contains("PASTE_ENROLLMENT_TOKEN_VALUE"));
     assert!(script.contains("opendesk enrollment check-in http_status="));
+    let script = script.replace("PASTE_ENROLLMENT_TOKEN_VALUE", &created.token_value);
 
     let temp_root = std::env::temp_dir().join(format!(
         "opendesk-linux-script-test-{}",

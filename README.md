@@ -58,10 +58,11 @@ snapshot and never imports or mutates state. Pass `--manifest approved-migration
 
 ```bash
 cargo test
-OPENDESK_LISTEN_ADDR=127.0.0.1:8080 cargo run
+OPENDESK_CLIENT_TOKEN_HMAC_KEY="$(openssl rand -hex 32)" \
+  OPENDESK_LISTEN_ADDR=127.0.0.1:8080 cargo run
 ```
 
-Default bootstrap admin credentials come from `OPENDESK_BOOTSTRAP_ADMIN_USERNAME` and `OPENDESK_BOOTSTRAP_ADMIN_PASSWORD` (change before any real deployment).
+Default bootstrap admin credentials come from `OPENDESK_BOOTSTRAP_ADMIN_USERNAME` and `OPENDESK_BOOTSTRAP_ADMIN_PASSWORD` (change before any real deployment). `OPENDESK_CLIENT_TOKEN_HMAC_KEY` is also required and must be a stable random hexadecimal value containing at least 32 bytes; store it as a deployment secret because changing it invalidates every official-client login token.
 
 Compose deployment:
 

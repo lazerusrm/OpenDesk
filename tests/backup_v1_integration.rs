@@ -103,9 +103,17 @@ async fn backup_v1_boundary_conversion_restores_without_new_collections() {
         "device_visibility_grants",
         "user_device_visibility_grants",
         "address_books",
+        "address_book_access_rules",
+        "address_book_tags",
         "address_book_entries",
+        "address_book_entry_tags",
     ] {
         object.remove(field);
+    }
+    for user in object["users"].as_array_mut().expect("users") {
+        user.as_object_mut()
+            .expect("user")
+            .remove("activation_state");
     }
     let parsed =
         parse_backup_json(&serde_json::to_string(&v1).expect("serialize v1")).expect("convert v1");

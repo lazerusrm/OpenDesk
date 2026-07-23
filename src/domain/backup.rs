@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use super::access_group::AccessGroup;
 use super::access_group_membership::AccessGroupMembership;
-use super::address_book::{AddressBook, AddressBookEntry};
+use super::address_book::AddressBookEntry;
 use super::device::Device;
 use super::device_visibility::{DeviceVisibilityGrant, UserDeviceVisibilityGrant};
 use super::server_config::ServerConfig;
@@ -15,9 +15,9 @@ use super::tag::Tag;
 mod backup_scoped_validation;
 #[path = "backup_v1_conversion.rs"]
 mod backup_v1_conversion;
-use backup_v1_conversion::BackupDocumentV1;
+use backup_v1_conversion::{BackupDocumentV1, BackupDocumentV2};
 
-pub const BACKUP_SCHEMA_VERSION: u32 = 2;
+pub const BACKUP_SCHEMA_VERSION: u32 = 3;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -55,6 +55,7 @@ pub struct BackupUser {
     pub username: String,
     pub password_hash: String,
     pub role: String,
+    pub activation_state: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -66,6 +67,40 @@ pub struct BackupEnrollmentToken {
     pub site_uuid: Option<Uuid>,
     pub expires_at: Option<String>,
     pub revoked_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct BackupAddressBook {
+    pub address_book_uuid: Uuid,
+    pub owner_user_uuid: Uuid,
+    pub name: String,
+    pub book_kind: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct BackupAddressBookAccessRule {
+    pub address_book_uuid: Uuid,
+    pub principal_type: String,
+    pub principal_uuid: Uuid,
+    pub permission: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct BackupAddressBookTag {
+    pub address_book_uuid: Uuid,
+    pub name: String,
+    pub color: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct BackupAddressBookEntryTag {
+    pub address_book_entry_uuid: Uuid,
+    pub address_book_uuid: Uuid,
+    pub tag_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -82,8 +117,11 @@ pub struct BackupDocument {
     pub access_group_memberships: Vec<AccessGroupMembership>,
     pub device_visibility_grants: Vec<DeviceVisibilityGrant>,
     pub user_device_visibility_grants: Vec<UserDeviceVisibilityGrant>,
-    pub address_books: Vec<AddressBook>,
+    pub address_books: Vec<BackupAddressBook>,
+    pub address_book_access_rules: Vec<BackupAddressBookAccessRule>,
+    pub address_book_tags: Vec<BackupAddressBookTag>,
     pub address_book_entries: Vec<AddressBookEntry>,
+    pub address_book_entry_tags: Vec<BackupAddressBookEntryTag>,
     pub server_config: Option<ServerConfig>,
     pub enrollment_tokens: Vec<BackupEnrollmentToken>,
     pub users: Vec<BackupUser>,
@@ -140,9 +178,9 @@ pub fn render_backup_json(document: &BackupDocument) -> Result<String, serde_jso
     serde_json::to_string_pretty(document)
 }
 
-/// Parse current backups and convert the released v1 shape at this external boundary.
-/// Current exports and serialized restores are always v2; v1 conversion adds only
-/// the new empty collections and validates the resulting current document.
+/// Parse released backups and convert older shapes at this external boundary.
+/// Current exports and restores are always v3; v1 and v2 conversions add only
+/// explicitly absent fields before validating the current document.
 pub fn parse_backup_json(value: &str) -> Result<BackupDocument, serde_json::Error> {
     let raw: serde_json::Value = serde_json::from_str(value)?;
     let version = raw
@@ -156,6 +194,9 @@ pub fn parse_backup_json(value: &str) -> Result<BackupDocument, serde_json::Erro
         })? as u32;
     match version {
         1 => serde_json::from_value::<BackupDocumentV1>(raw)?
+            .into_current()
+            .map_err(backup_validation_error),
+        2 => serde_json::from_value::<BackupDocumentV2>(raw)?
             .into_current()
             .map_err(backup_validation_error),
         BACKUP_SCHEMA_VERSION => {
@@ -194,7 +235,10 @@ mod tests {
             device_visibility_grants: vec![],
             user_device_visibility_grants: vec![],
             address_books: vec![],
+            address_book_access_rules: vec![],
+            address_book_tags: vec![],
             address_book_entries: vec![],
+            address_book_entry_tags: vec![],
             server_config: None,
             enrollment_tokens: vec![],
             users: vec![BackupUser {
@@ -202,6 +246,7 @@ mod tests {
                 username: "admin".to_string(),
                 password_hash: "hash".to_string(),
                 role: "admin".to_string(),
+                activation_state: "active".to_string(),
             }],
         }
     }
@@ -227,7 +272,17 @@ mod tests {
             device_tags: document.device_tags.clone(),
             server_config: document.server_config.clone(),
             enrollment_tokens: document.enrollment_tokens.clone(),
-            users: document.users.clone(),
+            users: document
+                .users
+                .iter()
+                .cloned()
+                .map(|user| backup_v1_conversion::LegacyBackupUser {
+                    user_uuid: user.user_uuid,
+                    username: user.username,
+                    password_hash: user.password_hash,
+                    role: user.role,
+                })
+                .collect(),
         };
         let json = serde_json::to_string(&v1).expect("serialize v1 backup");
         let converted = parse_backup_json(&json).expect("convert v1 backup");

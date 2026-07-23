@@ -29,6 +29,12 @@ async fn main() -> anyhow::Result<()> {
         public_base_url: config.public_base_url,
         backup_schedule: config.backup_schedule,
         backup_destination_configured: config.backup_destination.is_some(),
+        client_token_hmac_key: config.client_token_hmac_key,
+        transport_introspection_key: config.transport_introspection_key,
+        rustdesk_download_windows_url: config.rustdesk_download_windows_url,
+        rustdesk_download_macos_url: config.rustdesk_download_macos_url,
+        rustdesk_download_linux_url: config.rustdesk_download_linux_url,
+        rustdesk_download_android_url: config.rustdesk_download_android_url,
     };
     let app = build_router(state);
     let listener = tokio::net::TcpListener::bind(config.listen_addr).await?;

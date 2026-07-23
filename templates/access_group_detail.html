@@ -2,7 +2,7 @@
 {% block content %}
 <section class="card">
   <h1>Access group: {{ name }}</h1>
-  <p><code>{{ access_group_uuid }}</code></p>
+  <p class="muted">Choose the people in this group and the devices they can see.</p>
   {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
 </section>
 <section class="card">
@@ -12,7 +12,7 @@
     {% for user in user_options %}<label><input type="checkbox" name="user_uuid" value="{{ user.user_uuid }}"{% if user.selected %} checked{% endif %}> {{ user.username }}</label>{% endfor %}
     <button type="submit">Save members</button>
   </form>
-  <ul>{% for member in members %}<li>{{ member.username }} <code>{{ member.user_uuid }}</code></li>{% endfor %}</ul>
+  <ul>{% for member in members %}<li>{{ member.username }}</li>{% endfor %}</ul>
 </section>
 <section class="card">
   <h2>Device visibility</h2>
@@ -21,6 +21,6 @@
     {% for device in device_options %}<label><input type="checkbox" name="device_uuid" value="{{ device.device_uuid }}"{% if device.selected %} checked{% endif %}> {{ device.alias }}</label>{% endfor %}
     <button type="submit">Save device visibility</button>
   </form>
-  <ul>{% for device in devices %}<li>{{ device.alias }} <code>{{ device.device_uuid }}</code></li>{% endfor %}</ul>
+  <ul>{% for device in devices %}<li>{{ device.alias }}</li>{% endfor %}</ul>
 </section>
 {% endblock %}

@@ -45,6 +45,8 @@ OpenDesk should wrap, monitor, and document this stack rather than modify it dur
 
 The official client contains custom server configuration parsing in `src/custom_server.rs`.
 
+The client heartbeat worker posts JSON to `/api/heartbeat` with `id`, `uuid`, numeric `ver`, optional `conns`, and numeric `modified_at`; it posts system information to `/api/sysinfo` with `id`, `uuid`, `version`, and platform-dependent metadata. OpenDesk accepts only bounded payloads at this isolated boundary and returns compatibility acknowledgements. It deliberately does not persist unauthenticated liveness or system metadata, enroll devices, authenticate dashboard sessions, return secrets, disconnect sessions, or push strategy/configuration controls. Authenticated enrollment remains `/api/enrollments/check-in` with a scoped token.
+
 The visible filename form supports:
 
 ```text

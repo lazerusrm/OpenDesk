@@ -9,12 +9,11 @@ use axum_extra::extract::cookie::CookieJar;
 use serde::Deserialize;
 
 use crate::app_state::AppState;
-use crate::auth;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::http::routes::render::render_login;
 use crate::http::session::{end_session, require_csrf, require_present_same_origin, start_session};
 use crate::repository::audit_events::insert_audit_event;
-use crate::repository::users::find_user_by_username;
+use crate::repository::users::authenticate_user_password;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -47,17 +46,12 @@ async fn login_submit(
     if !require_present_same_origin(&headers, &state.public_base_url) {
         return Err(StatusCode::FORBIDDEN);
     }
-    let user = find_user_by_username(&state.db, form.username.trim())
+    let user = authenticate_user_password(&state.db, form.username.trim(), &form.password)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let Some(user) = user else {
         return Ok(render_login(Some("Invalid username or password".to_string())).into_response());
     };
-    if user.activation_state != "active"
-        || auth::verify_password(&form.password, &user.password_hash).is_err()
-    {
-        return Ok(render_login(Some("Invalid username or password".to_string())).into_response());
-    }
     let (jar, _) = start_session(&state, jar, user.user_uuid)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

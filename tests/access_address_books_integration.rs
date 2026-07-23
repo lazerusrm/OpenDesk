@@ -81,6 +81,19 @@ async fn access_group_pages_are_admin_only_and_replacements_prg() {
         .await
         .expect("detail");
     assert_eq!(detail.status(), StatusCode::OK);
+    let detail_html = String::from_utf8(
+        detail
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    assert!(detail_html.contains("Operators"));
+    assert!(!detail_html.contains("Access group UUID"));
+    assert!(!detail_html.contains("<code>"));
 
     let membership_body =
         form_with_csrf(&admin_cookie, &format!("user_uuid={}", operator.user_uuid));
@@ -201,7 +214,10 @@ async fn address_books_are_owner_scoped_and_entry_posts_prg() {
                 .uri("/address-books")
                 .header("cookie", &cookie)
                 .header("content-type", "application/x-www-form-urlencoded")
-                .body(Body::from(form_with_csrf(&cookie, "name=Favorites")))
+                .body(Body::from(form_with_csrf(
+                    &cookie,
+                    "name=Favorites&book_kind=personal",
+                )))
                 .unwrap(),
         )
         .await
@@ -257,13 +273,15 @@ async fn address_books_are_owner_scoped_and_entry_posts_prg() {
     assert!(html.contains("Primary"));
     assert!(html.contains("Save entry"));
     assert!(html.contains("Delete entry"));
+    assert!(!html.contains("Address book UUID"));
+    assert!(!html.contains("<code>"));
 
     let readonly = users::create_user(&state.db, "book-reader", "reader-password", Role::READ_ONLY)
         .await
         .expect("reader");
     let readonly_cookie = login_as(&app, "book-reader", "reader-password").await;
     let readonly_book =
-        address_books::create_address_book(&state.db, readonly.user_uuid, "Reader book")
+        address_books::create_personal_address_book(&state.db, readonly.user_uuid, "Reader book")
             .await
             .expect("reader book");
     device_visibility::replace_user_device_visibility_grants(
@@ -315,7 +333,8 @@ async fn address_books_are_owner_scoped_and_entry_posts_prg() {
     assert!(!readonly_html.contains("Delete entry"));
     let _ = readonly;
 
-    let foreign = address_books::create_address_book(&state.db, Uuid::new_v4(), "No owner").await;
+    let foreign =
+        address_books::create_personal_address_book(&state.db, Uuid::new_v4(), "No owner").await;
     assert!(foreign.is_err());
     let missing = app
         .clone()

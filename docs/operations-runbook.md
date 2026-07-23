@@ -14,19 +14,44 @@ validation evidence or a site-specific deployment procedure.
   probe is a reachability signal, not proof of WAN, UDP, NAT, or client-session
   behavior. Validate those paths from the required client networks.
 
+## Official-client token key
+
+Set `OPENDESK_CLIENT_TOKEN_HMAC_KEY` to a stable random hexadecimal secret of at
+least 32 bytes before starting OpenDesk. Store it outside the repository with the
+same availability controls as other deployment secrets. OpenDesk stores only
+HMAC-SHA-256 token digests; losing or rotating this key invalidates all official-
+client login tokens and requires users to log in again. Logical backups exclude
+client access tokens.
+
+## Transport admission
+
+Transport admission is disabled unless `OPENDESK_TRANSPORT_INTROSPECTION_KEY`
+is configured. Provision the same random hexadecimal secret of at least 32 bytes
+to the authorized transport process as `OPENDESK_TRANSPORT_INTROSPECTION_KEY`;
+never pass it on a command line or place it in the repository. Configure the
+transport process with `OPENDESK_TRANSPORT_INTROSPECTION_URL` using HTTPS, or
+loopback HTTP only when both processes share a host. Authorization fails closed
+when OpenDesk is unavailable and requires an active client token plus explicit
+device visibility. This implementation evidence does not replace direct/relay
+session validation or authorize production cutover.
+
 ## Backup and restore
 
-Backups are JSON exports from `/backup/export.json`. They contain inventory,
-server configuration, enrollment-token hashes, and user password hashes. They
-exclude sessions, audit events, and endpoint check-ins. Protect exports like
+Backups are versioned JSON exports from `/backup/export.json`. They contain inventory,
+server configuration, enrollment-token hashes, user password hashes and activation
+states, scoped address-book sharing rules, and address-book tags. They
+exclude browser sessions, official-client access tokens, audit events, and endpoint check-ins. Protect exports like
 credentials and do not place them in the repository or a public web directory.
 
 Before restore, verify the schema version, sensitivity metadata, and destination
 permissions. Restore is destructive: it replaces inventory, configuration,
-users, and enrollment tokens. The application validates references, duplicate
+users, enrollment tokens, and migration provenance. Runtime client tokens are not
+restored. The application validates references, duplicate
 identifiers, roles, and server configuration before opening the replacement
-transaction. Restore into a disposable instance first, then verify login,
-server configuration, device inventory, enrollment behavior, and health checks.
+transaction. Restore into a disposable instance first. Every official client must
+log in again after restore because runtime client tokens are deliberately excluded
+and revoked by replacement. Then verify login, server configuration, device
+inventory, enrollment behavior, and health checks.
 
 The application does not silently run a backup scheduler. Set
 `OPENDESK_BACKUP_SCHEDULE` and `OPENDESK_BACKUP_DIR` only when an approved
@@ -53,11 +78,20 @@ python3 scripts/export-rustdesk-pro-sanitized.py \
   > sanitized-export.json
 ```
 
-The adapter opens the database with SQLite immutable read-only mode. It rejects
-unmapped source roles, dangling user/group or address-book/device references,
-ownerless books, source device-group assignments, populated address-book rules,
-control-role mappings, custom clients, strategies, role scopes, user roles, and
-unreviewed setting values. It does not interpret those records or silently broaden
+The adapter opens the database with SQLite immutable read-only mode. Use
+`--unsupported-inventory` first to emit only populated unsupported-table names and
+counts, without reading or exporting their contents. This supports an owner parity
+review without exposing passwords, installers, settings, or other opaque payloads.
+Normal export rejects unmapped source roles, dangling user/group or address-book/device
+references, ownerless books, source device-group assignments, populated address-book
+rules, control-role mappings, custom clients, strategies, role scopes, user roles, and
+unreviewed setting values. A category can be emitted only as count-only `retired`
+metadata by repeating `--retire-unsupported custom_client`, `strategy`, or `settings`.
+Every populated category must be named; unretired categories still fail closed. The
+retirement metadata is bound to the export digest, preflight, manifest digest, and
+separately signed apply plan. It records no payload, does not preserve behavior, and
+must not be used to claim client, session, or policy equivalence. The adapter does not
+interpret those records or silently broaden
 access. This is deliberate: custom-client definitions can carry endpoint passwords
 and opaque installers, and strategy options can claim RustDesk session controls
 that OpenDesk does not enforce. Treat the resulting export as sensitive operational
@@ -65,9 +99,18 @@ metadata even though it contains no credentials.
 
 ## Migration preflight
 
-After creating a verified, WAL-free SQLite backup of an initialized staging
-OpenDesk database, bind the exact sanitized export to that target before seeking
-an apply approval:
+Before creating the preflight, explicitly mark the disposable staging database
+inside its own SQLite file. The apply command refuses any unmarked target; never
+place this marker in a production database:
+
+```text
+sqlite3 staging-opendesk.sqlite \
+  "INSERT INTO migration_staging_targets (instance_uuid, marked_at)
+   SELECT instance_uuid, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+   FROM opendesk_instance;"
+```
+
+After the marker is present, run the read-only preflight:
 
 ```text
 opendesk-migration-preflight \
@@ -83,11 +126,56 @@ identity differs from the target. Its JSON result contains only source/target an
 backup SHA-256 bindings and must be included in the separately signed staging
 apply approval.
 
+The apply verifier key is a protected target-side deployment setting named
+`OPENDESK_MIGRATION_APPROVAL_PUBLIC_KEY_HEX`; it is not accepted as an apply
+artifact. Provision the approved 32-byte Ed25519 verifying key through the
+existing secret-management path before running the command. Keep its private
+signing counterpart separate from the staging target and never place either
+key in the repository. After a successful staging import, accounts remain disabled unless credentials
+were attached through the existing signed in-apply bridge. For the dedicated
+post-apply path, place the separately generated protected credential artifact in
+owner-only non-repository storage with mode `0600`, independently verify its
+lowercase SHA-256 digest and provenance, then run:
+
+```text
+opendesk-migration-credentials-attach \
+  --attach --activate-all \
+  --database staging-opendesk.sqlite \
+  --credentials protected-credentials.json \
+  --expected-sha256 approved-lowercase-sha256
+```
+
+The command opens only an existing owner-only regular database, binds the exact
+raw artifact digest and source/run/input/target provenance to an already applied
+migration, requires the complete unique imported-user binding set and every
+account still disabled, and atomically stores the one-login bcrypt bridge,
+activates all bound users, and records an attachment receipt. Any mismatch,
+partial prior attachment, active user, or replay rolls back without activation.
+Its output is static JSON and never includes artifact content or verifier values.
+If protected attachment is not approved, an administrator must instead set a new
+password and activate each disabled imported account from `/users`; that action
+is audited and never accepts a source password or hash.
+
+## Operator account password reset
+Run only from an interactive controlling terminal as the database owner. The existing
+SQLite file must be regular, single-link, and inaccessible to group and others:
+```text
+opendesk-user-password-reset \
+  --database /protected/path/opendesk.sqlite \
+  --username exact-account-name \
+  --reset
+```
+The command prompts twice without echo and never accepts the password from arguments,
+environment, or standard input. It requires an active exact-match account, applies the
+eight-character account policy, and emits static JSON. Success atomically writes the
+Argon2 hash, consumes a pending migration credential, deletes browser sessions, revokes
+client tokens, and records a detail-free `operator_cli` `password_reset` audit event.
+Failure leaves account and access state unchanged.
 ## Migration dry-run report
 
-The migration path is report-only. It does not provide an HTTP import endpoint and
-there is no write operation. Run the separate binary against a copied or otherwise
-approved current SQLite file and a sanitized export:
+The migration dry-run command is report-only. It does not provide an HTTP import
+endpoint and never writes to the database. Run the separate binary against a copied
+or otherwise approved current SQLite file and a sanitized export:
 
 ```text
 opendesk-migration-dry-run \

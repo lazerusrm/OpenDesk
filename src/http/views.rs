@@ -1,3 +1,4 @@
+pub use super::deployment_views::{DeploymentDownloadView, DeploymentView};
 use crate::domain::access_policy::Action;
 use crate::domain::role::Role;
 use askama::Template;
@@ -183,22 +184,6 @@ pub struct ServerConfigView {
     pub error_message: Option<String>,
 }
 
-#[derive(Template)]
-#[template(path = "deployment.html")]
-pub struct DeploymentView {
-    pub title: String,
-    pub show_nav: bool,
-    pub nav: NavPermissions,
-    pub csrf_token: String,
-    pub tokens: Vec<EnrollmentTokenOptionView>,
-    pub enrollment_token_value: String,
-    pub public_base_url: String,
-    pub linux_script: String,
-    pub windows_script: String,
-    pub macos_script: String,
-    pub filename_custom_server: String,
-}
-
 #[derive(Clone)]
 pub struct HealthCheckRowView {
     pub label: String,
@@ -286,8 +271,9 @@ pub struct UserRowView {
     pub user_uuid: String,
     pub username: String,
     pub role_display: String,
+    pub activation_state: String,
+    pub can_activate: bool,
 }
-
 #[derive(Template)]
 #[template(path = "access_groups.html")]
 pub struct AccessGroupsListView {

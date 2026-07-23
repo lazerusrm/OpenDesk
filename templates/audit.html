@@ -13,10 +13,8 @@
         <th>Actor</th>
         <th>Action</th>
         <th>Object</th>
-        <th>Object UUID</th>
         <th>Outcome</th>
         <th>Source</th>
-        <th>Detail</th>
       </tr>
     </thead>
     <tbody>
@@ -26,10 +24,8 @@
         <td>{{ event.actor_display }}</td>
         <td>{{ event.action }}</td>
         <td>{{ event.object_type }}</td>
-        <td><code>{{ event.object_uuid_display }}</code></td>
         <td>{{ event.outcome }}</td>
         <td>{{ event.source }}</td>
-        <td><code>{{ event.detail_display }}</code></td>
       </tr>
       {% endfor %}
     </tbody>

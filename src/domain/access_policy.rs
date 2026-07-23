@@ -37,6 +37,7 @@ pub enum Action {
     BackupRestore,
     UserList,
     UserCreate,
+    UserActivate,
     ServerConfigView,
     ServerConfigUpdate,
     StatusView,
@@ -86,6 +87,7 @@ impl Action {
         Self::BackupRestore,
         Self::UserList,
         Self::UserCreate,
+        Self::UserActivate,
         Self::ServerConfigView,
         Self::ServerConfigUpdate,
         Self::StatusView,
@@ -141,6 +143,7 @@ impl Action {
             Self::BackupRestore => "backup_restore",
             Self::UserList => "user_list",
             Self::UserCreate => "user_create",
+            Self::UserActivate => "user_activate",
             Self::ServerConfigView => "server_config_view",
             Self::ServerConfigUpdate => "server_config_update",
             Self::StatusView => "status_view",
@@ -259,7 +262,7 @@ mod tests {
 
     #[test]
     fn every_allowlisted_action_round_trips_and_unknowns_fail_closed() {
-        assert_eq!(Action::ALL.len(), 41);
+        assert_eq!(Action::ALL.len(), 42);
         for action in Action::ALL {
             assert_eq!(Action::parse(action.as_str()), Ok(*action));
         }

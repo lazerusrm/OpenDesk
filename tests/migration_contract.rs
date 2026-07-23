@@ -29,16 +29,25 @@ fn sample() -> SanitizedMigrationExport {
         groups: vec![SourceGroup {
             source_group_id: "group-1".into(),
             name: "Ops".into(),
+            allow_device_access_within_group: true,
         }],
         user_group_memberships: vec![SourceUserGroupMembership {
             source_user_id: "user-1".into(),
             source_group_id: "group-1".into(),
         }],
-        devices: vec![],
+        cross_group_access: vec![],
+        devices: vec![SourceDevice {
+            rustdesk_id: "123".into(),
+            alias: "Desktop".into(),
+            hostname: None,
+            owner_source_user_id: Some("user-1".into()),
+            source_group_ids: vec![],
+        }],
         address_books: vec![SourceAddressBook {
             source_address_book_id: "book-1".into(),
             name: "Ops".into(),
             owner_source_user_id: Some("user-1".into()),
+            book_kind: AddressBookKind::Shared,
             rules: vec![SourceAddressBookRule {
                 principal_type: AddressBookPrincipalType::Group,
                 principal_id: "group-1".into(),
@@ -56,6 +65,7 @@ fn sample() -> SanitizedMigrationExport {
             key: "theme".into(),
             disposition: SettingsDisposition::Exclude,
         }],
+        unsupported_semantics: vec![],
     }
 }
 
@@ -91,8 +101,23 @@ fn validation_requires_reset_and_known_relationships() {
     );
     let mut document = sample();
     document.user_group_memberships[0].source_group_id = "missing".into();
+    let mut document = sample();
+    document.unsupported_semantics = vec![
+        UnsupportedSourceSemantics {
+            category: UnsupportedSemanticsCategory::CustomClient,
+            count: 5,
+            disposition: UnsupportedSemanticsDisposition::Retired,
+        },
+        UnsupportedSourceSemantics {
+            category: UnsupportedSemanticsCategory::CustomClient,
+            count: 5,
+            disposition: UnsupportedSemanticsDisposition::Retired,
+        },
+    ];
     assert_eq!(
         validate_export(&document),
-        Err(MigrationContractError::UnknownMembershipReference)
+        Err(MigrationContractError::InvalidSourceValue {
+            field: "unsupported_semantics"
+        })
     );
 }

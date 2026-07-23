@@ -15,16 +15,16 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 NAMESPACE = uuid.UUID("3f1e9cbe-d5d4-4618-ae5a-9a391e42635a")
 UNSUPPORTED_TABLES = (
-    "ab_rule",
     "control_role_map",
     "custom_client",
     "role_scope",
     "strategy",
     "user_roles",
 )
+RETIRABLE_UNSUPPORTED = {"custom_client", "strategy", "settings"}
 
 
 def fail(message: str) -> None:
@@ -42,14 +42,13 @@ def text(value: object, field: str) -> str:
     if not isinstance(value, str) or not value.strip() or any(c in value for c in "\r\n\t\x00"):
         fail(f"source contains an invalid {field}")
     lowered = value.lower()
+    assignments = tuple(f"{name}" + "=" for name in ("password", "token", "secret"))
     if (
         "-----begin" in lowered
         or lowered.startswith("$2a$")
         or lowered.startswith("$2b$")
         or lowered.startswith("$argon2")
-        or "password=" in lowered
-        or "token=" in lowered
-        or "secret=" in lowered
+        or any(assignment in lowered for assignment in assignments)
         or "private_key" in lowered
     ):
         fail(f"source contains sensitive content in {field}")
@@ -84,18 +83,35 @@ def source_role_map(values: list[str]) -> dict[int, str]:
     return result
 
 
-def require_supported_source(connection: sqlite3.Connection) -> None:
-    for table in UNSUPPORTED_TABLES:
-        if table_exists(connection, table) and table_count(connection, table):
-            fail(f"source has populated unsupported semantics: {table}")
+def unsupported_inventory(connection: sqlite3.Connection) -> dict[str, int]:
+    inventory = {
+        table: table_count(connection, table)
+        for table in UNSUPPORTED_TABLES
+        if table_exists(connection, table) and table_count(connection, table)
+    }
+    if table_exists(connection, "settings") and table_count(connection, "settings"):
+        inventory["settings"] = table_count(connection, "settings")
+    return inventory
+
+
+def require_supported_source(connection: sqlite3.Connection, retired: set[str]) -> list[dict[str, object]]:
+    inventory = unsupported_inventory(connection)
+    unretired = set(inventory) - retired
+    if unretired:
+        fail(f"source has populated unsupported semantics: {next(iter(sorted(unretired)))}")
+    return [
+        {"category": category, "count": inventory[category], "disposition": "retired"}
+        for category in sorted(inventory)
+    ]
 
 
 def export_snapshot(connection: sqlite3.Connection, role_map: dict[int, str], source_instance: str,
-                    source_export_id: str, source_schema_version: str) -> dict[str, object]:
-    require_supported_source(connection)
+                    source_export_id: str, source_schema_version: str,
+                    retired: set[str]) -> dict[str, object]:
+    unsupported_semantics = require_supported_source(connection, retired)
     users = []
     memberships = []
-    groups: dict[str, dict[str, str]] = {}
+    groups: dict[str, dict[str, object]] = {}
     for guid, name, role, group_guid in connection.execute(
         'SELECT guid, name, role, grp FROM "user" ORDER BY guid'
     ):
@@ -110,16 +126,48 @@ def export_snapshot(connection: sqlite3.Connection, role_map: dict[int, str], so
             "credential_reset_required": True,
         })
         memberships.append({"source_user_id": user_id, "source_group_id": group_id})
-    for guid, name in connection.execute("SELECT guid, name FROM grp ORDER BY guid"):
+    for guid, name, info in connection.execute("SELECT guid, name, info FROM grp ORDER BY guid"):
         group_id = hex_id(guid)
-        groups[group_id] = {"source_group_id": group_id, "name": text(name, "group name")}
+        try:
+            group_info = json.loads(info or "{}")
+        except json.JSONDecodeError:
+            fail("source group metadata is invalid")
+        if not isinstance(group_info, dict) or set(group_info) - {"no_conn_in_group"}:
+            fail("source group metadata requires an explicit reviewed mapping")
+        no_conn_in_group = group_info.get("no_conn_in_group", 0)
+        if no_conn_in_group not in (0, 1):
+            fail("source group has an invalid within-group access policy")
+        groups[group_id] = {
+            "source_group_id": group_id,
+            "name": text(name, "group name"),
+            "allow_device_access_within_group": no_conn_in_group == 0,
+        }
     if any(item["source_group_id"] not in groups for item in memberships):
         fail("source user references a missing group")
+    known_user_ids = {item["source_user_id"] for item in users}
+
+    cross_group_access = []
+    if table_exists(connection, "cross_grp"):
+        for incoming, outgoing, rule_type in connection.execute(
+            "SELECT incoming, outgoing, type FROM cross_grp ORDER BY incoming, outgoing"
+        ):
+            source_group_id = hex_id(outgoing)
+            target_group_id = hex_id(incoming)
+            if rule_type != 0:
+                fail("source cross-group rule requires an explicit reviewed mapping")
+            if source_group_id not in groups or target_group_id not in groups:
+                fail("source cross-group rule references a missing group")
+            if source_group_id == target_group_id:
+                fail("source cross-group rule references the same group")
+            cross_group_access.append({
+                "source_group_id": source_group_id,
+                "target_group_id": target_group_id,
+            })
 
     devices = []
     device_ids: set[bytes] = set()
-    for guid, rustdesk_id, group_guid, info in connection.execute(
-        "SELECT guid, id, grp, info FROM peer ORDER BY guid"
+    for guid, rustdesk_id, owner_guid, group_guid, info in connection.execute(
+        'SELECT guid, id, "user", grp, info FROM peer ORDER BY guid'
     ):
         if group_guid is not None:
             fail("source has populated peer group semantics without a reviewed mapping")
@@ -136,41 +184,76 @@ def export_snapshot(connection: sqlite3.Connection, role_map: dict[int, str], so
         device_name = parsed_info.get("device_name", rustdesk_id)
         if not isinstance(device_name, str):
             fail("source peer metadata contains an invalid device name")
+        owner_id = owner_guid.hex() if isinstance(owner_guid, bytes) else None
+        if owner_id is not None and owner_id not in known_user_ids:
+            fail("source peer references a missing owner")
         devices.append({
             "rustdesk_id": text(rustdesk_id, "RustDesk ID"),
             "alias": text(device_name, "device alias"),
             "hostname": None,
+            "owner_source_user_id": owner_id,
             "source_group_ids": [],
         })
 
     books = []
     known_books: set[bytes] = set()
-    for guid, name, owner in connection.execute("SELECT guid, name, owner FROM ab ORDER BY guid"):
+    for guid, name, owner, personal in connection.execute(
+        "SELECT guid, name, owner, personal FROM ab ORDER BY guid"
+    ):
         book_guid = bytes(guid) if isinstance(guid, bytes) else None
         owner_guid = bytes(owner) if isinstance(owner, bytes) else None
-        if book_guid is None or owner_guid is None:
+        if book_guid is None or owner_guid is None or personal not in (0, 1):
             fail("source contains an ownerless or invalid address book")
         known_books.add(book_guid)
         owner_id = owner_guid.hex()
-        if owner_id not in {item["source_user_id"] for item in users}:
+        if owner_id not in known_user_ids:
             fail("source address book references a missing owner")
+        owner_name = next(item["username"] for item in users if item["source_user_id"] == owner_id)
+        display_name = f"Personal · {owner_name}" if personal == 1 else text(name, "address book name")
+        rules = []
+        for rule_user, rule_group, permission in connection.execute(
+            'SELECT "user", grp, rule FROM ab_rule WHERE ab = ? ORDER BY guid',
+            (book_guid,),
+        ):
+            if (rule_user is None) == (rule_group is None) or permission not in (1, 2, 3):
+                fail("source address book contains an invalid access rule")
+            principal_type = "user" if rule_user is not None else "group"
+            principal = bytes(rule_user if rule_user is not None else rule_group)
+            principal_id = principal.hex()
+            if (principal_type == "user" and principal_id not in known_user_ids) or (
+                principal_type == "group" and principal_id not in groups
+            ):
+                fail("source address book access rule references a missing principal")
+            rules.append({
+                "principal_type": principal_type,
+                "principal_id": principal_id,
+                "permission": {1: "read", 2: "write", 3: "admin"}[permission],
+            })
         books.append({
             "source_address_book_id": book_guid.hex(),
-            "name": text(name, "address book name"),
+            "name": display_name,
             "owner_source_user_id": owner_id,
-            "rules": [],
+            "book_kind": "personal" if personal == 1 else "shared",
+            "rules": rules,
         })
 
     entries = []
-    for book_guid, peer_guid, note in connection.execute(
-        "SELECT ab, peer, note FROM ab_peer WHERE deleted_at IS NULL ORDER BY guid"
+    for book_guid, peer_guid, note, info in connection.execute(
+        "SELECT ab, peer, note, info FROM ab_peer WHERE deleted_at IS NULL ORDER BY guid"
     ):
         book = bytes(book_guid) if isinstance(book_guid, bytes) else None
         peer = bytes(peer_guid) if isinstance(peer_guid, bytes) else None
         if book not in known_books or peer not in device_ids:
             fail("source address book link is not referentially complete")
-        if note not in (None, ""):
-            fail("source address book notes require an explicit reviewed mapping")
+        try:
+            entry_info = json.loads(info or "{}")
+        except json.JSONDecodeError:
+            fail("source address-book entry metadata is invalid")
+        if not isinstance(entry_info, dict) or set(entry_info) - {"alias", "hash"}:
+            fail("source address-book entry metadata requires an explicit reviewed mapping")
+        alias = entry_info.get("alias")
+        if alias is not None and not isinstance(alias, str):
+            fail("source address-book entry alias is invalid")
         rustdesk_id = connection.execute("SELECT id FROM peer WHERE guid = ?", (peer,)).fetchone()
         if rustdesk_id is None:
             fail("source address book link references a missing device")
@@ -178,22 +261,24 @@ def export_snapshot(connection: sqlite3.Connection, role_map: dict[int, str], so
         entries.append({
             "source_address_book_id": book.hex(),
             "rustdesk_id": identifier,
-            "alias": identifier,
-            "notes": None,
+            "alias": text(alias, "address book entry alias") if alias and alias.strip() else identifier,
+            "notes": text(note, "address book entry notes") if note and note.strip() else None,
             "credential_reset_required": True,
         })
 
-    if table_exists(connection, "settings") and table_count(connection, "settings"):
+    if table_exists(connection, "settings") and table_count(connection, "settings") and "settings" not in retired:
         fail("source settings require an explicit reviewed mapping")
 
     snapshot = {
         "users": users,
         "groups": list(groups.values()),
         "user_group_memberships": memberships,
+        "cross_group_access": cross_group_access,
         "devices": devices,
         "address_books": books,
         "address_book_entries": entries,
         "settings": [],
+        "unsupported_semantics": unsupported_semantics,
     }
     snapshot_sha256 = hashlib.sha256(canonical_bytes(snapshot)).hexdigest()
     now = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
@@ -226,6 +311,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-export-id", required=True)
     parser.add_argument("--source-schema-version", required=True)
     parser.add_argument("--role-map", action="append", default=[])
+    parser.add_argument("--retire-unsupported", action="append", default=[])
+    parser.add_argument("--unsupported-inventory", action="store_true")
     return parser.parse_args()
 
 
@@ -234,14 +321,21 @@ def main() -> None:
     if not args.database.is_file():
         fail("source database is not a regular file")
     role_map = source_role_map(args.role_map)
+    retired = set(args.retire_unsupported)
+    if not retired.issubset(RETIRABLE_UNSUPPORTED):
+        fail("unsupported retirement category")
     uri = f"file:{args.database.resolve().as_posix()}?mode=ro&immutable=1"
     try:
         connection = sqlite3.connect(uri, uri=True)
         connection.execute("PRAGMA query_only = ON")
+        if args.unsupported_inventory:
+            print(json.dumps({"unsupported_semantics": unsupported_inventory(connection)},
+                             separators=(",", ":"), sort_keys=True))
+            return
         document = export_snapshot(
             connection, role_map, text(args.source_instance, "source instance"),
             text(args.source_export_id, "source export ID"),
-            text(args.source_schema_version, "source schema version"),
+            text(args.source_schema_version, "source schema version"), retired,
         )
     except (json.JSONDecodeError, sqlite3.Error):
         fail("source database cannot be read safely")

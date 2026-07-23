@@ -12,6 +12,12 @@ pub struct AppConfig {
     pub public_base_url: String,
     pub backup_schedule: Option<String>,
     pub backup_destination: Option<PathBuf>,
+    pub client_token_hmac_key: Vec<u8>,
+    pub transport_introspection_key: Option<Vec<u8>>,
+    pub rustdesk_download_windows_url: Option<String>,
+    pub rustdesk_download_macos_url: Option<String>,
+    pub rustdesk_download_linux_url: Option<String>,
+    pub rustdesk_download_android_url: Option<String>,
 }
 
 impl AppConfig {
@@ -37,8 +43,44 @@ impl AppConfig {
                 .unwrap_or_else(|_| "http://127.0.0.1:8080".to_string()),
             backup_schedule: optional_env("OPENDESK_BACKUP_SCHEDULE"),
             backup_destination: optional_env("OPENDESK_BACKUP_DIR").map(PathBuf::from),
+            client_token_hmac_key: required_client_token_hmac_key(),
+            transport_introspection_key: optional_hex_key("OPENDESK_TRANSPORT_INTROSPECTION_KEY"),
+            rustdesk_download_windows_url: optional_https_url(
+                "OPENDESK_RUSTDESK_DOWNLOAD_WINDOWS_URL",
+            ),
+            rustdesk_download_macos_url: optional_https_url("OPENDESK_RUSTDESK_DOWNLOAD_MACOS_URL"),
+            rustdesk_download_linux_url: optional_https_url("OPENDESK_RUSTDESK_DOWNLOAD_LINUX_URL"),
+            rustdesk_download_android_url: optional_https_url(
+                "OPENDESK_RUSTDESK_DOWNLOAD_ANDROID_URL",
+            ),
         }
     }
+}
+
+fn required_client_token_hmac_key() -> Vec<u8> {
+    let encoded = env::var("OPENDESK_CLIENT_TOKEN_HMAC_KEY")
+        .expect("OPENDESK_CLIENT_TOKEN_HMAC_KEY is required");
+    let key = hex::decode(encoded).expect("OPENDESK_CLIENT_TOKEN_HMAC_KEY must be hexadecimal");
+    assert!(
+        key.len() >= 32,
+        "OPENDESK_CLIENT_TOKEN_HMAC_KEY must contain at least 32 bytes"
+    );
+    key
+}
+
+fn optional_hex_key(name: &str) -> Option<Vec<u8>> {
+    optional_env(name).map(|encoded| {
+        let key = hex::decode(encoded).unwrap_or_else(|_| panic!("{name} must be hexadecimal"));
+        assert!(key.len() >= 32, "{name} must contain at least 32 bytes");
+        key
+    })
+}
+
+fn optional_https_url(name: &str) -> Option<String> {
+    optional_env(name).map(|value| {
+        assert!(value.starts_with("https://"), "{name} must use https");
+        value
+    })
 }
 
 fn optional_env(name: &str) -> Option<String> {

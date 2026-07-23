@@ -11,8 +11,8 @@
   </form>
 </section>
 <section class="card">
-  <table><thead><tr><th>Name</th><th>Access group UUID</th></tr></thead><tbody>
-  {% for group in groups %}<tr><td><a href="/access-groups/{{ group.access_group_uuid }}">{{ group.name }}</a></td><td><code>{{ group.access_group_uuid }}</code></td></tr>{% endfor %}
+  <table><thead><tr><th>Name</th><th>Manage</th></tr></thead><tbody>
+  {% for group in groups %}<tr><td>{{ group.name }}</td><td><a href="/access-groups/{{ group.access_group_uuid }}">View access</a></td></tr>{% endfor %}
   </tbody></table>
 </section>
 {% endblock %}
