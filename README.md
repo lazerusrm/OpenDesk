@@ -2,6 +2,8 @@
 
 Initial planning workspace for a self-hosted RustDesk OSS control plane.
 
+Currently V.1 ALPHA -- working with caveats.
+
 Goal: keep the official RustDesk clients and OSS `hbbs`/`hbbr` remote access stack, then build a full RustDesk Server Pro replacement control plane. OpenDesk provides the management value currently expected from Pro through our own web app, API, deployment tooling, inventory, policy, monitoring, backups, and validation discipline.
 
 Production target:
