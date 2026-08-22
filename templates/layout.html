@@ -10,7 +10,7 @@
 <body{% if !show_nav %} class="auth-page"{% endif %}>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar">
-    <a class="brand" href="{% if show_nav %}/devices{% else %}/login{% endif %}" aria-label="OpenDesk home">
+    <a class="brand" href="{% if show_nav %}/{% else %}/login{% endif %}" aria-label="OpenDesk home">
       <span class="brand-mark" aria-hidden="true">O</span><span>OpenDesk</span>
     </a>
     {% if show_nav %}
@@ -22,6 +22,7 @@
   <aside class="sidebar" id="console-nav">
     <nav aria-label="Console navigation">
       <p class="nav-label">Fleet</p>
+      {% if nav.dashboard %}<a href="/">Overview</a>{% endif %}
       {% if nav.devices %}<a href="/devices">Devices</a>{% endif %}
       {% if nav.sites %}<a href="/sites">Sites</a>{% endif %}
       {% if nav.tags %}<a href="/tags">Tags</a>{% endif %}
@@ -29,18 +30,24 @@
       <p class="nav-label">Access</p>
       {% if nav.users %}<a href="/users">Users</a>{% endif %}
       {% if nav.access_groups %}<a href="/access-groups">Access groups</a>{% endif %}
-      {% if nav.enrollment %}<a href="/enrollment-tokens">Enrollment tokens</a>{% endif %}
+      {% if nav.enrollment %}
+      <a href="/onboard-setup">Onboard codes</a>
+      <a href="/enrollment-tokens">Enrollment tokens</a>
+      {% endif %}
       <p class="nav-label">Operations</p>
       {% if nav.deployment %}<a href="/deployment">Deployment center</a>{% endif %}
-      {% if nav.server_config %}<a href="/settings/server-config">Server config</a>{% endif %}
+      {% if nav.server_config %}<a href="/settings">Settings</a>{% endif %}
       {% if nav.status %}<a href="/status">Status</a>{% endif %}
       {% if nav.backup %}<a href="/backup">Backup</a>{% endif %}
       {% if nav.audit %}<a href="/audit">Audit</a>{% endif %}
     </nav>
-    <form method="post" action="/logout" class="sidebar-footer">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button type="submit" class="button-secondary">Sign out</button>
-    </form>
+    <div class="sidebar-footer">
+      <a href="/account">Account</a>
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="button-secondary">Sign out</button>
+      </form>
+    </div>
   </aside>
   {% endif %}
   <main class="content" id="main-content" tabindex="-1">

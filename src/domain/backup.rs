@@ -6,7 +6,9 @@ use super::access_group::AccessGroup;
 use super::access_group_membership::AccessGroupMembership;
 use super::address_book::AddressBookEntry;
 use super::device::Device;
-use super::device_visibility::{DeviceVisibilityGrant, UserDeviceVisibilityGrant};
+use super::device_visibility::{
+    AccessGroupAccessGrant, DeviceVisibilityGrant, UserDeviceVisibilityGrant,
+};
 use super::server_config::ServerConfig;
 use super::site::Site;
 use super::tag::Tag;
@@ -117,6 +119,8 @@ pub struct BackupDocument {
     pub access_group_memberships: Vec<AccessGroupMembership>,
     pub device_visibility_grants: Vec<DeviceVisibilityGrant>,
     pub user_device_visibility_grants: Vec<UserDeviceVisibilityGrant>,
+    #[serde(default)]
+    pub access_group_access_grants: Vec<AccessGroupAccessGrant>,
     pub address_books: Vec<BackupAddressBook>,
     pub address_book_access_rules: Vec<BackupAddressBookAccessRule>,
     pub address_book_tags: Vec<BackupAddressBookTag>,
@@ -234,6 +238,7 @@ mod tests {
             access_group_memberships: vec![],
             device_visibility_grants: vec![],
             user_device_visibility_grants: vec![],
+            access_group_access_grants: vec![],
             address_books: vec![],
             address_book_access_rules: vec![],
             address_book_tags: vec![],
@@ -257,6 +262,18 @@ mod tests {
         let json = render_backup_json(&document).expect("serialize");
         let parsed = parse_backup_json(&json).expect("parse");
         assert_eq!(parsed, document);
+    }
+
+    #[test]
+    fn v3_backup_without_access_group_access_grants_defaults_empty() {
+        let document = sample_document();
+        let mut raw: serde_json::Value =
+            serde_json::from_str(&render_backup_json(&document).expect("serialize")).unwrap();
+        raw.as_object_mut()
+            .expect("object")
+            .remove("access_group_access_grants");
+        let parsed = parse_backup_json(&raw.to_string()).expect("parse");
+        assert!(parsed.access_group_access_grants.is_empty());
     }
 
     #[test]

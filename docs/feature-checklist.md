@@ -55,23 +55,25 @@ Status legend:
   - Relay server: `rd.example.com`
   - API server: blank for OSS path
   - Public key: imported from current server
-- [ ] Generate RustDesk import string if supported by current client.
+- [x] Generate RustDesk import string if supported by current client.
 - [x] Generate filename-based custom server download name as fallback.
 - [x] Generate Windows PowerShell installer/config script.
 - [x] Generate Linux installer/config script.
 - [x] Generate macOS installer/config script if required.
 - [x] Provide official-client download links or cached installer packages.
-- [ ] Provide a single frontend page per OS with install command/download.
+- [x] Serve an operator-provisioned signed Windows installer from the deployment page when present.
+- [x] Provide a single frontend page per OS with install command/download.
 - [x] Avoid executable renaming as the main workflow.
 - [ ] Version generated scripts.
 - [x] Audit generated downloads/scripts.
-- [ ] Validate whether `/api/devices/deploy` can be used by official clients without Pro.
-- [ ] Implement `/api/devices/deploy` compatibility only if validation passes.
+- [~] Validate `/api/devices/deploy` on remaining Windows/macOS official clients.
+- [x] Implement `/api/devices/deploy` compatibility only if validation passes.
 
 ## Phase 3: Endpoint Self-Registration
 
 - [x] Enrollment token model.
 - [x] Enrollment token creation/rotation/revocation.
+- [x] Enrollment token optional expiry in the dashboard create form.
 - [x] Endpoint registration API.
 - [x] Windows self-registration script.
 - [x] Linux self-registration script.
@@ -80,6 +82,9 @@ Status legend:
 - [x] Last check-in timestamp.
 - [x] Endpoint metadata update.
 - [x] Endpoint registration audit events.
+- [x] Public `/onboard/{token}` install page without recipient login.
+- [x] Public `/onboard` six-digit authenticator unlock without recipient login.
+- [x] Onboard check-in grants visibility to the issuing operator only.
 
 ## Phase 4: Health and Operations
 
@@ -100,7 +105,15 @@ Status legend:
 - [x] Role model: admin, operator, read-only.
 - [x] Canonical dashboard/API action allowlist and role predicate.
 - [x] Default-deny device visibility predicate for direct/access-group grants.
-- [ ] Device visibility integration by access group/direct grant.
+- [x] Device visibility integration by access group/direct grant.
+- [x] Access-group to access-group visibility grants for dashboard/API and official-client data scope.
+- [x] Admin sees all devices; unassigned devices are admin-only.
+- [x] Address-book share grants in the dashboard for shared books.
+- [x] Official-client personal address book auto-create and visible-device sync.
+- [x] Official-client accessible-device list includes user and device-group names for local filters.
+- [x] Admin-only deletes; operators cannot delete inventory or address-book entries.
+- [x] Sign-in attempt throttling and failed-login audit.
+- [x] Disable-user revokes dashboard sessions and official-client tokens.
 - [x] Audit log UI.
 - [x] Export audit log.
 - [ ] Optional reverse proxy SSO.

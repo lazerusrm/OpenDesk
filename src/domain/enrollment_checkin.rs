@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::domain::device::Device;
+use crate::domain::device::{Device, DeviceDraft};
 
 /// Lookup results for duplicate detection during endpoint enrollment check-in.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -24,6 +24,37 @@ pub fn hostname_lookup_key(hostname: Option<&str>) -> Option<String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(|value| value.to_string())
+}
+
+/// Overlay official-client CLI `device_name` / `note` onto an existing device.
+/// Blank values leave the stored alias and notes unchanged.
+pub fn apply_cli_alias_notes(
+    existing: &Device,
+    device_name: Option<&str>,
+    note: Option<&str>,
+) -> DeviceDraft {
+    let alias = device_name
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| existing.alias.clone());
+    let notes = note
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_string())
+        .or_else(|| existing.notes.clone());
+    DeviceDraft {
+        rustdesk_id: existing.rustdesk_id.clone(),
+        alias,
+        hostname: existing.hostname.clone(),
+        os_family: existing.os_family.clone(),
+        os_version: existing.os_version.clone(),
+        architecture: existing.architecture.clone(),
+        rustdesk_version: existing.rustdesk_version.clone(),
+        site_uuid: existing.site_uuid,
+        owner: existing.owner.clone(),
+        notes,
+    }
 }
 
 #[cfg(test)]
@@ -85,5 +116,18 @@ mod tests {
             hostname_lookup_key(Some("ws-01")),
             Some("ws-01".to_string())
         );
+    }
+
+    #[test]
+    fn apply_cli_alias_notes_overlays_nonempty_fields() {
+        let mut existing = sample_device("alpha", "111222333", "host-a");
+        existing.notes = Some("kept".to_string());
+        let draft = apply_cli_alias_notes(&existing, Some("  workstation-01  "), None);
+        assert_eq!(draft.alias, "workstation-01");
+        assert_eq!(draft.notes.as_deref(), Some("kept"));
+        assert_eq!(draft.rustdesk_id.as_deref(), Some("111222333"));
+        let cleared_name = apply_cli_alias_notes(&existing, Some("  "), Some("lab note"));
+        assert_eq!(cleared_name.alias, "alpha");
+        assert_eq!(cleared_name.notes.as_deref(), Some("lab note"));
     }
 }

@@ -18,7 +18,8 @@ use crate::domain::enrollment_checkin::{
     hostname_lookup_key, select_existing_device_for_checkin, EnrollmentDeviceLookup,
 };
 use crate::domain::enrollment_token::{
-    hash_enrollment_token_value, validate_enrollment_token_label, verify_enrollment_token_value,
+    enrollment_token_expires_at_from_days, hash_enrollment_token_value,
+    validate_enrollment_token_label, verify_enrollment_token_value,
 };
 use crate::http::routes::render::render_enrollment_tokens;
 use crate::http::session::{require_action, require_csrf};
@@ -27,8 +28,8 @@ use crate::repository::devices::{
     create_device, find_device_by_hostname, find_device_by_rustdesk_id, touch_device_checkin,
 };
 use crate::repository::enrollment_tokens::{
-    create_enrollment_token, find_enrollment_token_by_hash, record_endpoint_checkin,
-    revoke_enrollment_token,
+    create_enrollment_token, find_enrollment_token_by_hash, grant_issuer_device_visibility,
+    record_endpoint_checkin, revoke_enrollment_token,
 };
 
 pub fn routes() -> Router<AppState> {
@@ -50,7 +51,7 @@ async fn enrollment_tokens_page(
 ) -> Result<Response, Response> {
     let user = require_action(&state, &jar, Action::EnrollmentTokenList).await?;
     Ok(
-        render_enrollment_tokens(&state, None, &user.csrf_token, user.parsed_role())
+        render_enrollment_tokens(&state, None, &user.csrf_token, user.parsed_role(), None)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
             .into_response(),
@@ -61,6 +62,8 @@ async fn enrollment_tokens_page(
 struct EnrollmentTokenForm {
     csrf_token: String,
     label: String,
+    #[serde(default)]
+    expires_in_days: String,
 }
 
 async fn enrollment_token_create(
@@ -71,18 +74,40 @@ async fn enrollment_token_create(
     let user = require_action(&state, &jar, Action::EnrollmentTokenCreate).await?;
     require_csrf(&user, &form.csrf_token)?;
     if let Err(_error) = validate_enrollment_token_label(&form.label) {
-        return Ok(
-            render_enrollment_tokens(&state, None, &user.csrf_token, user.parsed_role())
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-                .into_response(),
-        );
+        return Ok(render_enrollment_tokens(
+            &state,
+            None,
+            &user.csrf_token,
+            user.parsed_role(),
+            None,
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+        .into_response());
     }
+    let expires_at = match enrollment_token_expires_at_from_days(
+        &form.expires_in_days,
+        OffsetDateTime::now_utc(),
+    ) {
+        Ok(expires_at) => expires_at,
+        Err(error) => {
+            return Ok(render_enrollment_tokens(
+                &state,
+                None,
+                &user.csrf_token,
+                user.parsed_role(),
+                Some(error.to_string()),
+            )
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            .into_response());
+        }
+    };
     let created = create_enrollment_token(
         &state.db,
         form.label.trim(),
         None,
-        None,
+        expires_at,
         Some(user.user_uuid),
     )
     .await
@@ -102,6 +127,7 @@ async fn enrollment_token_create(
         Some(created.token_value),
         &user.csrf_token,
         user.parsed_role(),
+        None,
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
@@ -135,7 +161,7 @@ async fn enrollment_token_revoke(
     };
     let _ = insert_audit_event(&state.db, &audit).await;
     Ok(
-        render_enrollment_tokens(&state, None, &user.csrf_token, user.parsed_role())
+        render_enrollment_tokens(&state, None, &user.csrf_token, user.parsed_role(), None)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
             .into_response(),
@@ -265,6 +291,9 @@ async fn enrollment_checkin(
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    grant_issuer_device_visibility(&state.db, &record, device.device_uuid)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let action = if is_update {
         "endpoint_checkin_update"
     } else {

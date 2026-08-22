@@ -9,7 +9,7 @@ use crate::domain::connection_helper::{
 };
 use crate::domain::device::DeviceDraft;
 use crate::domain::device_list::rustdesk_id_copy_text;
-use crate::domain::enrollment_token::EnrollmentTokenRecord;
+use crate::domain::enrollment_token::{onboard_url, EnrollmentTokenRecord};
 use crate::domain::role::Role;
 use crate::domain::server_config::{default_server_config, ServerConfig};
 use crate::http::views::{
@@ -20,14 +20,16 @@ use crate::repository::enrollment_tokens::list_enrollment_tokens;
 use crate::repository::server_config::load_server_config;
 use crate::repository::sites::list_sites;
 use crate::repository::tags::list_tags;
+use crate::time_format::format_timestamp;
 
-pub fn render_login(error_message: Option<String>) -> Html<String> {
+pub fn render_login(error_message: Option<String>, notice_message: Option<String>) -> Html<String> {
     let view = LoginView {
         title: "Login".to_string(),
         show_nav: false,
         nav: crate::http::views::NavPermissions::NONE,
         csrf_token: String::new(),
         error_message,
+        notice_message,
     };
     Html(view.render().expect("render login"))
 }
@@ -124,6 +126,7 @@ pub async fn render_enrollment_tokens(
     created_token_value: Option<String>,
     csrf_token: &str,
     role: Role,
+    error_message: Option<String>,
 ) -> Result<Html<String>, sqlx::Error> {
     let tokens = list_enrollment_tokens(&state.db).await?;
     let rows = tokens
@@ -134,10 +137,17 @@ pub async fn render_enrollment_tokens(
                 enrollment_token_uuid: token.enrollment_token_uuid.to_string(),
                 label: token.label,
                 status,
+                expires_display: token
+                    .expires_at
+                    .map(format_timestamp)
+                    .unwrap_or_else(|| "None".to_string()),
                 can_revoke: token.revoked_at.is_none(),
             }
         })
         .collect();
+    let created_onboard_url = created_token_value
+        .as_ref()
+        .map(|token| onboard_url(&state.public_base_url, token));
     let view = EnrollmentTokensView {
         title: "Enrollment Tokens".to_string(),
         show_nav: true,
@@ -145,6 +155,8 @@ pub async fn render_enrollment_tokens(
         csrf_token: csrf_token.to_string(),
         tokens: rows,
         created_token_value,
+        created_onboard_url,
+        error_message,
     };
     Ok(Html(view.render().expect("render enrollment tokens")))
 }

@@ -4,6 +4,7 @@ use crate::domain::role::Role;
 use askama::Template;
 #[derive(Clone, Copy)]
 pub struct NavPermissions {
+    pub dashboard: bool,
     pub devices: bool,
     pub sites: bool,
     pub tags: bool,
@@ -19,6 +20,7 @@ pub struct NavPermissions {
 }
 impl NavPermissions {
     pub const NONE: Self = Self {
+        dashboard: false,
         devices: false,
         sites: false,
         tags: false,
@@ -35,6 +37,7 @@ impl NavPermissions {
 }
 pub fn nav_permissions_for_role(role: Role) -> NavPermissions {
     NavPermissions {
+        dashboard: Action::StatusView.allowed_for(role) || Action::DeviceList.allowed_for(role),
         devices: Action::DeviceList.allowed_for(role),
         sites: Action::SiteList.allowed_for(role),
         tags: Action::TagList.allowed_for(role),
@@ -57,6 +60,24 @@ pub struct LoginView {
     pub nav: NavPermissions,
     pub csrf_token: String,
     pub error_message: Option<String>,
+    pub notice_message: Option<String>,
+}
+#[derive(Template)]
+#[template(path = "account.html")]
+pub struct AccountView {
+    pub title: String,
+    pub show_nav: bool,
+    pub nav: NavPermissions,
+    pub csrf_token: String,
+    pub username: String,
+    pub role_display: String,
+    pub error_message: Option<String>,
+    pub can_manage_onboard_totp: bool,
+    pub onboard_totp_enrolled: bool,
+    pub onboard_totp_qr_svg: String,
+    pub onboard_totp_secret: String,
+    pub onboard_notice: Option<String>,
+    pub onboard_error: Option<String>,
 }
 #[derive(Template)]
 #[template(path = "devices_list.html")]
@@ -67,6 +88,12 @@ pub struct DevicesListView {
     pub csrf_token: String,
     pub search_term: String,
     pub export_csv_href: String,
+    pub archived_hide: bool,
+    pub archived_only: bool,
+    pub archived_all: bool,
+    pub seen_recent: bool,
+    pub empty_inventory: bool,
+    pub filter_empty: bool,
     pub devices: Vec<DeviceRowView>,
 }
 #[derive(Clone)]
@@ -83,6 +110,8 @@ pub struct DeviceRowView {
     pub explicit_helper_copy_text: String,
     pub hostname_display: String,
     pub last_checkin_display: String,
+    pub recently_seen: bool,
+    pub status_display: String,
     pub archived_display: String,
 }
 #[derive(Clone)]
@@ -189,6 +218,7 @@ pub struct HealthCheckRowView {
     pub label: String,
     pub target: String,
     pub status: String,
+    pub status_pill_class: String,
     pub detail: String,
 }
 
@@ -203,8 +233,18 @@ pub struct StatusView {
     pub relay_server: String,
     pub public_key_fingerprint: String,
     pub backup_status: String,
+    pub backup_status_pill_class: String,
     pub backup_execution: String,
+    pub backup_execution_pill_class: String,
     pub checks: Vec<HealthCheckRowView>,
+}
+
+pub fn status_pill_class(status: &str) -> &'static str {
+    match status {
+        "ok" | "configured_external_runner" => "pill-ok",
+        "failed" | "incomplete" | "error" | "degraded" => "pill-bad",
+        _ => "pill-muted",
+    }
 }
 
 #[derive(Clone)]
@@ -224,6 +264,8 @@ pub struct EnrollmentTokensView {
     pub csrf_token: String,
     pub tokens: Vec<EnrollmentTokenRowView>,
     pub created_token_value: Option<String>,
+    pub created_onboard_url: Option<String>,
+    pub error_message: Option<String>,
 }
 
 #[derive(Clone)]
@@ -231,6 +273,7 @@ pub struct EnrollmentTokenRowView {
     pub enrollment_token_uuid: String,
     pub label: String,
     pub status: String,
+    pub expires_display: String,
     pub can_revoke: bool,
 }
 
@@ -242,6 +285,19 @@ pub struct AuditLogView {
     pub nav: NavPermissions,
     pub csrf_token: String,
     pub events: Vec<AuditEventRowView>,
+    pub tabs: Vec<AuditKindTabView>,
+    pub export_csv_href: String,
+    pub intro: String,
+    pub connection_disclaimer: Option<String>,
+    pub empty_message: String,
+    pub has_events: bool,
+}
+
+#[derive(Clone)]
+pub struct AuditKindTabView {
+    pub label: String,
+    pub href: String,
+    pub selected: bool,
 }
 
 #[derive(Clone)]
@@ -254,6 +310,7 @@ pub struct AuditEventRowView {
     pub outcome: String,
     pub source: String,
     pub detail_display: String,
+    pub detail_title: String,
 }
 
 #[derive(Template)]
@@ -273,113 +330,9 @@ pub struct UserRowView {
     pub role_display: String,
     pub activation_state: String,
     pub can_activate: bool,
-}
-#[derive(Template)]
-#[template(path = "access_groups.html")]
-pub struct AccessGroupsListView {
-    pub title: String,
-    pub show_nav: bool,
-    pub nav: NavPermissions,
-    pub csrf_token: String,
-    pub groups: Vec<AccessGroupRowView>,
-    pub error_message: Option<String>,
+    pub can_disable: bool,
 }
 
-#[derive(Clone)]
-pub struct AccessGroupRowView {
-    pub access_group_uuid: String,
-    pub name: String,
-}
-
-#[derive(Template)]
-#[template(path = "access_group_detail.html")]
-pub struct AccessGroupDetailView {
-    pub title: String,
-    pub show_nav: bool,
-    pub nav: NavPermissions,
-    pub csrf_token: String,
-    pub access_group_uuid: String,
-    pub name: String,
-    pub members: Vec<AccessGroupMemberView>,
-    pub devices: Vec<AccessGroupDeviceView>,
-    pub user_options: Vec<AccessGroupUserOptionView>,
-    pub device_options: Vec<AccessGroupDeviceOptionView>,
-    pub error_message: Option<String>,
-}
-
-#[derive(Clone)]
-pub struct AccessGroupMemberView {
-    pub username: String,
-    pub user_uuid: String,
-}
-
-#[derive(Clone)]
-pub struct AccessGroupDeviceView {
-    pub alias: String,
-    pub device_uuid: String,
-}
-
-#[derive(Clone)]
-pub struct AccessGroupUserOptionView {
-    pub username: String,
-    pub user_uuid: String,
-    pub selected: bool,
-}
-
-#[derive(Clone)]
-pub struct AccessGroupDeviceOptionView {
-    pub alias: String,
-    pub device_uuid: String,
-    pub selected: bool,
-}
-
-#[derive(Template)]
-#[template(path = "address_books.html")]
-pub struct AddressBooksListView {
-    pub title: String,
-    pub show_nav: bool,
-    pub nav: NavPermissions,
-    pub can_create: bool,
-    pub can_update: bool,
-    pub can_delete: bool,
-    pub csrf_token: String,
-    pub books: Vec<AddressBookRowView>,
-    pub error_message: Option<String>,
-}
-
-#[derive(Clone)]
-pub struct AddressBookRowView {
-    pub address_book_uuid: String,
-    pub name: String,
-}
-
-#[derive(Template)]
-#[template(path = "address_book_detail.html")]
-pub struct AddressBookDetailView {
-    pub title: String,
-    pub show_nav: bool,
-    pub nav: NavPermissions,
-    pub can_create: bool,
-    pub can_update: bool,
-    pub can_delete: bool,
-    pub csrf_token: String,
-    pub address_book_uuid: String,
-    pub name: String,
-    pub entries: Vec<AddressBookEntryRowView>,
-    pub device_options: Vec<AddressBookDeviceOptionView>,
-    pub error_message: Option<String>,
-}
-
-#[derive(Clone)]
-pub struct AddressBookEntryRowView {
-    pub address_book_entry_uuid: String,
-    pub device_uuid: String,
-    pub alias: String,
-    pub notes: String,
-    pub position: u32,
-}
-#[derive(Clone)]
-pub struct AddressBookDeviceOptionView {
-    pub device_uuid: String,
-    pub alias: String,
-}
+#[path = "views_access.rs"]
+mod views_access;
+pub use views_access::*;

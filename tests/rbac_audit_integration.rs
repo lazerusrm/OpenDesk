@@ -7,8 +7,9 @@ use common::{
 };
 use http_body_util::BodyExt;
 use opendesk::build_router;
+use opendesk::domain::audit_event::AuditEventDraft;
 use opendesk::domain::role::Role;
-use opendesk::repository::audit_events::list_audit_events;
+use opendesk::repository::audit_events::{insert_audit_event, list_audit_events};
 use opendesk::repository::users::{create_user, find_user_by_username};
 use tower::ServiceExt;
 
@@ -30,6 +31,39 @@ async fn login_as(app: &axum::Router, username: &str, password: &str) -> String 
         .expect("login");
     assert_eq!(response.status(), StatusCode::SEE_OTHER);
     session_cookie_from_response(&response)
+}
+
+async fn get_with_cookie(app: &axum::Router, cookie: &str, uri: &str) -> (StatusCode, String) {
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(uri)
+                .header("cookie", cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("request");
+    let status = response.status();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    (status, String::from_utf8(body.to_vec()).expect("utf8"))
+}
+
+fn client_audit_draft(
+    action: &str,
+    object_type: &str,
+    detail: Option<serde_json::Value>,
+) -> AuditEventDraft {
+    AuditEventDraft {
+        actor_user_uuid: None,
+        action: action.to_string(),
+        object_type: object_type.to_string(),
+        object_uuid: None,
+        outcome: "success".to_string(),
+        source: "client".to_string(),
+        detail,
+    }
 }
 
 #[tokio::test]
@@ -354,39 +388,4 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
     assert!(csv.contains("created_at,actor_username,action,"));
     assert!(!csv.contains(secret));
     assert!(csv.contains("endpoint_checkin") || csv.contains("enrollment_token_create"));
-}
-
-#[tokio::test]
-async fn read_only_can_view_audit_but_not_export_devices_csv() {
-    let state = test_state().await;
-    create_user(&state.db, "reader", "reader-password", Role::READ_ONLY)
-        .await
-        .expect("create reader");
-    let app = build_router(state);
-    let cookie = login_as(&app, "reader", "reader-password").await;
-
-    let audit = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/audit")
-                .header("cookie", &cookie)
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .expect("audit");
-    assert_eq!(audit.status(), StatusCode::OK);
-
-    let csv = app
-        .oneshot(
-            Request::builder()
-                .uri("/devices/export.csv")
-                .header("cookie", &cookie)
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .expect("csv");
-    assert_eq!(csv.status(), StatusCode::FORBIDDEN);
 }

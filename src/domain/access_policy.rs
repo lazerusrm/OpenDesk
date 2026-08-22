@@ -37,7 +37,9 @@ pub enum Action {
     BackupRestore,
     UserList,
     UserCreate,
+    UserUpdate,
     UserActivate,
+    UserDisable,
     ServerConfigView,
     ServerConfigUpdate,
     StatusView,
@@ -87,7 +89,9 @@ impl Action {
         Self::BackupRestore,
         Self::UserList,
         Self::UserCreate,
+        Self::UserUpdate,
         Self::UserActivate,
+        Self::UserDisable,
         Self::ServerConfigView,
         Self::ServerConfigUpdate,
         Self::StatusView,
@@ -143,7 +147,9 @@ impl Action {
             Self::BackupRestore => "backup_restore",
             Self::UserList => "user_list",
             Self::UserCreate => "user_create",
+            Self::UserUpdate => "user_update",
             Self::UserActivate => "user_activate",
+            Self::UserDisable => "user_disable",
             Self::ServerConfigView => "server_config_view",
             Self::ServerConfigUpdate => "server_config_update",
             Self::StatusView => "status_view",
@@ -194,12 +200,10 @@ impl Action {
                     | Self::SiteView
                     | Self::SiteCreate
                     | Self::SiteUpdate
-                    | Self::SiteDelete
                     | Self::TagList
                     | Self::TagView
                     | Self::TagCreate
                     | Self::TagUpdate
-                    | Self::TagDelete
                     | Self::EnrollmentTokenList
                     | Self::EnrollmentTokenCreate
                     | Self::EnrollmentTokenRevoke
@@ -213,7 +217,6 @@ impl Action {
                     | Self::AddressBookView
                     | Self::AddressBookCreate
                     | Self::AddressBookUpdate
-                    | Self::AddressBookDelete
             ),
             Role::ReadOnly => matches!(
                 self,
@@ -262,7 +265,7 @@ mod tests {
 
     #[test]
     fn every_allowlisted_action_round_trips_and_unknowns_fail_closed() {
-        assert_eq!(Action::ALL.len(), 42);
+        assert_eq!(Action::ALL.len(), 44);
         for action in Action::ALL {
             assert_eq!(Action::parse(action.as_str()), Ok(*action));
         }
@@ -297,12 +300,10 @@ mod tests {
                         | Action::SiteView
                         | Action::SiteCreate
                         | Action::SiteUpdate
-                        | Action::SiteDelete
                         | Action::TagList
                         | Action::TagView
                         | Action::TagCreate
                         | Action::TagUpdate
-                        | Action::TagDelete
                         | Action::EnrollmentTokenList
                         | Action::EnrollmentTokenCreate
                         | Action::EnrollmentTokenRevoke
@@ -316,7 +317,6 @@ mod tests {
                         | Action::AddressBookView
                         | Action::AddressBookCreate
                         | Action::AddressBookUpdate
-                        | Action::AddressBookDelete
                 )
             );
             assert_eq!(

@@ -24,6 +24,16 @@ pub struct AddressBookEntry {
     pub position: u32,
 }
 
+/// Owner-granted official-client access to a shared address book.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AddressBookAccessRule {
+    pub address_book_uuid: Uuid,
+    pub principal_type: String,
+    pub principal_uuid: Uuid,
+    pub permission: String,
+}
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum AddressBookValidationError {
     #[error("address book name must not be empty")]

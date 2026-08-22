@@ -273,6 +273,9 @@ async fn address_books_are_owner_scoped_and_entry_posts_prg() {
     assert!(html.contains("Primary"));
     assert!(html.contains("Save entry"));
     assert!(html.contains("Delete entry"));
+    assert!(html.contains("Work"));
+    assert!(html.contains("This web address book is OpenDesk data"));
+    assert!(html.contains("No visible devices available to add."));
     assert!(!html.contains("Address book UUID"));
     assert!(!html.contains("<code>"));
 

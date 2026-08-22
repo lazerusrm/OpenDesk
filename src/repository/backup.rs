@@ -9,7 +9,9 @@ use crate::domain::backup::{
     BackupDeviceTag, BackupDocument, BackupEnrollmentToken, BackupSensitivity, BackupUser,
     BACKUP_SCHEMA_VERSION,
 };
-use crate::domain::device_visibility::{DeviceVisibilityGrant, UserDeviceVisibilityGrant};
+use crate::domain::device_visibility::{
+    AccessGroupAccessGrant, DeviceVisibilityGrant, UserDeviceVisibilityGrant,
+};
 use crate::time_format::format_timestamp;
 
 use super::backup_address_book_tags::export_address_book_tags;
@@ -91,6 +93,19 @@ pub async fn export_backup_document(pool: &SqlitePool) -> Result<BackupDocument,
         device_uuid: Uuid::parse_str(&device_uuid).expect("stored uuid"),
     })
     .collect();
+    let access_group_access_grants = sqlx::query_as::<_, (String, String)>(
+        "SELECT incoming_access_group_uuid, outgoing_access_group_uuid
+         FROM access_group_access_grants
+         ORDER BY incoming_access_group_uuid ASC, outgoing_access_group_uuid ASC",
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|(incoming, outgoing)| AccessGroupAccessGrant {
+        incoming_access_group_uuid: Uuid::parse_str(&incoming).expect("stored uuid"),
+        outgoing_access_group_uuid: Uuid::parse_str(&outgoing).expect("stored uuid"),
+    })
+    .collect();
     let (address_books, address_book_access_rules) = export_address_book_access(pool).await?;
     let (address_book_tags, address_book_entry_tags) = export_address_book_tags(pool).await?;
     let address_book_entries =
@@ -151,6 +166,7 @@ pub async fn export_backup_document(pool: &SqlitePool) -> Result<BackupDocument,
         access_group_memberships,
         device_visibility_grants,
         user_device_visibility_grants,
+        access_group_access_grants,
         address_books,
         address_book_access_rules,
         address_book_tags,

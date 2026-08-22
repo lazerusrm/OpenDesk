@@ -6,15 +6,29 @@ use common::test_state;
 use http_body_util::BodyExt;
 use opendesk::build_router;
 use opendesk::domain::device::DeviceDraft;
+use opendesk::repository::audit_events::list_audit_events;
 use opendesk::repository::devices::{create_device, find_device_by_rustdesk_id};
-use serde_json::json;
+use serde_json::{json, Value};
 use tower::ServiceExt;
 
 async fn post(app: axum::Router, uri: &str, value: serde_json::Value) -> (StatusCode, Vec<u8>) {
+    send(app, "POST", uri, value).await
+}
+
+async fn put(app: axum::Router, uri: &str, value: serde_json::Value) -> (StatusCode, Vec<u8>) {
+    send(app, "PUT", uri, value).await
+}
+
+async fn send(
+    app: axum::Router,
+    method: &str,
+    uri: &str,
+    value: serde_json::Value,
+) -> (StatusCode, Vec<u8>) {
     let response = app
         .oneshot(
             Request::builder()
-                .method("POST")
+                .method(method)
                 .uri(uri)
                 .header("content-type", "application/json")
                 .body(Body::from(value.to_string()))
@@ -89,20 +103,23 @@ async fn sysinfo_accepts_platform_fields_without_mutating_inventory() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, b"SYSINFO_UPDATED");
-    let unchanged = find_device_by_rustdesk_id(&state.db, "654321")
+    let device = find_device_by_rustdesk_id(&state.db, "654321")
         .await
         .expect("lookup")
         .expect("device");
-    assert_eq!(unchanged.alias, "original alias");
-    assert_eq!(unchanged.hostname.as_deref(), Some("original-host"));
-    assert!(unchanged.last_checkin_at.is_none());
+    assert_eq!(device.alias, "original alias");
+    assert_eq!(device.hostname.as_deref(), Some("untrusted-host"));
+    assert_eq!(device.os_family.as_deref(), Some("linux"));
+    assert_eq!(device.rustdesk_version.as_deref(), Some("1.4.9"));
+    assert!(device.last_checkin_at.is_some());
+    assert!(device.notes.is_none());
 }
 
 #[tokio::test]
 async fn compatibility_boundary_rejects_unknown_heartbeat_and_unbounded_sysinfo() {
     let state = test_state().await;
     let app = build_router(state);
-    let (status, _) = post(
+    let (status, body) = post(
         app.clone(),
         "/api/heartbeat",
         json!({
@@ -114,7 +131,8 @@ async fn compatibility_boundary_rejects_unknown_heartbeat_and_unbounded_sysinfo(
         }),
     )
     .await;
-    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, b"{}");
 
     let (status, _) = post(
         app,

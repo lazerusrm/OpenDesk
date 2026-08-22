@@ -16,7 +16,9 @@ use crate::domain::backup::backup_readiness;
 use crate::domain::health::{build_health_checks, public_key_fingerprint};
 use crate::domain::server_config::default_server_config;
 use crate::http::session::require_action;
-use crate::http::views::{nav_permissions_for_role, HealthCheckRowView, StatusView};
+use crate::http::views::{
+    nav_permissions_for_role, status_pill_class, HealthCheckRowView, StatusView,
+};
 use crate::repository::server_config::load_server_config;
 use crate::time_format::format_timestamp;
 
@@ -60,6 +62,7 @@ async fn status_page(State(state): State<AppState>, jar: CookieJar) -> Result<Re
     let checks = build_health_checks(&config)
         .into_iter()
         .map(|check| HealthCheckRowView {
+            status_pill_class: status_pill_class(&check.status).to_string(),
             label: check.label,
             target: check.target,
             status: check.status,
@@ -79,7 +82,9 @@ async fn status_page(State(state): State<AppState>, jar: CookieJar) -> Result<Re
         relay_server: config.relay_server.clone(),
         public_key_fingerprint: public_key_fingerprint(&config.public_key),
         backup_status: readiness.status.to_string(),
+        backup_status_pill_class: status_pill_class(readiness.status).to_string(),
         backup_execution: readiness.execution.to_string(),
+        backup_execution_pill_class: status_pill_class(readiness.execution).to_string(),
         checks,
     };
     let html = view

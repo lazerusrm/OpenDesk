@@ -1,4 +1,11 @@
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
 use sqlx::SqlitePool;
+use uuid::Uuid;
+
+use crate::login_throttle::LoginThrottle;
+use crate::onboard_guard::OnboardGuard;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -13,4 +20,8 @@ pub struct AppState {
     pub rustdesk_download_macos_url: Option<String>,
     pub rustdesk_download_linux_url: Option<String>,
     pub rustdesk_download_android_url: Option<String>,
+    pub signed_client_dir: Option<std::path::PathBuf>,
+    pub login_throttle: Arc<Mutex<LoginThrottle>>,
+    pub onboard_guard: Arc<Mutex<OnboardGuard>>,
+    pub pending_onboard_totp: Arc<Mutex<HashMap<Uuid, Vec<u8>>>>,
 }

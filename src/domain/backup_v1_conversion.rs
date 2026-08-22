@@ -91,6 +91,7 @@ impl BackupDocumentV2 {
             access_group_memberships: self.access_group_memberships,
             device_visibility_grants: self.device_visibility_grants,
             user_device_visibility_grants: self.user_device_visibility_grants,
+            access_group_access_grants: Vec::new(),
             address_books: self
                 .address_books
                 .into_iter()
@@ -135,6 +136,7 @@ impl BackupDocumentV1 {
             access_group_memberships: Vec::new(),
             device_visibility_grants: Vec::new(),
             user_device_visibility_grants: Vec::new(),
+            access_group_access_grants: Vec::new(),
             address_books: Vec::new(),
             address_book_access_rules: Vec::new(),
             address_book_tags: Vec::new(),

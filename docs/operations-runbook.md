@@ -13,6 +13,7 @@ validation evidence or a site-specific deployment procedure.
 - A failed OpenDesk database check is an OpenDesk incident. A failed RustDesk
   probe is a reachability signal, not proof of WAN, UDP, NAT, or client-session
   behavior. Validate those paths from the required client networks.
+- Bind `OPENDESK_LISTEN_ADDR` to loopback and terminate TLS plus official-client `/api` on a reverse proxy. Do not publish the application listen port.
 
 ## Official-client token key
 
@@ -39,7 +40,7 @@ session validation or authorize production cutover.
 
 Backups are versioned JSON exports from `/backup/export.json`. They contain inventory,
 server configuration, enrollment-token hashes, user password hashes and activation
-states, scoped address-book sharing rules, and address-book tags. They
+states, scoped address-book sharing rules, access-group access grants, and address-book tags. They
 exclude browser sessions, official-client access tokens, audit events, and endpoint check-ins. Protect exports like
 credentials and do not place them in the repository or a public web directory.
 
@@ -219,7 +220,6 @@ sensitive fields (password/hash/token/secret/key/session/audit/topology) are
 rejected. The manifest is only a report precondition: this command has no apply
 or database-write operation.
 
-
 ```text
 sqlite3 source.db '.backup staging-copy.sqlite'
 opendesk-migration-dry-run --input sanitized-export.json --database staging-copy.sqlite
@@ -246,5 +246,4 @@ error directing the operator to a verified backup artifact.
    restore the verified backup into a fresh data volume; do not hand-edit the
    SQLite database. Record the validation result and rollback decision.
 
-Cutover remains blocked until S-006 through S-009 and the required backup/restore
-and rollback evidence are recorded with date, environment, and artifact paths.
+Cutover remains blocked until S-006 through S-009 and the required backup/restore and rollback evidence are recorded with date, environment, and artifact paths.

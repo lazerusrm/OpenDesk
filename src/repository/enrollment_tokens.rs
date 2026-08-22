@@ -5,7 +5,34 @@ use uuid::Uuid;
 use crate::domain::enrollment_token::{
     generate_enrollment_token_value, hash_enrollment_token_value, EnrollmentTokenRecord,
 };
+use crate::repository::device_visibility::ensure_user_device_visibility_grant;
 use crate::time_format::{format_timestamp, parse_timestamp};
+
+type TokenRow = (
+    String,
+    String,
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
+
+fn row_to_record(row: TokenRow) -> EnrollmentTokenRecord {
+    EnrollmentTokenRecord {
+        enrollment_token_uuid: Uuid::parse_str(&row.0).expect("stored uuid"),
+        token_hash: row.1,
+        label: row.2,
+        site_uuid: row.3.and_then(|value| Uuid::parse_str(&value).ok()),
+        expires_at: row.4.and_then(|value| parse_timestamp(&value)),
+        revoked_at: row.5.and_then(|value| parse_timestamp(&value)),
+        created_by_user_uuid: row.6.and_then(|value| Uuid::parse_str(&value).ok()),
+    }
+}
+
+const TOKEN_SELECT: &str = "SELECT enrollment_token_uuid, token_hash, label, site_uuid,
+            expires_at, revoked_at, created_by_user_uuid
+         FROM enrollment_tokens";
 
 pub struct CreatedEnrollmentToken {
     pub record: EnrollmentTokenRecord,
@@ -45,6 +72,7 @@ pub async fn create_enrollment_token(
             site_uuid,
             expires_at,
             revoked_at: None,
+            created_by_user_uuid,
         },
         token_value,
     })
@@ -53,64 +81,32 @@ pub async fn create_enrollment_token(
 pub async fn list_enrollment_tokens(
     pool: &SqlitePool,
 ) -> Result<Vec<EnrollmentTokenRecord>, sqlx::Error> {
-    let rows = sqlx::query_as::<
-        _,
-        (
-            String,
-            String,
-            String,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-        ),
-    >(
-        "SELECT enrollment_token_uuid, token_hash, label, site_uuid, expires_at, revoked_at
-         FROM enrollment_tokens ORDER BY created_at DESC",
-    )
-    .fetch_all(pool)
-    .await?;
-    Ok(rows
-        .into_iter()
-        .map(|row| EnrollmentTokenRecord {
-            enrollment_token_uuid: Uuid::parse_str(&row.0).expect("stored uuid"),
-            token_hash: row.1,
-            label: row.2,
-            site_uuid: row.3.and_then(|value| Uuid::parse_str(&value).ok()),
-            expires_at: row.4.and_then(|value| parse_timestamp(&value)),
-            revoked_at: row.5.and_then(|value| parse_timestamp(&value)),
-        })
-        .collect())
+    let rows = sqlx::query_as::<_, TokenRow>(&format!("{TOKEN_SELECT} ORDER BY created_at DESC"))
+        .fetch_all(pool)
+        .await?;
+    Ok(rows.into_iter().map(row_to_record).collect())
 }
 
 pub async fn find_enrollment_token_by_hash(
     pool: &SqlitePool,
     token_hash: &str,
 ) -> Result<Option<EnrollmentTokenRecord>, sqlx::Error> {
-    let row = sqlx::query_as::<
-        _,
-        (
-            String,
-            String,
-            String,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-        ),
-    >(
-        "SELECT enrollment_token_uuid, token_hash, label, site_uuid, expires_at, revoked_at
-         FROM enrollment_tokens WHERE token_hash = ?",
-    )
-    .bind(token_hash)
-    .fetch_optional(pool)
-    .await?;
-    Ok(row.map(|row| EnrollmentTokenRecord {
-        enrollment_token_uuid: Uuid::parse_str(&row.0).expect("stored uuid"),
-        token_hash: row.1,
-        label: row.2,
-        site_uuid: row.3.and_then(|value| Uuid::parse_str(&value).ok()),
-        expires_at: row.4.and_then(|value| parse_timestamp(&value)),
-        revoked_at: row.5.and_then(|value| parse_timestamp(&value)),
-    }))
+    let row = sqlx::query_as::<_, TokenRow>(&format!("{TOKEN_SELECT} WHERE token_hash = ?"))
+        .bind(token_hash)
+        .fetch_optional(pool)
+        .await?;
+    Ok(row.map(row_to_record))
+}
+
+pub async fn grant_issuer_device_visibility(
+    pool: &SqlitePool,
+    record: &EnrollmentTokenRecord,
+    device_uuid: Uuid,
+) -> Result<(), sqlx::Error> {
+    let Some(user_uuid) = record.created_by_user_uuid else {
+        return Ok(());
+    };
+    ensure_user_device_visibility_grant(pool, user_uuid, device_uuid).await
 }
 
 pub async fn revoke_enrollment_token(

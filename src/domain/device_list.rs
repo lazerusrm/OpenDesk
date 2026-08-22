@@ -1,8 +1,18 @@
 use std::collections::HashMap;
 
+use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 
 use super::device::Device;
+use crate::time_format::parse_timestamp;
+
+pub const RECENTLY_SEEN_WINDOW: Duration = Duration::seconds(5 * 60);
+
+pub fn recently_seen(last_checkin_at: Option<&str>, now: OffsetDateTime, window: Duration) -> bool {
+    last_checkin_at
+        .and_then(parse_timestamp)
+        .is_some_and(|seen_at| now - seen_at <= window)
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct DeviceSearchQuery {
@@ -233,5 +243,23 @@ mod tests {
             term: "123456".to_string(),
         };
         assert!(device_matches_search(&device, &query));
+    }
+
+    #[test]
+    fn recently_seen_uses_last_checkin_window() {
+        use crate::time_format::format_timestamp;
+        use time::macros::datetime;
+
+        let now = datetime!(2026-08-20 12:00:00 UTC);
+        let within = format_timestamp(datetime!(2026-08-20 11:55:00 UTC));
+        let outside = format_timestamp(datetime!(2026-08-20 11:54:59 UTC));
+        assert!(recently_seen(Some(&within), now, RECENTLY_SEEN_WINDOW));
+        assert!(!recently_seen(Some(&outside), now, RECENTLY_SEEN_WINDOW));
+        assert!(!recently_seen(None, now, RECENTLY_SEEN_WINDOW));
+        assert!(!recently_seen(
+            Some("not-a-timestamp"),
+            now,
+            RECENTLY_SEEN_WINDOW
+        ));
     }
 }

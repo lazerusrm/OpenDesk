@@ -5,9 +5,11 @@ use uuid::Uuid;
 ///
 /// `access_group_uuids` is the user's effective `AccessGroupMembership` set;
 /// `device_access_group_uuids` is the device's `DeviceVisibilityGrant` set;
-/// and `directly_granted_device_uuids` contains this user's
-/// `UserDeviceVisibilityGrant` targets. The policy intentionally owns no
-/// persistence or aggregate schema.
+/// `directly_granted_device_uuids` contains this user's
+/// `UserDeviceVisibilityGrant` targets; and `reachable_outgoing_access_group_uuids`
+/// is the outgoing groups of `AccessGroupAccessGrant` rows whose incoming group
+/// the user belongs to. The policy intentionally owns no persistence or
+/// aggregate schema.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VisibilityFacts {
     pub user_uuid: Uuid,
@@ -15,6 +17,7 @@ pub struct VisibilityFacts {
     pub access_group_uuids: BTreeSet<Uuid>,
     pub device_access_group_uuids: BTreeSet<Uuid>,
     pub directly_granted_device_uuids: BTreeSet<Uuid>,
+    pub reachable_outgoing_access_group_uuids: BTreeSet<Uuid>,
 }
 
 impl VisibilityFacts {
@@ -25,6 +28,7 @@ impl VisibilityFacts {
             access_group_uuids: BTreeSet::new(),
             device_access_group_uuids: BTreeSet::new(),
             directly_granted_device_uuids: BTreeSet::new(),
+            reachable_outgoing_access_group_uuids: BTreeSet::new(),
         }
     }
 }
@@ -35,13 +39,9 @@ impl VisibilityFacts {
 /// authorize or deny a RustDesk session. Address-book ownership is a separate
 /// policy and must not be inferred from these facts.
 pub fn is_device_visible(facts: &VisibilityFacts) -> bool {
-    facts
-        .directly_granted_device_uuids
-        .contains(&facts.device_uuid)
-        || facts
-            .access_group_uuids
-            .iter()
-            .any(|group_uuid| facts.device_access_group_uuids.contains(group_uuid))
+    has_direct_device_visibility_grant(facts)
+        || has_access_group_device_visibility_grant(facts)
+        || has_access_group_access_visibility_grant(facts)
 }
 
 /// Explicit direct `UserDeviceVisibilityGrant` predicate.
@@ -55,6 +55,15 @@ pub fn has_direct_device_visibility_grant(facts: &VisibilityFacts) -> bool {
 pub fn has_access_group_device_visibility_grant(facts: &VisibilityFacts) -> bool {
     facts
         .access_group_uuids
+        .iter()
+        .any(|group_uuid| facts.device_access_group_uuids.contains(group_uuid))
+}
+
+/// Explicit `AccessGroupAccessGrant` predicate: a group the user belongs to
+/// may see devices granted to another group.
+pub fn has_access_group_access_visibility_grant(facts: &VisibilityFacts) -> bool {
+    facts
+        .reachable_outgoing_access_group_uuids
         .iter()
         .any(|group_uuid| facts.device_access_group_uuids.contains(group_uuid))
 }
@@ -92,6 +101,19 @@ mod tests {
         facts.device_access_group_uuids.insert(user_group);
         assert!(is_device_visible(&facts));
         assert!(has_access_group_device_visibility_grant(&facts));
+    }
+
+    #[test]
+    fn group_access_grant_sees_outgoing_group_devices() {
+        let (user_uuid, device_uuid, incoming, outgoing) = ids();
+        let mut facts = VisibilityFacts::new(user_uuid, device_uuid);
+        facts.access_group_uuids.insert(incoming);
+        facts.device_access_group_uuids.insert(outgoing);
+        assert!(!is_device_visible(&facts));
+        facts.reachable_outgoing_access_group_uuids.insert(outgoing);
+        assert!(is_device_visible(&facts));
+        assert!(has_access_group_access_visibility_grant(&facts));
+        assert!(!has_access_group_device_visibility_grant(&facts));
     }
 
     #[test]

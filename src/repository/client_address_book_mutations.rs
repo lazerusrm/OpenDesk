@@ -213,6 +213,22 @@ pub async fn delete_client_address_book_peers(
     require_write_access(&mut tx, user_uuid, address_book_uuid).await?;
     for rustdesk_id in rustdesk_ids {
         let device_uuid = visible_device_uuid(&mut tx, user_uuid, rustdesk_id).await?;
+        sqlx::query(
+            "INSERT OR IGNORE INTO personal_address_book_hidden_devices
+             (owner_user_uuid, device_uuid)
+             SELECT ?, ?
+             FROM address_books
+             WHERE address_book_uuid = ?
+               AND owner_user_uuid = ?
+               AND book_kind = 'personal'",
+        )
+        .bind(user_uuid.to_string())
+        .bind(device_uuid.to_string())
+        .bind(address_book_uuid.to_string())
+        .bind(user_uuid.to_string())
+        .execute(&mut *tx)
+        .await
+        .map_err(map_sql_error)?;
         let result = sqlx::query(
             "DELETE FROM address_book_entries WHERE address_book_uuid = ? AND device_uuid = ?",
         )

@@ -110,6 +110,7 @@ async fn client_sync_returns_only_explicitly_scoped_groups_users_and_peers() {
             hostname: Some("visible-host".into()),
             os_family: Some("Linux".into()),
             os_version: Some("Test".into()),
+            owner: Some("operator".into()),
             notes: Some("visible note".into()),
             ..Default::default()
         },
@@ -150,6 +151,20 @@ async fn client_sync_returns_only_explicitly_scoped_groups_users_and_peers() {
     .execute(&db)
     .await
     .expect("visibility");
+    let other_group_uuid = Uuid::new_v4();
+    sqlx::query("INSERT INTO access_groups (access_group_uuid, name) VALUES (?, 'Other Team')")
+        .bind(other_group_uuid.to_string())
+        .execute(&db)
+        .await
+        .expect("other group");
+    sqlx::query(
+        "INSERT INTO device_visibility_grants (access_group_uuid, device_uuid) VALUES (?, ?)",
+    )
+    .bind(other_group_uuid.to_string())
+    .bind(visible.device_uuid.to_string())
+    .execute(&db)
+    .await
+    .expect("other visibility");
     let book = opendesk::repository::address_books::create_personal_address_book(
         &db,
         operator.user_uuid,
@@ -252,6 +267,9 @@ async fn client_sync_returns_only_explicitly_scoped_groups_users_and_peers() {
     assert_eq!(peers["data"][0]["id"], "200001");
     assert_eq!(peers["data"][0]["info"]["device_name"], "visible-host");
     assert_eq!(peers["data"][0]["note"], "visible note");
+    assert_eq!(peers["data"][0]["user_name"], "operator");
+    assert_eq!(peers["data"][0]["user"], operator.user_uuid.to_string());
+    assert_eq!(peers["data"][0]["device_group_name"], "Scoped Team");
 
     let settings = post_json_with_token(&app, "/api/ab/settings", json!({}), &token).await;
     assert_eq!(settings.status(), StatusCode::OK);

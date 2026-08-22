@@ -33,6 +33,8 @@ pub async fn restore_backup_document(
         "address_books",
         "user_device_visibility_grants",
         "device_visibility_grants",
+        "access_group_access_grants",
+        "personal_address_book_hidden_devices",
         "access_group_memberships",
         "access_groups",
         "endpoint_checkins",
@@ -168,6 +170,17 @@ pub async fn restore_backup_document(
         )
         .bind(grant.user_uuid.to_string())
         .bind(grant.device_uuid.to_string())
+        .execute(&mut *tx)
+        .await?;
+    }
+    for grant in &document.access_group_access_grants {
+        sqlx::query(
+            "INSERT INTO access_group_access_grants
+             (incoming_access_group_uuid, outgoing_access_group_uuid)
+             VALUES (?, ?)",
+        )
+        .bind(grant.incoming_access_group_uuid.to_string())
+        .bind(grant.outgoing_access_group_uuid.to_string())
         .execute(&mut *tx)
         .await?;
     }

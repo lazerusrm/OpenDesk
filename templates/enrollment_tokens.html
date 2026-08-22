@@ -1,24 +1,62 @@
 {% extends "layout.html" %}
 {% block content %}
 <section class="card">
-  <h1>Enrollment Tokens</h1>
-  {% if created_token_value.is_some() %}
-  <p>New token (shown once): <code>{{ created_token_value.as_ref().unwrap() }}</code></p>
+  <h1>Enrollment tokens</h1>
+  <p>For people you are talking to, use <a href="/onboard-setup">Onboard codes</a>: they open <code>/onboard</code> and type a six-digit code from your phone. This page is the longer token/link flow.</p>
+  <p>Create a labeled, revocable token, then send the onboard URL. The recipient does not sign in and does not get access to other computers. The installed device is visible to you (administrators still see every device).</p>
+  <p>Official clients can also run <code>rustdesk --deploy --token TOKEN</code> against the configured API server. OpenDesk native check-in remains <code>POST /api/enrollments/check-in</code>.</p>
+  <p>Prefer the onboard URL when sending a link. Revoke the token if a link leaks. Set an expiry for links you send to people.</p>
+  {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
+</section>
+{% if created_token_value.is_some() %}
+<section class="card notice">
+  <h2>New enrollment token</h2>
+  <p class="error">Copy the onboard link now. The secret is not shown again.</p>
+  {% if created_onboard_url.is_some() %}
+  <label for="created-onboard-url">Onboard link</label>
+  <div class="input-with-copy">
+    <input id="created-onboard-url" value="{{ created_onboard_url.as_ref().unwrap() }}" readonly autocomplete="off" spellcheck="false">
+    <button type="button" class="copy-button" data-copy-input="created-onboard-url">Copy</button>
+  </div>
+  <p>Send this URL. It does not create an account for the recipient.</p>
   {% endif %}
+  <label for="created-enrollment-token">Enrollment token</label>
+  <div class="input-with-copy">
+    <input id="created-enrollment-token" value="{{ created_token_value.as_ref().unwrap() }}" readonly autocomplete="off" spellcheck="false">
+    <button type="button" class="copy-button" data-copy-input="created-enrollment-token">Copy</button>
+  </div>
+  <p class="muted">Use the raw token only in <code>rustdesk --deploy</code> or a check-in body.</p>
+</section>
+{% endif %}
+<section class="card">
+  <h2>Create token</h2>
   <form method="post" action="/enrollment-tokens">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="label">Label</label>
-    <input id="label" name="label" required>
+    <input id="label" name="label" required maxlength="128" autocomplete="off">
+    <label for="expires_in_days">Expires</label>
+    <select id="expires_in_days" name="expires_in_days">
+      <option value="7">7 days</option>
+      <option value="">No expiry</option>
+      <option value="30">30 days</option>
+      <option value="90">90 days</option>
+      <option value="365">365 days</option>
+    </select>
     <button type="submit">Create token</button>
   </form>
 </section>
 <section class="card">
+  <h2>Tokens</h2>
+  {% if tokens.is_empty() %}
+  <p class="muted">No enrollment tokens yet. Create a labeled token to register devices. The secret is shown only once after you create it.</p>
+  {% else %}
   <table>
     <thead>
       <tr>
         <th>Label</th>
         <th>Status</th>
-        <th></th>
+        <th>Expires</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -26,11 +64,12 @@
       <tr>
         <td>{{ token.label }}</td>
         <td>{{ token.status }}</td>
+        <td>{{ token.expires_display }}</td>
         <td>
           {% if token.can_revoke %}
           <form method="post" action="/enrollment-tokens/{{ token.enrollment_token_uuid }}/revoke" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button type="submit">Revoke</button>
+            <button type="submit" class="button-secondary">Revoke</button>
           </form>
           {% endif %}
         </td>
@@ -38,5 +77,6 @@
       {% endfor %}
     </tbody>
   </table>
+  {% endif %}
 </section>
 {% endblock %}

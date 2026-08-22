@@ -14,6 +14,7 @@ pub mod enrollment_tokens;
 pub mod migration_apply;
 pub mod migration_credentials;
 pub mod migration_instance;
+pub mod onboard_totp;
 pub mod server_config;
 pub mod sessions;
 pub mod sites;

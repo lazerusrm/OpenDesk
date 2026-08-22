@@ -90,6 +90,76 @@ pub async fn reset_user_password(
     Ok(())
 }
 
+#[derive(Debug, Error)]
+pub enum DisableUserError {
+    #[error("user is missing")]
+    Missing,
+    #[error("the signed-in admin cannot disable their own account")]
+    CannotDisableSelf,
+    #[error("the last active admin cannot be disabled")]
+    LastAdmin,
+    #[error("database operation failed")]
+    Database(#[from] sqlx::Error),
+}
+
+pub async fn disable_user(
+    pool: &SqlitePool,
+    actor_user_uuid: Uuid,
+    target_user_uuid: Uuid,
+    now: OffsetDateTime,
+) -> Result<(), DisableUserError> {
+    if actor_user_uuid == target_user_uuid {
+        return Err(DisableUserError::CannotDisableSelf);
+    }
+    let timestamp = format_timestamp(now);
+    let mut tx = pool.begin().await?;
+    let target: Option<(String, String)> =
+        sqlx::query_as("SELECT role, activation_state FROM users WHERE user_uuid = ?")
+            .bind(target_user_uuid.to_string())
+            .fetch_optional(&mut *tx)
+            .await?;
+    let Some((role, activation_state)) = target else {
+        tx.rollback().await?;
+        return Err(DisableUserError::Missing);
+    };
+    if activation_state != "active" {
+        tx.rollback().await?;
+        return Err(DisableUserError::Missing);
+    }
+    if role == "admin" {
+        let active_admins: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM users WHERE role = 'admin' AND activation_state = 'active'",
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        if active_admins <= 1 {
+            tx.rollback().await?;
+            return Err(DisableUserError::LastAdmin);
+        }
+    }
+    sqlx::query(
+        "UPDATE users SET activation_state = 'disabled', updated_at = ? WHERE user_uuid = ?",
+    )
+    .bind(&timestamp)
+    .bind(target_user_uuid.to_string())
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("DELETE FROM sessions WHERE user_uuid = ?")
+        .bind(target_user_uuid.to_string())
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "UPDATE client_access_tokens SET revoked_at = ?
+         WHERE user_uuid = ? AND revoked_at IS NULL",
+    )
+    .bind(&timestamp)
+    .bind(target_user_uuid.to_string())
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
 pub async fn list_users(pool: &SqlitePool) -> Result<Vec<UserRow>, sqlx::Error> {
     let rows = sqlx::query_as::<_, (String, String, String, String, String)>(
         "SELECT user_uuid, username, password_hash, role, activation_state FROM users ORDER BY username ASC",

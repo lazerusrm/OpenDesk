@@ -1,19 +1,23 @@
 use axum::{
     extract::{rejection::JsonRejection, DefaultBodyLimit, State},
     http::{header::AUTHORIZATION, HeaderMap, StatusCode},
-    routing::post,
+    routing::{get, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use time::OffsetDateTime;
+use uuid::Uuid;
 
 use crate::app_state::AppState;
+use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::client_access_token::validate_client_identity;
+use crate::login_throttle::request_ip;
+use crate::repository::audit_events::insert_audit_event;
 use crate::repository::{
     client_access_tokens::{
-        authenticate_client_access_token, issue_client_access_token, revoke_client_access_token,
-        AuthenticatedClientToken,
+        authenticate_client_access_token, authenticate_client_bearer_token,
+        issue_client_access_token, revoke_client_access_token, AuthenticatedClientToken,
     },
     users::{authenticate_user_password, find_user_by_uuid, UserRow},
 };
@@ -26,7 +30,10 @@ const INVALID_CREDENTIALS: &str = "Invalid username or password";
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/login", post(login))
-        .route("/api/currentUser", post(current_user))
+        .route(
+            "/api/currentUser",
+            get(current_user_from_bearer).post(current_user),
+        )
         .route("/api/logout", post(logout))
         .layer(DefaultBodyLimit::max(16 * 1024))
 }
@@ -72,15 +79,50 @@ struct ClientUserResponse {
 
 async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     request: Result<Json<LoginRequest>, JsonRejection>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let Json(request) =
         request.map_err(|_| json_error(StatusCode::BAD_REQUEST, INVALID_REQUEST))?;
     let (username, password, rustdesk_id, client_uuid) = accepted_login(&request)?;
-    let user = authenticate_user_password(&state.db, username, password)
+    let ip = request_ip(&headers);
+    let now = OffsetDateTime::now_utc();
+    if state
+        .login_throttle
+        .lock()
+        .map(|mut throttle| throttle.is_blocked(username, &ip, now))
+        .unwrap_or(false)
+    {
+        return Err(json_error(
+            StatusCode::TOO_MANY_REQUESTS,
+            "Too many sign-in attempts",
+        ));
+    }
+    let user = match authenticate_user_password(&state.db, username, password)
         .await
         .map_err(internal_error)?
-        .ok_or_else(|| json_error(StatusCode::UNAUTHORIZED, INVALID_CREDENTIALS))?;
+    {
+        Some(user) => user,
+        None => {
+            if let Ok(mut throttle) = state.login_throttle.lock() {
+                throttle.record_failure(username, &ip, now);
+            }
+            let audit = AuditEventDraft {
+                actor_user_uuid: None,
+                action: "login".to_string(),
+                object_type: "session".to_string(),
+                object_uuid: None,
+                outcome: "failure".to_string(),
+                source: "client".to_string(),
+                detail: None,
+            };
+            let _ = insert_audit_event(&state.db, &audit).await;
+            return Err(json_error(StatusCode::UNAUTHORIZED, INVALID_CREDENTIALS));
+        }
+    };
+    if let Ok(mut throttle) = state.login_throttle.lock() {
+        throttle.record_success(username, &ip);
+    }
     let access_token = issue_client_access_token(
         &state.db,
         &state.client_token_hmac_key,
@@ -108,11 +150,15 @@ async fn current_user(
     validate_client_identity(&request.id, &request.uuid)
         .map_err(|_| json_error(StatusCode::BAD_REQUEST, INVALID_REQUEST))?;
     let token = authenticate_request(&state, &headers, &request).await?;
-    let user = find_user_by_uuid(&state.db, token.user_uuid)
-        .await
-        .map_err(internal_error)?
-        .ok_or_else(unauthorized)?;
-    Ok(Json(client_user(&user)))
+    user_response(&state, token.user_uuid).await
+}
+
+async fn current_user_from_bearer(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<ClientUserResponse>, (StatusCode, Json<Value>)> {
+    let token = authenticate_bearer(&state, &headers).await?;
+    user_response(&state, token.user_uuid).await
 }
 
 async fn logout(
@@ -181,6 +227,33 @@ async fn authenticate_request(
     .await
     .map_err(internal_error)?
     .ok_or_else(unauthorized)
+}
+
+async fn authenticate_bearer(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<AuthenticatedClientToken, (StatusCode, Json<Value>)> {
+    let value = bearer_token(headers).ok_or_else(unauthorized)?;
+    authenticate_client_bearer_token(
+        &state.db,
+        &state.client_token_hmac_key,
+        value,
+        OffsetDateTime::now_utc(),
+    )
+    .await
+    .map_err(internal_error)?
+    .ok_or_else(unauthorized)
+}
+
+async fn user_response(
+    state: &AppState,
+    user_uuid: Uuid,
+) -> Result<Json<ClientUserResponse>, (StatusCode, Json<Value>)> {
+    let user = find_user_by_uuid(&state.db, user_uuid)
+        .await
+        .map_err(internal_error)?
+        .ok_or_else(unauthorized)?;
+    Ok(Json(client_user(&user)))
 }
 
 pub(crate) fn bearer_token(headers: &HeaderMap) -> Option<&str> {

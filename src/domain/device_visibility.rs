@@ -16,3 +16,13 @@ pub struct UserDeviceVisibilityGrant {
     pub user_uuid: Uuid,
     pub device_uuid: Uuid,
 }
+
+/// Members of `incoming_access_group_uuid` can see devices granted to
+/// `outgoing_access_group_uuid`. This is dashboard/API and official-client
+/// data scope only; it does not authorize a RustDesk session.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AccessGroupAccessGrant {
+    pub incoming_access_group_uuid: Uuid,
+    pub outgoing_access_group_uuid: Uuid,
+}

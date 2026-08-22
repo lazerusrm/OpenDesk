@@ -10,8 +10,9 @@ use time::OffsetDateTime;
 
 use crate::app_state::AppState;
 use crate::repository::address_books::{
-    find_address_book_for_client_access, find_personal_address_book,
+    ensure_personal_address_book, find_address_book_for_client_access,
     list_address_book_tags_for_client, list_shared_address_books_for_user,
+    sync_visible_devices_into_personal_address_book,
 };
 use crate::repository::{
     client_access_tokens::authenticate_client_bearer_token,
@@ -193,9 +194,9 @@ async fn peers(
                     "os": os,
                 }),
                 status: 1,
-                user: String::new(),
-                user_name: String::new(),
-                device_group_name: String::new(),
+                user: peer.user_guid,
+                user_name: peer.user_name,
+                device_group_name: peer.device_group_name,
                 note: peer.notes.unwrap_or_default(),
             }
         })
@@ -216,9 +217,12 @@ async fn personal_address_book(
     headers: HeaderMap,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let user_uuid = authenticate(&state, &headers).await?;
-    let book = find_personal_address_book(&state.db, user_uuid)
+    let book = ensure_personal_address_book(&state.db, user_uuid)
         .await
-        .map_err(|_| json_error(StatusCode::NOT_FOUND, "Address book not found"))?;
+        .map_err(internal_error)?;
+    sync_visible_devices_into_personal_address_book(&state.db, user_uuid, book.address_book_uuid)
+        .await
+        .map_err(internal_error)?;
     Ok(Json(json!({ "guid": book.address_book_uuid.to_string() })))
 }
 

@@ -16,6 +16,9 @@ use crate::repository::client_address_book_mutations::{
     ClientAddressBookPeerDraft, ClientAddressBookPeerUpdate,
 };
 
+use crate::domain::role::Role;
+use crate::repository::users::find_user_by_uuid;
+
 use super::client_account::json_error;
 use super::client_sync::{authenticate, parse_guid};
 
@@ -93,7 +96,7 @@ async fn add_peer(
     Path(guid): Path<String>,
     Json(request): Json<AddPeerRequest>,
 ) -> Result<StatusCode, (StatusCode, Json<Value>)> {
-    reject_secret_fields(request.password.as_deref(), request.hash.as_deref())?;
+    let _ignored_secrets = (request.password, request.hash);
     let _ignored_client_metadata = (
         request.username,
         request.hostname,
@@ -133,9 +136,14 @@ async fn update_peer(
     Path(guid): Path<String>,
     Json(request): Json<UpdatePeerRequest>,
 ) -> Result<StatusCode, (StatusCode, Json<Value>)> {
-    reject_secret_fields(request.password.as_deref(), request.hash.as_deref())?;
+    // Official Flutter PUTs `{id, hash}` after a successful session and toasts
+    // any JSON `error`. Acknowledge without persisting those secrets.
+    let _ignored_secrets = (request.password, request.hash);
     let _ignored_client_metadata = (request.username, request.hostname, request.platform);
     let user_uuid = authenticate(&state, &headers).await?;
+    if request.alias.is_none() && request.note.is_none() && request.tags.is_none() {
+        return Ok(StatusCode::OK);
+    }
     update_client_address_book_peer(
         &state.db,
         user_uuid,
@@ -162,6 +170,7 @@ async fn delete_peers(
         return Err(json_error(StatusCode::BAD_REQUEST, INVALID_REQUEST));
     }
     let user_uuid = authenticate(&state, &headers).await?;
+    require_admin_user(&state, user_uuid).await?;
     delete_client_address_book_peers(&state.db, user_uuid, parse_guid(&guid)?, &ids)
         .await
         .map_err(repository_error)?;
@@ -235,20 +244,23 @@ async fn delete_tags(
         return Err(json_error(StatusCode::BAD_REQUEST, INVALID_REQUEST));
     }
     let user_uuid = authenticate(&state, &headers).await?;
+    require_admin_user(&state, user_uuid).await?;
     delete_client_address_book_tags(&state.db, user_uuid, parse_guid(&guid)?, &names)
         .await
         .map_err(repository_error)?;
     Ok(StatusCode::OK)
 }
 
-fn reject_secret_fields(
-    password: Option<&str>,
-    hash: Option<&str>,
+async fn require_admin_user(
+    state: &AppState,
+    user_uuid: uuid::Uuid,
 ) -> Result<(), (StatusCode, Json<Value>)> {
-    if password.is_some_and(|value| !value.is_empty())
-        || hash.is_some_and(|value| !value.is_empty())
-    {
-        return Err(json_error(StatusCode::BAD_REQUEST, INVALID_REQUEST));
+    let user = find_user_by_uuid(&state.db, user_uuid)
+        .await
+        .map_err(|_| json_error(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error"))?
+        .ok_or_else(|| json_error(StatusCode::UNAUTHORIZED, "Unauthorized"))?;
+    if user.role != Role::ADMIN {
+        return Err(json_error(StatusCode::FORBIDDEN, "Forbidden"));
     }
     Ok(())
 }

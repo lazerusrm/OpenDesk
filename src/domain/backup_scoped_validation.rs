@@ -169,6 +169,30 @@ pub fn validate_backup_document(document: &BackupDocument) -> Result<(), BackupV
         }
     }
 
+    let mut group_access = HashSet::new();
+    for grant in &document.access_group_access_grants {
+        if grant.incoming_access_group_uuid == grant.outgoing_access_group_uuid {
+            return Err(BackupValidationError::InvalidValue {
+                field: "access group access grant",
+            });
+        }
+        if !access_group_ids.contains(&grant.incoming_access_group_uuid)
+            || !access_group_ids.contains(&grant.outgoing_access_group_uuid)
+        {
+            return Err(BackupValidationError::InvalidReference {
+                relation: "access group access grant",
+            });
+        }
+        if !group_access.insert((
+            grant.incoming_access_group_uuid,
+            grant.outgoing_access_group_uuid,
+        )) {
+            return Err(BackupValidationError::DuplicateIdentifier {
+                collection: "access group access grant",
+            });
+        }
+    }
+
     let mut address_book_names = HashSet::new();
     for book in &document.address_books {
         if !user_ids.contains(&book.owner_user_uuid) {

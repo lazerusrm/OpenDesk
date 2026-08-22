@@ -30,16 +30,18 @@ async fn request(
         .expect("response")
 }
 
+async fn body_bytes(response: axum::response::Response) -> Vec<u8> {
+    response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes()
+        .to_vec()
+}
+
 async fn body_json(response: axum::response::Response) -> Value {
-    serde_json::from_slice(
-        &response
-            .into_body()
-            .collect()
-            .await
-            .expect("body")
-            .to_bytes(),
-    )
-    .expect("json")
+    serde_json::from_slice(&body_bytes(response).await).expect("json")
 }
 
 async fn login(app: &axum::Router, username: &str, id: &str) -> String {
@@ -69,7 +71,7 @@ async fn login(app: &axum::Router, username: &str, id: &str) -> String {
 async fn official_client_mutations_enforce_write_scope_and_never_accept_secrets() {
     let state = common::test_state().await;
     let db = state.db.clone();
-    let owner = opendesk::repository::users::create_user(&db, "owner", "password", "operator")
+    let owner = opendesk::repository::users::create_user(&db, "owner", "password", "admin")
         .await
         .expect("owner");
     let writer = opendesk::repository::users::create_user(&db, "writer", "password", "operator")
@@ -88,7 +90,7 @@ async fn official_client_mutations_enforce_write_scope_and_never_accept_secrets(
     )
     .await
     .expect("device");
-    for user_uuid in [writer.user_uuid, reader.user_uuid] {
+    for user_uuid in [owner.user_uuid, writer.user_uuid, reader.user_uuid] {
         sqlx::query(
             "INSERT INTO user_device_visibility_grants (user_uuid, device_uuid) VALUES (?, ?)",
         )
@@ -119,6 +121,7 @@ async fn official_client_mutations_enforce_write_scope_and_never_accept_secrets(
         .expect("rule");
     }
     let app = build_router(state);
+    let owner_token = login(&app, "owner", "410100").await;
     let writer_token = login(&app, "writer", "410101").await;
     let reader_token = login(&app, "reader", "410102").await;
     let guid = book.address_book_uuid;
@@ -223,9 +226,33 @@ async fn official_client_mutations_enforce_write_scope_and_never_accept_secrets(
         json!({"id": "410001", "password": "must-not-cross"}),
     )
     .await;
-    assert_eq!(secret.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(secret.status(), StatusCode::OK);
+    assert!(body_bytes(secret).await.is_empty());
+    let hash_only = request(
+        &app,
+        Method::PUT,
+        &format!("/api/ab/peer/update/{guid}"),
+        Some(&writer_token),
+        json!({"id": "410001", "hash": "bXVzdC1ub3QtcGVyc2lzdA=="}),
+    )
+    .await;
+    assert_eq!(hash_only.status(), StatusCode::OK);
+    assert!(body_bytes(hash_only).await.is_empty());
+    let after_secret = request(
+        &app,
+        Method::POST,
+        &format!("/api/ab/peers?current=1&pageSize=100&ab={guid}"),
+        Some(&writer_token),
+        json!({}),
+    )
+    .await;
+    let after_secret = body_json(after_secret).await;
+    assert_eq!(after_secret["data"][0]["alias"], "Updated");
+    assert_eq!(after_secret["data"][0]["password"], "");
+    assert_eq!(after_secret["data"][0]["hash"], "");
+    assert_eq!(after_secret["data"][0]["note"], "new note");
 
-    let delete_peer = request(
+    let operator_delete = request(
         &app,
         Method::DELETE,
         &format!("/api/ab/peer/{guid}"),
@@ -233,12 +260,30 @@ async fn official_client_mutations_enforce_write_scope_and_never_accept_secrets(
         json!(["410001"]),
     )
     .await;
+    assert_eq!(operator_delete.status(), StatusCode::FORBIDDEN);
+    let delete_peer = request(
+        &app,
+        Method::DELETE,
+        &format!("/api/ab/peer/{guid}"),
+        Some(&owner_token),
+        json!(["410001"]),
+    )
+    .await;
     assert_eq!(delete_peer.status(), StatusCode::OK);
-    let delete_tag = request(
+    let operator_delete_tag = request(
         &app,
         Method::DELETE,
         &format!("/api/ab/tag/{guid}"),
         Some(&writer_token),
+        json!([" Priority "]),
+    )
+    .await;
+    assert_eq!(operator_delete_tag.status(), StatusCode::FORBIDDEN);
+    let delete_tag = request(
+        &app,
+        Method::DELETE,
+        &format!("/api/ab/tag/{guid}"),
+        Some(&owner_token),
         json!([" Priority "]),
     )
     .await;

@@ -161,6 +161,30 @@ pub async fn list_access_group_memberships(
         .collect())
 }
 
+pub async fn list_access_groups_for_user(
+    pool: &SqlitePool,
+    user_uuid: Uuid,
+) -> Result<Vec<AccessGroup>, sqlx::Error> {
+    let rows = sqlx::query_as::<_, (String, String)>(
+        "SELECT access_groups.access_group_uuid, access_groups.name
+         FROM access_groups
+         INNER JOIN access_group_memberships
+             ON access_group_memberships.access_group_uuid = access_groups.access_group_uuid
+         WHERE access_group_memberships.user_uuid = ?
+         ORDER BY access_groups.name ASC, access_groups.access_group_uuid ASC",
+    )
+    .bind(user_uuid.to_string())
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|(access_group_uuid, name)| AccessGroup {
+            access_group_uuid: parse_uuid(access_group_uuid),
+            name,
+        })
+        .collect())
+}
+
 pub async fn replace_access_group_memberships(
     pool: &SqlitePool,
     access_group_uuid: Uuid,

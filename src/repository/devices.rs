@@ -243,3 +243,47 @@ pub async fn touch_device_checkin(
         .await?
         .ok_or_else(|| sqlx::Error::RowNotFound)
 }
+
+/// Updates last_checkin_at for an existing rustdesk_id. Does not create devices or change alias.
+pub async fn touch_device_last_seen(
+    pool: &SqlitePool,
+    rustdesk_id: &str,
+    now: &str,
+) -> Result<bool, sqlx::Error> {
+    let result =
+        sqlx::query("UPDATE devices SET last_checkin_at = ?, updated_at = ? WHERE rustdesk_id = ?")
+            .bind(now)
+            .bind(now)
+            .bind(rustdesk_id)
+            .execute(pool)
+            .await?;
+    Ok(result.rows_affected() > 0)
+}
+
+/// Refreshes last_checkin_at and COALESCE hostname/os_family/rustdesk_version. Does not change alias.
+pub async fn touch_device_sysinfo(
+    pool: &SqlitePool,
+    rustdesk_id: &str,
+    hostname: Option<&str>,
+    os_family: Option<&str>,
+    rustdesk_version: Option<&str>,
+    now: &str,
+) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query(
+        "UPDATE devices SET
+            hostname = COALESCE(?, hostname),
+            os_family = COALESCE(?, os_family),
+            rustdesk_version = COALESCE(?, rustdesk_version),
+            last_checkin_at = ?, updated_at = ?
+         WHERE rustdesk_id = ?",
+    )
+    .bind(hostname)
+    .bind(os_family)
+    .bind(rustdesk_version)
+    .bind(now)
+    .bind(now)
+    .bind(rustdesk_id)
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected() > 0)
+}

@@ -28,6 +28,16 @@ pub async fn test_state() -> AppState {
         rustdesk_download_macos_url: None,
         rustdesk_download_linux_url: None,
         rustdesk_download_android_url: None,
+        signed_client_dir: None,
+        login_throttle: std::sync::Arc::new(std::sync::Mutex::new(
+            opendesk::login_throttle::LoginThrottle::default(),
+        )),
+        onboard_guard: std::sync::Arc::new(std::sync::Mutex::new(
+            opendesk::onboard_guard::OnboardGuard::default(),
+        )),
+        pending_onboard_totp: std::sync::Arc::new(std::sync::Mutex::new(
+            std::collections::HashMap::new(),
+        )),
     }
 }
 
@@ -67,6 +77,31 @@ pub fn form_with_csrf(cookie: &str, body: &str) -> String {
 
 pub async fn login_and_get_session_cookie(app: &axum::Router) -> String {
     login_and_get_session_cookie_with_origin(app, "http://127.0.0.1:8080").await
+}
+
+#[allow(dead_code)]
+pub async fn login_and_get_session_cookie_as(
+    app: &axum::Router,
+    username: &str,
+    password: &str,
+) -> String {
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/login")
+                .header("origin", "http://127.0.0.1:8080")
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from(format!(
+                    "username={username}&password={password}"
+                )))
+                .unwrap(),
+        )
+        .await
+        .expect("login response");
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    session_cookie_from_response(&response)
 }
 
 pub async fn login_and_get_session_cookie_with_origin(app: &axum::Router, origin: &str) -> String {

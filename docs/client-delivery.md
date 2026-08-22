@@ -99,6 +99,31 @@ Cons:
 - We own signing/trust for the wrapper.
 - Adds packaging work.
 
+When an operator provisions a signed Windows installer directory
+(`OPENDESK_SIGNED_CLIENT_DIR` with allowlisted `windows-setup.exe` /
+`windows-setup.msi`), the authenticated deployment page can serve those files.
+Authenticode signing stays an external process; OpenDesk does not sign binaries
+in-process and does not redistribute unofficial packages by default.
+
+### Public onboard links
+
+The supported recipient URL is `https://rd.example.com/onboard`. The technician
+reads a six-digit authenticator code (separate from dashboard sign-in) and the
+recipient types it. A matching code mints a 30-minute enrollment token for that
+technician, is one-time (replay-blocked), and is rate-limited like sign-in.
+
+Safety rules:
+
+- `/onboard` without a valid code or cookie does not enroll or serve installers.
+- Authenticator enrollment lives on the Account page for admin/operator roles.
+- The page does not create a user, session, or dashboard login.
+- Check-in grants device visibility to the technician who owned the code.
+  Administrators still see every device. Recipients do not see other computers.
+- Onboard HTML and scripts use `Cache-Control: no-store` and
+  `Referrer-Policy: no-referrer`.
+- Long `/onboard/{token}` links remain valid for scripted delivery.
+- Windows PowerShell and Linux/macOS commands perform install plus check-in.
+
 ### Option 4: Light RustDesk Fork
 
 Build custom clients with default server config embedded.

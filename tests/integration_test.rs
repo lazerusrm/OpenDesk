@@ -127,7 +127,8 @@ async fn login_page_renders_opendesk_form() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let html = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(html.contains("OpenDesk"));
-    assert!(html.contains("Admin Login"));
+    assert!(html.contains("Sign in"));
+    assert!(html.contains("OpenDesk administration"));
 }
 
 #[tokio::test]

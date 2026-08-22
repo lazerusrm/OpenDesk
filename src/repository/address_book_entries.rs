@@ -1,8 +1,13 @@
-use sqlx::{Sqlite, SqlitePool, Transaction};
+use std::collections::HashSet;
+
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use super::{map_sql_error, parse_uuid, require_owned_book, AddressBookRepositoryError};
 use crate::domain::address_book::AddressBookEntry;
+use crate::repository::device_visibility::{
+    is_device_visible_to_user, list_visible_device_uuids_for_user,
+};
 
 fn entry_from_row(
     (entry, book, device, alias, notes, position): (
@@ -24,44 +29,19 @@ fn entry_from_row(
     }
 }
 
-/// Device visibility is an explicit direct grant or an explicit shared group grant.
-/// Roles, site membership, tags, and device owner are deliberately not consulted.
 async fn require_visible_device(
-    tx: &mut Transaction<'_, Sqlite>,
+    pool: &SqlitePool,
     owner_user_uuid: Uuid,
     device_uuid: Uuid,
 ) -> Result<(), AddressBookRepositoryError> {
-    let row = sqlx::query(
-        "SELECT 1
-         FROM devices device
-         WHERE device.device_uuid = ?
-           AND (
-             EXISTS (
-               SELECT 1 FROM user_device_visibility_grants direct_grant
-               WHERE direct_grant.user_uuid = ?
-                 AND direct_grant.device_uuid = device.device_uuid
-             )
-             OR EXISTS (
-               SELECT 1
-               FROM access_group_memberships membership
-               INNER JOIN device_visibility_grants group_grant
-                 ON group_grant.access_group_uuid = membership.access_group_uuid
-               WHERE membership.user_uuid = ?
-                 AND group_grant.device_uuid = device.device_uuid
-             )
-           )
-         LIMIT 1",
-    )
-    .bind(device_uuid.to_string())
-    .bind(owner_user_uuid.to_string())
-    .bind(owner_user_uuid.to_string())
-    .fetch_optional(&mut **tx)
-    .await
-    .map_err(map_sql_error)?;
-    if row.is_none() {
-        return Err(AddressBookRepositoryError::NotFound);
+    let visible = is_device_visible_to_user(pool, owner_user_uuid, device_uuid)
+        .await
+        .map_err(map_sql_error)?;
+    if visible {
+        Ok(())
+    } else {
+        Err(AddressBookRepositoryError::NotFound)
     }
-    Ok(())
 }
 
 pub async fn list_address_book_entries(
@@ -75,32 +55,24 @@ pub async fn list_address_book_entries(
         "SELECT entry.address_book_entry_uuid, entry.address_book_uuid, entry.device_uuid,
                 entry.alias, entry.notes, entry.position
          FROM address_book_entries entry
-         INNER JOIN address_books book ON book.address_book_uuid = entry.address_book_uuid
-         WHERE entry.address_book_uuid = ? AND book.owner_user_uuid = ?
-           AND (
-             EXISTS (
-               SELECT 1 FROM user_device_visibility_grants direct_grant
-               WHERE direct_grant.user_uuid = ? AND direct_grant.device_uuid = entry.device_uuid
-             )
-             OR EXISTS (
-               SELECT 1
-               FROM access_group_memberships membership
-               INNER JOIN device_visibility_grants group_grant
-                 ON group_grant.access_group_uuid = membership.access_group_uuid
-               WHERE membership.user_uuid = ? AND group_grant.device_uuid = entry.device_uuid
-             )
-           )
+         WHERE entry.address_book_uuid = ?
          ORDER BY entry.position ASC, entry.address_book_entry_uuid ASC",
     )
     .bind(address_book_uuid.to_string())
-    .bind(owner_user_uuid.to_string())
-    .bind(owner_user_uuid.to_string())
-    .bind(owner_user_uuid.to_string())
     .fetch_all(&mut *tx)
     .await
     .map_err(map_sql_error)?;
     tx.commit().await.map_err(map_sql_error)?;
-    Ok(rows.into_iter().map(entry_from_row).collect())
+    let visible: HashSet<Uuid> = list_visible_device_uuids_for_user(pool, owner_user_uuid)
+        .await
+        .map_err(map_sql_error)?
+        .into_iter()
+        .collect();
+    Ok(rows
+        .into_iter()
+        .map(entry_from_row)
+        .filter(|entry| visible.contains(&entry.device_uuid))
+        .collect())
 }
 
 pub async fn find_address_book_entry(
@@ -108,37 +80,22 @@ pub async fn find_address_book_entry(
     owner_user_uuid: Uuid,
     address_book_entry_uuid: Uuid,
 ) -> Result<AddressBookEntry, AddressBookRepositoryError> {
-    let mut tx = pool.begin().await.map_err(map_sql_error)?;
     let row = sqlx::query_as::<_, (String, String, String, String, Option<String>, i64)>(
         "SELECT entry.address_book_entry_uuid, entry.address_book_uuid, entry.device_uuid,
                 entry.alias, entry.notes, entry.position
          FROM address_book_entries entry
          INNER JOIN address_books book ON book.address_book_uuid = entry.address_book_uuid
-         WHERE entry.address_book_entry_uuid = ? AND book.owner_user_uuid = ?
-           AND (
-             EXISTS (
-               SELECT 1 FROM user_device_visibility_grants direct_grant
-               WHERE direct_grant.user_uuid = ? AND direct_grant.device_uuid = entry.device_uuid
-             )
-             OR EXISTS (
-               SELECT 1
-               FROM access_group_memberships membership
-               INNER JOIN device_visibility_grants group_grant
-                 ON group_grant.access_group_uuid = membership.access_group_uuid
-               WHERE membership.user_uuid = ? AND group_grant.device_uuid = entry.device_uuid
-             )
-           )",
+         WHERE entry.address_book_entry_uuid = ? AND book.owner_user_uuid = ?",
     )
     .bind(address_book_entry_uuid.to_string())
     .bind(owner_user_uuid.to_string())
-    .bind(owner_user_uuid.to_string())
-    .bind(owner_user_uuid.to_string())
-    .fetch_optional(&mut *tx)
+    .fetch_optional(pool)
     .await
     .map_err(map_sql_error)?
     .ok_or(AddressBookRepositoryError::NotFound)?;
-    tx.commit().await.map_err(map_sql_error)?;
-    Ok(entry_from_row(row))
+    let entry = entry_from_row(row);
+    require_visible_device(pool, owner_user_uuid, entry.device_uuid).await?;
+    Ok(entry)
 }
 
 pub async fn create_address_book_entry(
@@ -158,9 +115,9 @@ pub async fn create_address_book_entry(
         notes,
         position,
     )?;
+    require_visible_device(pool, owner_user_uuid, device_uuid).await?;
     let mut tx = pool.begin().await.map_err(map_sql_error)?;
     require_owned_book(&mut tx, address_book_uuid, owner_user_uuid).await?;
-    require_visible_device(&mut tx, owner_user_uuid, device_uuid).await?;
     sqlx::query(
         "INSERT INTO address_book_entries
          (address_book_entry_uuid, address_book_uuid, device_uuid, alias, notes, position)
@@ -188,36 +145,8 @@ pub async fn update_address_book_entry(
     notes: Option<String>,
     position: u32,
 ) -> Result<AddressBookEntry, AddressBookRepositoryError> {
-    let mut tx = pool.begin().await.map_err(map_sql_error)?;
-    let row = sqlx::query_as::<_, (String, String, String, String, Option<String>, i64)>(
-        "SELECT entry.address_book_entry_uuid, entry.address_book_uuid, entry.device_uuid,
-                entry.alias, entry.notes, entry.position
-         FROM address_book_entries entry
-         INNER JOIN address_books book ON book.address_book_uuid = entry.address_book_uuid
-         WHERE entry.address_book_entry_uuid = ? AND book.owner_user_uuid = ?
-           AND (
-             EXISTS (
-               SELECT 1 FROM user_device_visibility_grants direct_grant
-               WHERE direct_grant.user_uuid = ? AND direct_grant.device_uuid = entry.device_uuid
-             )
-             OR EXISTS (
-               SELECT 1
-               FROM access_group_memberships membership
-               INNER JOIN device_visibility_grants group_grant
-                 ON group_grant.access_group_uuid = membership.access_group_uuid
-               WHERE membership.user_uuid = ? AND group_grant.device_uuid = entry.device_uuid
-             )
-           )",
-    )
-    .bind(address_book_entry_uuid.to_string())
-    .bind(owner_user_uuid.to_string())
-    .bind(owner_user_uuid.to_string())
-    .bind(owner_user_uuid.to_string())
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(map_sql_error)?
-    .ok_or(AddressBookRepositoryError::NotFound)?;
-    let current = entry_from_row(row);
+    let current = find_address_book_entry(pool, owner_user_uuid, address_book_entry_uuid).await?;
+    require_visible_device(pool, owner_user_uuid, device_uuid).await?;
     let entry = AddressBookEntry::new(
         address_book_entry_uuid,
         current.address_book_uuid,
@@ -226,8 +155,6 @@ pub async fn update_address_book_entry(
         notes,
         position,
     )?;
-    require_owned_book(&mut tx, entry.address_book_uuid, owner_user_uuid).await?;
-    require_visible_device(&mut tx, owner_user_uuid, device_uuid).await?;
     let result = sqlx::query(
         "UPDATE address_book_entries SET device_uuid = ?, alias = ?, notes = ?, position = ?
          WHERE address_book_entry_uuid = ?
@@ -241,13 +168,12 @@ pub async fn update_address_book_entry(
     .bind(i64::from(entry.position))
     .bind(entry.address_book_entry_uuid.to_string())
     .bind(owner_user_uuid.to_string())
-    .execute(&mut *tx)
+    .execute(pool)
     .await
     .map_err(map_sql_error)?;
     if result.rows_affected() != 1 {
         return Err(AddressBookRepositoryError::NotFound);
     }
-    tx.commit().await.map_err(map_sql_error)?;
     Ok(entry)
 }
 

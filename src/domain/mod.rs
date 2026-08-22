@@ -20,6 +20,7 @@ pub mod migration_contract;
 pub mod migration_contract_validation;
 pub mod migration_credentials;
 pub mod migration_preflight;
+pub mod onboard_totp;
 pub mod role;
 pub mod server_config;
 pub mod session;

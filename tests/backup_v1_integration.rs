@@ -102,6 +102,7 @@ async fn backup_v1_boundary_conversion_restores_without_new_collections() {
         "access_group_memberships",
         "device_visibility_grants",
         "user_device_visibility_grants",
+        "access_group_access_grants",
         "address_books",
         "address_book_access_rules",
         "address_book_tags",

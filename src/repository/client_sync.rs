@@ -10,12 +10,16 @@ pub struct ClientPeerRow {
     pub os_version: Option<String>,
     pub owner: Option<String>,
     pub notes: Option<String>,
+    pub user_guid: String,
+    pub user_name: String,
+    pub device_group_name: String,
 }
 
 pub async fn list_client_visible_peers(
     pool: &SqlitePool,
     user_uuid: Uuid,
 ) -> Result<Vec<ClientPeerRow>, sqlx::Error> {
+    let viewer = user_uuid.to_string();
     let rows = sqlx::query_as::<
         _,
         (
@@ -26,14 +30,64 @@ pub async fn list_client_visible_peers(
             Option<String>,
             Option<String>,
             Option<String>,
+            String,
+            String,
+            String,
         ),
     >(
         "SELECT device.rustdesk_id, device.alias, device.hostname, device.os_family,
-                device.os_version, device.owner, device.notes
+                device.os_version, device.owner, device.notes,
+                COALESCE(
+                    (SELECT owner_user.user_uuid FROM users owner_user
+                     WHERE owner_user.username = device.owner
+                       AND owner_user.activation_state = 'active'
+                     LIMIT 1),
+                    (SELECT grant_user.user_uuid
+                     FROM user_device_visibility_grants direct_grant
+                     JOIN users grant_user ON grant_user.user_uuid = direct_grant.user_uuid
+                     WHERE direct_grant.device_uuid = device.device_uuid
+                       AND grant_user.activation_state = 'active'
+                     ORDER BY grant_user.username
+                     LIMIT 1),
+                    ''
+                ),
+                COALESCE(
+                    (SELECT owner_user.username FROM users owner_user
+                     WHERE owner_user.username = device.owner
+                       AND owner_user.activation_state = 'active'
+                     LIMIT 1),
+                    (SELECT grant_user.username
+                     FROM user_device_visibility_grants direct_grant
+                     JOIN users grant_user ON grant_user.user_uuid = direct_grant.user_uuid
+                     WHERE direct_grant.device_uuid = device.device_uuid
+                       AND grant_user.activation_state = 'active'
+                     ORDER BY grant_user.username
+                     LIMIT 1),
+                    ''
+                ),
+                COALESCE(
+                    (SELECT access_group.name
+                     FROM device_visibility_grants group_grant
+                     JOIN access_groups access_group
+                       ON access_group.access_group_uuid = group_grant.access_group_uuid
+                     WHERE group_grant.device_uuid = device.device_uuid
+                     ORDER BY CASE WHEN EXISTS (
+                         SELECT 1 FROM access_group_memberships viewer_membership
+                         WHERE viewer_membership.access_group_uuid = group_grant.access_group_uuid
+                           AND viewer_membership.user_uuid = ?
+                     ) THEN 0 ELSE 1 END,
+                     access_group.name
+                     LIMIT 1),
+                    ''
+                )
          FROM devices device
          WHERE device.archived = 0 AND device.rustdesk_id IS NOT NULL
            AND (
                EXISTS (
+                   SELECT 1 FROM users visibility_admin
+                   WHERE visibility_admin.user_uuid = ?
+                     AND visibility_admin.role = 'admin'
+               ) OR EXISTS (
                    SELECT 1 FROM user_device_visibility_grants direct_grant
                    WHERE direct_grant.user_uuid = ?
                      AND direct_grant.device_uuid = device.device_uuid
@@ -44,18 +98,30 @@ pub async fn list_client_visible_peers(
                      ON group_grant.access_group_uuid = membership.access_group_uuid
                    WHERE membership.user_uuid = ?
                      AND group_grant.device_uuid = device.device_uuid
+               ) OR EXISTS (
+                   SELECT 1
+                   FROM access_group_memberships incoming_membership
+                   JOIN access_group_access_grants group_access
+                     ON group_access.incoming_access_group_uuid = incoming_membership.access_group_uuid
+                   JOIN device_visibility_grants outgoing_grant
+                     ON outgoing_grant.access_group_uuid = group_access.outgoing_access_group_uuid
+                   WHERE incoming_membership.user_uuid = ?
+                     AND outgoing_grant.device_uuid = device.device_uuid
                )
            )
          ORDER BY device.rustdesk_id ASC",
     )
-    .bind(user_uuid.to_string())
-    .bind(user_uuid.to_string())
+    .bind(&viewer)
+    .bind(&viewer)
+    .bind(&viewer)
+    .bind(&viewer)
+    .bind(&viewer)
     .fetch_all(pool)
     .await?;
     Ok(rows
         .into_iter()
         .map(
-            |(rustdesk_id, alias, hostname, os_family, os_version, owner, notes)| ClientPeerRow {
+            |(
                 rustdesk_id,
                 alias,
                 hostname,
@@ -63,6 +129,20 @@ pub async fn list_client_visible_peers(
                 os_version,
                 owner,
                 notes,
+                user_guid,
+                user_name,
+                device_group_name,
+            )| ClientPeerRow {
+                rustdesk_id,
+                alias,
+                hostname,
+                os_family,
+                os_version,
+                owner,
+                notes,
+                user_guid,
+                user_name,
+                device_group_name,
             },
         )
         .collect())
@@ -73,13 +153,24 @@ pub async fn list_client_access_groups(
     user_uuid: Uuid,
 ) -> Result<Vec<String>, sqlx::Error> {
     sqlx::query_scalar(
-        "SELECT access_group.name
-         FROM access_groups access_group
-         JOIN access_group_memberships membership
-           ON membership.access_group_uuid = access_group.access_group_uuid
-         WHERE membership.user_uuid = ?
-         ORDER BY access_group.name ASC",
+        "SELECT name FROM (
+             SELECT access_group.name AS name
+             FROM access_groups access_group
+             JOIN access_group_memberships membership
+               ON membership.access_group_uuid = access_group.access_group_uuid
+             WHERE membership.user_uuid = ?
+             UNION
+             SELECT outgoing.name AS name
+             FROM access_group_memberships membership
+             JOIN access_group_access_grants group_access
+               ON group_access.incoming_access_group_uuid = membership.access_group_uuid
+             JOIN access_groups outgoing
+               ON outgoing.access_group_uuid = group_access.outgoing_access_group_uuid
+             WHERE membership.user_uuid = ?
+         )
+         ORDER BY name ASC",
     )
+    .bind(user_uuid.to_string())
     .bind(user_uuid.to_string())
     .fetch_all(pool)
     .await
@@ -140,6 +231,10 @@ pub async fn list_client_address_book_peers(
            AND device.archived = 0 AND device.rustdesk_id IS NOT NULL
            AND (
                EXISTS (
+                   SELECT 1 FROM users visibility_admin
+                   WHERE visibility_admin.user_uuid = ?
+                     AND visibility_admin.role = 'admin'
+               ) OR EXISTS (
                    SELECT 1 FROM user_device_visibility_grants direct_grant
                    WHERE direct_grant.user_uuid = ?
                      AND direct_grant.device_uuid = device.device_uuid
@@ -149,11 +244,21 @@ pub async fn list_client_address_book_peers(
                      ON group_grant.access_group_uuid = membership.access_group_uuid
                    WHERE membership.user_uuid = ?
                      AND group_grant.device_uuid = device.device_uuid
+               ) OR EXISTS (
+                   SELECT 1 FROM access_group_memberships incoming_membership
+                   JOIN access_group_access_grants group_access
+                     ON group_access.incoming_access_group_uuid = incoming_membership.access_group_uuid
+                   JOIN device_visibility_grants outgoing_grant
+                     ON outgoing_grant.access_group_uuid = group_access.outgoing_access_group_uuid
+                   WHERE incoming_membership.user_uuid = ?
+                     AND outgoing_grant.device_uuid = device.device_uuid
                )
            )
          ORDER BY entry.position ASC, entry.address_book_entry_uuid ASC",
     )
     .bind(address_book_uuid.to_string())
+    .bind(user_uuid.to_string())
+    .bind(user_uuid.to_string())
     .bind(user_uuid.to_string())
     .bind(user_uuid.to_string())
     .bind(user_uuid.to_string())
@@ -188,7 +293,13 @@ pub async fn list_client_accessible_users(
          FROM users accessible
          WHERE accessible.activation_state = 'active'
            AND (
-               accessible.user_uuid = ? OR EXISTS (
+               accessible.user_uuid = ?
+               OR EXISTS (
+                   SELECT 1 FROM users visibility_admin
+                   WHERE visibility_admin.user_uuid = ?
+                     AND visibility_admin.role = 'admin'
+               )
+               OR EXISTS (
                    SELECT 1
                    FROM access_group_memberships own_membership
                    JOIN access_group_memberships peer_membership
@@ -196,9 +307,21 @@ pub async fn list_client_accessible_users(
                    WHERE own_membership.user_uuid = ?
                      AND peer_membership.user_uuid = accessible.user_uuid
                )
+               OR EXISTS (
+                   SELECT 1
+                   FROM access_group_memberships own_membership
+                   JOIN access_group_access_grants group_access
+                     ON group_access.incoming_access_group_uuid = own_membership.access_group_uuid
+                   JOIN access_group_memberships peer_membership
+                     ON peer_membership.access_group_uuid = group_access.outgoing_access_group_uuid
+                   WHERE own_membership.user_uuid = ?
+                     AND peer_membership.user_uuid = accessible.user_uuid
+               )
            )
          ORDER BY accessible.username ASC",
     )
+    .bind(user_uuid.to_string())
+    .bind(user_uuid.to_string())
     .bind(user_uuid.to_string())
     .bind(user_uuid.to_string())
     .fetch_all(pool)

@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Overview</h1>
+  <p>Summary of this OpenDesk installation. Heartbeat check-ins are not session proof.</p>
+  <p class="notice">Dashboard authorization is separate from RustDesk session access.</p>
+</section>
+{% if nav.enrollment %}
+<section class="card">
+  <h2>Onboard a computer</h2>
+  <p>Tell them to open <code>/onboard</code> and enter the six-digit code from your authenticator. They do not sign in. The computer is visible to you.</p>
+  <a class="button" href="/onboard-setup">Set up authenticator</a>
+</section>
+{% endif %}
+<div class="stat-grid">
+  <article class="stat-card">
+    <p class="label">Devices</p>
+    <p class="value" data-count="devices"><strong>{{ device_count }}</strong></p>
+    {% if nav.devices %}<p class="muted"><a href="/devices">View devices</a></p>{% endif %}
+  </article>
+  <article class="stat-card">
+    <p class="label">Archived</p>
+    <p class="value" data-count="archived"><strong>{{ archived_count }}</strong></p>
+  </article>
+  <article class="stat-card">
+    <p class="label">Recently seen</p>
+    <p class="value" data-count="recently-seen"><strong>{{ recently_seen_count }}</strong></p>
+    <p class="muted">Last check-in within 5 minutes. Not session proof.</p>
+  </article>
+  <article class="stat-card">
+    <p class="label">Users</p>
+    <p class="value" data-count="users"><strong>{{ user_count }}</strong></p>
+    {% if nav.users %}<p class="muted"><a href="/users">View users</a></p>{% endif %}
+  </article>
+  <article class="stat-card">
+    <p class="label">Access groups</p>
+    <p class="value" data-count="access-groups"><strong>{{ access_group_count }}</strong></p>
+    {% if nav.access_groups %}<p class="muted"><a href="/access-groups">View access groups</a></p>{% endif %}
+  </article>
+  <article class="stat-card">
+    <p class="label">Address books</p>
+    <p class="value" data-count="address-books"><strong>{{ address_book_count }}</strong></p>
+    {% if nav.address_books %}<p class="muted"><a href="/address-books">View address books</a></p>{% endif %}
+  </article>
+  <article class="stat-card">
+    <p class="label">Active enrollment tokens</p>
+    <p class="value" data-count="enrollment-tokens"><strong>{{ active_enrollment_token_count }}</strong></p>
+    {% if nav.enrollment %}<p class="muted"><a href="/enrollment-tokens">View enrollment tokens</a></p>{% endif %}
+  </article>
+</div>
+{% if device_count == 0 || user_count == 0 || active_enrollment_token_count == 0 %}
+<section class="card">
+  <h2>Get started</h2>
+  {% if device_count == 0 %}
+  <p>No devices yet. <a href="/devices/new">Add a device</a> or open the <a href="/deployment">deployment center</a>.</p>
+  {% endif %}
+  {% if user_count == 0 %}
+  <p>No users yet. <a href="/users">Create a user</a>.</p>
+  {% endif %}
+  {% if active_enrollment_token_count == 0 %}
+  <p>No active enrollment tokens. <a href="/enrollment-tokens">Create an enrollment token</a>.</p>
+  {% endif %}
+</section>
+{% endif %}
+<section class="card">
+  <h2>Health</h2>
+  <p data-count="health-pass">Passed: {{ health_pass_count }}</p>
+  <p data-count="health-fail">Failed: {{ health_fail_count }}</p>
+  <p>Backup readiness: {{ backup_status }}</p>
+  {% if nav.status %}<p><a href="/status">Open status</a></p>{% endif %}
+</section>
+<section class="card">
+  <h2>Recent audit</h2>
+  {% if nav.audit %}<p><a href="/audit">Open audit log</a></p>{% endif %}
+  {% if events.is_empty() %}
+  <p class="muted">No audit events yet.</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Actor</th>
+        <th>Action</th>
+        <th>Object</th>
+        <th>Outcome</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in events %}
+      <tr>
+        <td>{{ event.created_at }}</td>
+        <td>{{ event.actor_display }}</td>
+        <td>{{ event.action }}</td>
+        <td>{{ event.object_type }}</td>
+        <td>{{ event.outcome }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

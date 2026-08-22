@@ -38,7 +38,7 @@
     <tbody>
       {% for user in users %}
       <tr>
-        <td>{{ user.username }}</td>
+        <td><a href="/users/{{ user.user_uuid }}">{{ user.username }}</a></td>
         <td>{{ user.role_display }}</td>
         <td>{{ user.activation_state }}</td>
         <td>
@@ -49,6 +49,13 @@
             <label for="activation-password-{{ user.user_uuid }}">New password</label>
             <input id="activation-password-{{ user.user_uuid }}" name="password" type="password" required minlength="8" autocomplete="new-password">
             <button type="submit">Set password and activate</button>
+          </form>
+          {% endif %}
+          {% if user.can_disable %}
+          <form method="post" action="/users/disable">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="user_uuid" value="{{ user.user_uuid }}">
+            <button type="submit" class="button-secondary">Disable user</button>
           </form>
           {% endif %}
         </td>

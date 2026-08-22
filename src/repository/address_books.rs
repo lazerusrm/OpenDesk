@@ -11,6 +11,20 @@ pub use address_book_entries::{
     list_address_book_entries, update_address_book_entry,
 };
 
+#[path = "address_book_access.rs"]
+mod address_book_access;
+pub use address_book_access::{
+    delete_address_book_access_rule, list_address_book_access_rules,
+    upsert_address_book_access_rule,
+};
+
+#[path = "personal_address_book.rs"]
+mod personal_address_book;
+pub use personal_address_book::{
+    ensure_personal_address_book, hide_personal_address_book_device,
+    sync_visible_devices_into_personal_address_book,
+};
+
 #[derive(Debug, Error)]
 pub enum AddressBookRepositoryError {
     #[error("database error")]

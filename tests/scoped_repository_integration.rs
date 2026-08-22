@@ -106,10 +106,87 @@ async fn group_replacements_are_atomic_and_visibility_is_default_deny() {
     .await
     .expect("membership removal denies visibility"));
     assert!(
-        !device_visibility::is_device_visible_to_user(&state.db, admin.user_uuid, device_uuid)
+        device_visibility::is_device_visible_to_user(&state.db, admin.user_uuid, device_uuid)
             .await
-            .expect("admin role does not grant visibility")
+            .expect("admin sees assigned devices")
     );
+    assert!(
+        device_visibility::is_device_visible_to_user(
+            &state.db,
+            admin.user_uuid,
+            unrelated_device_uuid
+        )
+        .await
+        .expect("admin sees unassigned devices")
+    );
+}
+
+#[tokio::test]
+async fn incoming_group_sees_outgoing_group_device_grants() {
+    let state = test_state().await;
+    let operator = users::create_user(&state.db, "incoming-op", "password", "operator")
+        .await
+        .expect("operator");
+    let outsider = users::create_user(&state.db, "outsider", "password", "operator")
+        .await
+        .expect("outsider");
+    let visible = create_device(&state, "Outgoing device").await;
+    let hidden = create_device(&state, "Other device").await;
+    let incoming = access_groups::create_access_group(&state.db, "Helpdesk")
+        .await
+        .expect("incoming");
+    let outgoing = access_groups::create_access_group(&state.db, "Shop")
+        .await
+        .expect("outgoing");
+    access_groups::replace_access_group_memberships(
+        &state.db,
+        incoming.access_group_uuid,
+        &[operator.user_uuid],
+    )
+    .await
+    .expect("incoming membership");
+    access_groups::replace_group_device_visibility_grants(
+        &state.db,
+        outgoing.access_group_uuid,
+        &[visible],
+    )
+    .await
+    .expect("outgoing devices");
+    device_visibility::replace_outgoing_access_group_access_grants(
+        &state.db,
+        incoming.access_group_uuid,
+        &[outgoing.access_group_uuid],
+    )
+    .await
+    .expect("group access");
+    assert!(device_visibility::is_device_visible_to_user(
+        &state.db,
+        operator.user_uuid,
+        visible
+    )
+    .await
+    .expect("incoming sees outgoing"));
+    assert!(!device_visibility::is_device_visible_to_user(
+        &state.db,
+        operator.user_uuid,
+        hidden
+    )
+    .await
+    .expect("unrelated still denied"));
+    assert!(!device_visibility::is_device_visible_to_user(
+        &state.db,
+        outsider.user_uuid,
+        visible
+    )
+    .await
+    .expect("non-member denied"));
+    assert!(device_visibility::replace_outgoing_access_group_access_grants(
+        &state.db,
+        incoming.access_group_uuid,
+        &[incoming.access_group_uuid]
+    )
+    .await
+    .is_err());
 }
 
 #[tokio::test]

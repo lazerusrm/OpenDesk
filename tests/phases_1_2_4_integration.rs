@@ -72,24 +72,71 @@ async fn deployment_page_renders_macos_script_and_filename_fallback() {
 
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;
-    let response = app
+    let hub = app
+        .clone()
         .oneshot(
             Request::builder()
                 .uri("/deployment")
+                .header("cookie", &session_cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("deployment hub");
+    assert_eq!(hub.status(), StatusCode::OK);
+    let hub_html = String::from_utf8(hub.into_body().collect().await.unwrap().to_bytes().to_vec())
+        .expect("utf8");
+    assert!(hub_html.contains("/deployment/macos"));
+    assert!(hub_html.contains("/deployment/windows"));
+    assert!(hub_html.contains("official RustDesk clients"));
+
+    let macos = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/deployment/macos")
+                .header("cookie", &session_cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("macos page");
+    assert_eq!(macos.status(), StatusCode::OK);
+    let macos_html = String::from_utf8(
+        macos
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .expect("utf8");
+    assert!(macos_html.contains("OS_FAMILY=") && macos_html.contains("macos"));
+    assert!(macos_html.contains("https://github.com/rustdesk/rustdesk/releases"));
+
+    let windows = app
+        .oneshot(
+            Request::builder()
+                .uri("/deployment/windows")
                 .header("cookie", session_cookie)
                 .body(Body::empty())
                 .unwrap(),
         )
         .await
-        .expect("deployment page");
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = response.into_body().collect().await.unwrap().to_bytes();
-    let html = String::from_utf8(body.to_vec()).expect("utf8");
-    assert!(html.contains("macOS shell script"));
-    assert!(html.contains("OS_FAMILY=") && html.contains("macos"));
-    assert!(html.contains("rustdesk-host=rd.example.com,"));
-    assert!(html.contains("official RustDesk clients"));
-    assert!(html.contains("https://github.com/rustdesk/rustdesk/releases"));
+        .expect("windows page");
+    assert_eq!(windows.status(), StatusCode::OK);
+    let windows_html = String::from_utf8(
+        windows
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .expect("utf8");
+    assert!(windows_html.contains("rustdesk-host=rd.example.com,"));
 }
 
 #[tokio::test]

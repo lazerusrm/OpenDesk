@@ -2,7 +2,7 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{login_and_get_session_cookie, test_state};
+use common::{form_with_csrf, login_and_get_session_cookie, test_state};
 use http_body_util::BodyExt;
 use opendesk::build_router;
 use serde_json::json;
@@ -287,4 +287,93 @@ async fn devices_list_shows_last_checkin_column() {
     assert!(html.contains("Last check-in"));
     assert!(html.contains("556677889"));
     assert!(!html.contains(">-\n"));
+}
+
+#[tokio::test]
+async fn enrollment_token_create_form_accepts_allowlisted_expiry() {
+    let state = test_state().await;
+    let app = build_router(state.clone());
+    let cookie = login_and_get_session_cookie(&app).await;
+    let page = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/enrollment-tokens")
+                .header("cookie", &cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("page");
+    assert_eq!(page.status(), StatusCode::OK);
+    let page_html = String::from_utf8(
+        page.into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    assert!(page_html.contains("name=\"expires_in_days\""));
+    assert!(page_html.contains(">Expires<"));
+
+    let created = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/enrollment-tokens")
+                .header("cookie", &cookie)
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from(form_with_csrf(
+                    &cookie,
+                    "label=expiry-token&expires_in_days=7",
+                )))
+                .unwrap(),
+        )
+        .await
+        .expect("create");
+    assert_eq!(created.status(), StatusCode::OK);
+    let tokens = opendesk::repository::enrollment_tokens::list_enrollment_tokens(&state.db)
+        .await
+        .expect("tokens");
+    let created_token = tokens
+        .iter()
+        .find(|token| token.label == "expiry-token")
+        .expect("created token");
+    assert!(created_token.expires_at.is_some());
+
+    let rejected = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/enrollment-tokens")
+                .header("cookie", &cookie)
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from(form_with_csrf(
+                    &cookie,
+                    "label=bad-expiry&expires_in_days=14",
+                )))
+                .unwrap(),
+        )
+        .await
+        .expect("reject");
+    assert_eq!(rejected.status(), StatusCode::OK);
+    let rejected_html = String::from_utf8(
+        rejected
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    assert!(rejected_html.contains("enrollment token expiry must be 7, 30, 90, or 365 days, or empty"));
+    let tokens = opendesk::repository::enrollment_tokens::list_enrollment_tokens(&state.db)
+        .await
+        .expect("tokens after reject");
+    assert!(tokens.iter().all(|token| token.label != "bad-expiry"));
 }

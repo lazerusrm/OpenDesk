@@ -50,6 +50,10 @@ pub async fn require_user(
     let Ok(Some(user)) = find_user_by_uuid(&state.db, session.user_uuid).await else {
         return Err(Redirect::to("/login").into_response());
     };
+    if user.activation_state != "active" {
+        let _ = delete_session(&state.db, session_uuid).await;
+        return Err(Redirect::to("/login").into_response());
+    }
     Ok(AuthenticatedUser {
         user_uuid: user.user_uuid,
         username: user.username,
@@ -132,7 +136,7 @@ fn origin_from_url(value: &str) -> Option<String> {
     Some(format!("{}://{}", &value[..scheme_end], authority).to_ascii_lowercase())
 }
 
-fn constant_time_equal(expected: &[u8], provided: &[u8]) -> bool {
+pub(crate) fn constant_time_equal(expected: &[u8], provided: &[u8]) -> bool {
     let mut difference = (expected.len() ^ provided.len()) as u8;
     for index in 0..expected.len().max(provided.len()) {
         difference |=

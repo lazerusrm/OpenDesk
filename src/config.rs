@@ -18,6 +18,7 @@ pub struct AppConfig {
     pub rustdesk_download_macos_url: Option<String>,
     pub rustdesk_download_linux_url: Option<String>,
     pub rustdesk_download_android_url: Option<String>,
+    pub signed_client_dir: Option<PathBuf>,
 }
 
 impl AppConfig {
@@ -53,6 +54,7 @@ impl AppConfig {
             rustdesk_download_android_url: optional_https_url(
                 "OPENDESK_RUSTDESK_DOWNLOAD_ANDROID_URL",
             ),
+            signed_client_dir: optional_existing_dir("OPENDESK_SIGNED_CLIENT_DIR"),
         }
     }
 }
@@ -80,6 +82,14 @@ fn optional_https_url(name: &str) -> Option<String> {
     optional_env(name).map(|value| {
         assert!(value.starts_with("https://"), "{name} must use https");
         value
+    })
+}
+
+fn optional_existing_dir(name: &str) -> Option<PathBuf> {
+    optional_env(name).map(|value| {
+        let path = PathBuf::from(value);
+        assert!(path.is_dir(), "{name} must be an existing directory");
+        path
     })
 }
 

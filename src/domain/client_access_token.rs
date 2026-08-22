@@ -5,7 +5,7 @@ use thiserror::Error;
 use time::{Duration, OffsetDateTime};
 
 pub const CLIENT_ACCESS_TOKEN_BYTES: usize = 32;
-pub const CLIENT_ACCESS_TOKEN_LIFETIME: Duration = Duration::days(30);
+pub const CLIENT_ACCESS_TOKEN_LIFETIME: Duration = Duration::days(7);
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -79,9 +79,6 @@ mod tests {
         assert!(validate_client_identity("", "client-uuid").is_err());
         assert!(validate_client_identity("123", "bad\nvalue").is_err());
         let now = datetime!(2026-07-22 00:00:00 UTC);
-        assert_eq!(
-            client_access_token_expires_at(now),
-            now + Duration::days(30)
-        );
+        assert_eq!(client_access_token_expires_at(now), now + Duration::days(7));
     }
 }

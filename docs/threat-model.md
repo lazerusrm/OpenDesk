@@ -32,6 +32,7 @@ OpenDesk manages remote access metadata and deployment flows. A compromise can m
 |---|---|---|
 | T-001 | Production secrets committed to public Git. | `.gitignore`, ignored local context folder, sensitive-string scan before commits. |
 | T-002 | Enrollment token used after intended deployment. | Expiring scoped tokens, revocation, hashed storage, audit events. |
+| T-013 | Public onboard URL enrolls devices or leaks fleet access. | Code or token required; one-time TOTP replay block; rate limit; no recipient account; issuer-only visibility. |
 | T-003 | Generated script modified in transit. | HTTPS, checksums for cached installers, visible script preview, short-lived tokens. |
 | T-004 | OpenDesk user sees unauthorized device metadata. | RBAC and site/tag scoping tests. |
 | T-005 | OpenDesk claims session ACLs that it does not enforce. | Explicit access boundary docs and UI wording; no enforcement claims without tests. |
