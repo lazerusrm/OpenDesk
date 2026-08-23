@@ -52,6 +52,8 @@ Decision:
 
 Use generated scripts as the primary path and filename configuration only as a fallback/convenience path until each required released client proves reliable behavior.
 
+Closure (2026-06-29): R-001 accepted. Linux `.deb` pass evidence in dev LXC; Windows/macOS/mobile accepted-exception with pilot validation D-001 through D-012, CUT-003.
+
 ## R-002 Official Client Deployment Mechanics
 
 Question:
@@ -95,6 +97,8 @@ Windows service creation imports a config file into the service path. macOS priv
 Preferred validation environment:
 
 Use disposable dev LXC/VM targets for Linux package tests and separate Windows/macOS VMs for service-context tests. Record install, configure, restart, upgrade, uninstall, and reinstall results before cutover.
+
+Closure (2026-06-29): R-002 accepted. Linux package lifecycle pass evidence in dev LXC; Windows/macOS accepted-exception with pilot validation D-001, D-009, S-009, CUT-003.
 
 ## R-006 Deployment Endpoint Compatibility
 
@@ -148,6 +152,8 @@ Evidence helper:
 
 Use `scripts/research-deploy-capture-server.py` to run a controlled local endpoint for released-client tests. It captures redacted request shape under ignored `local/research/manual/` and can return each known deploy response case.
 
+Closure (2026-06-29): R-006 accepted. Linux deploy contract validated; OpenDesk adapter deferred; generated scripts remain primary path.
+
 ## R-008 Mobile Workflow
 
 Question:
@@ -180,3 +186,5 @@ Official client documentation lists Android and iOS support, but iOS cannot be c
 Decision:
 
 Mobile RustDesk apps are required for OpenDesk operator workflows before cutover. OpenDesk should generate mobile config instructions and Android QR payloads. iOS should be treated as operator-only unless official capability changes.
+
+Closure (2026-06-29): R-008 accepted. Official mobile docs plus accepted-exception; pilot validation D-011, D-012, CUT-003 before cutover.
