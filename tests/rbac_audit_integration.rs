@@ -10,7 +10,7 @@ use http_body_util::BodyExt;
 use opendesk::build_router;
 use opendesk::domain::audit_event::AuditEventDraft;
 use opendesk::domain::role::Role;
-use opendesk::repository::audit_events::{insert_audit_event, list_audit_events};
+use opendesk::repository::audit_events::list_audit_events;
 use opendesk::repository::users::{create_user, find_user_by_username};
 use tower::ServiceExt;
 
@@ -305,19 +305,6 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
         .await
         .expect("token");
     assert_eq!(create_token.status(), StatusCode::OK);
-    let token_body = create_token.into_body().collect().await.unwrap().to_bytes();
-    let token_html = String::from_utf8(token_body.to_vec()).expect("utf8");
-    // Extract plaintext token from one-time display for a failed check-in that redacts it.
-    let raw_token = token_html
-        .lines()
-        .find(|line| line.contains("created_token") || line.contains("token"))
-        .and_then(|_| {
-            // The page shows created token value once; pull a long alphanumeric-ish string.
-            token_html
-                .split_whitespace()
-                .find(|part| part.len() >= 24 && part.chars().all(|c| c.is_ascii_alphanumeric()))
-                .map(|s| s.to_string())
-        });
 
     // Known-but-revoked tokens still write a failure audit; unknown garbage tokens do not.
     let created = opendesk::repository::enrollment_tokens::create_enrollment_token(
@@ -363,10 +350,9 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
         "expected redacted detail, got {detail}"
     );
     assert!(
-        !detail.contains(secret),
+        !detail.contains(&secret),
         "raw enrollment token must not appear in audit detail"
     );
-    let _ = raw_token;
 
     let page = app
         .clone()
@@ -387,7 +373,7 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
     assert!(
         page_html.contains("endpoint_checkin") || page_html.contains("enrollment_token_create")
     );
-    assert!(!page_html.contains(secret));
+    assert!(!page_html.contains(&secret));
 
     let export = app
         .oneshot(
@@ -407,6 +393,6 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
     let csv = String::from_utf8(export_body.to_vec()).expect("utf8");
     assert!(csv.starts_with("# Newest 500 events only; not a complete history."));
     assert!(csv.contains("created_at,actor_username,action,"));
-    assert!(!csv.contains(secret));
+    assert!(!csv.contains(&secret));
     assert!(csv.contains("endpoint_checkin") || csv.contains("enrollment_token_create"));
 }
