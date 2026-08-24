@@ -2,6 +2,8 @@
 
 ## Immediate Next Steps
 
+- [x] Public self-host install guide (`docs/install.md`, README entry).
+- [ ] OSS self-host first-run (goal below).
 - [ ] Create Git repository and remote.
 - [x] Decide first implementation stack: Rust backend with server-rendered UI first.
 - [x] Inventory current RustDesk LXC configuration.
@@ -45,6 +47,48 @@
 - [x] Add Linux install/config script generator.
 - [x] Add endpoint enrollment token model.
 - [x] Add endpoint registration endpoint.
+
+## Goal: OSS self-host first-run
+
+Make a fresh OpenDesk checkout usable by a third party who does not have
+organization signing keys.
+
+Build:
+
+- First-run wizard when the database has no users. Username is always `admin`.
+  The operator sets the password and the public base URL, ID server, relay,
+  API URL, and hbbs public key. Do not create `admin` from an env password
+  when the wizard is enabled.
+- If `OPENDESK_CLIENT_TOKEN_HMAC_KEY` is unset on first start, generate at
+  least 32 random bytes, persist next to the SQLite file, and reuse that file
+  on later starts. Refuse to start if an existing database has no stored key
+  and the env is also unset.
+- Keep organization-signed Windows installers opt-in through
+  `OPENDESK_SIGNED_CLIENT_DIR`. Default UI is official RustDesk downloads plus
+  generated scripts.
+- Keep `hbbs`/`hbbr` as official OSS binaries. Do not vendor AGPL RustDesk.
+
+Test:
+
+- Empty data directory: wizard, then login as `admin` with the chosen
+  password; env bootstrap password is not required.
+- Signed directory unset: no `setup.exe` links; PowerShell script still
+  renders.
+- Signed directory with `windows-setup.exe`: download appears.
+- HMAC key file is created once and reused across process restart.
+- `scripts/docs-check.sh`, `scripts/privacy-scan.sh`, and
+  `scripts/public-content-scan.sh` stay green. No production hosts or secrets
+  in the repository.
+
+Validate:
+
+- Follow `docs/install.md` on a clean machine (Compose or `cargo run`).
+- Official client can import ID, relay, API, and key from Settings.
+- Loopback bind plus reverse-proxy TLS remains the documented production
+  posture. Publishing port 8080 stays lab-only.
+
+Out of scope: OIDC, LDAP, SMTP, vault unattended passwords, vendoring AGPL
+RustDesk, in-process Authenticode, RustDesk session ACL enforcement.
 
 ## Questions For Owner
 

@@ -7,6 +7,7 @@ cd "$repo_root"
 required_docs=(
   README.md
   TASKS.md
+  docs/install.md
   docs/initial-tapeout.md
   docs/requirements.md
   docs/architecture.md

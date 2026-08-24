@@ -1,7 +1,8 @@
 # Operations Runbook
 
 This runbook covers the current OpenDesk operational boundary. It does not replace
-validation evidence or a site-specific deployment procedure.
+validation evidence or a site-specific deployment procedure. For a first install,
+see [Install OpenDesk](install.md).
 
 ## Health and diagnostics
 
