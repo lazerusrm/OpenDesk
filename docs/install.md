@@ -55,6 +55,28 @@ relay, API URL, and hbbs public key. Then sign in as `admin`.
 This published port is **lab-only**. Do not expose it on a network. Production
 must bind OpenDesk to loopback and terminate HTTPS on a reverse proxy.
 
+### Optional official hbbs/hbbr
+
+`hbbs` and `hbbr` are RustDesk OSS (AGPL). OpenDesk does not vendor them. A TTY
+prompt asks whether to pull the latest official image or zip:
+
+```bash
+bash scripts/fetch-rustdesk-server.sh
+```
+
+Default is no. Non-interactive latest pull:
+
+```bash
+bash scripts/fetch-rustdesk-server.sh --yes
+docker compose --profile rustdesk-server up --build
+```
+
+`--yes --start` also starts the Compose profile. `--method github` downloads
+the official zip from GitHub, checks sha256, and writes `hbbs`/`hbbr` under
+`data/rustdesk-server/`. After hbbs has run once, paste `id_ed25519.pub` into
+`/setup`. For lab on the same host, ID server and relay are `127.0.0.1`. Set
+`OPENDESK_RELAY_HOST` when clients should use a public hostname.
+
 ## Lab: cargo
 
 ```bash
@@ -72,9 +94,11 @@ password with `opendesk-user-password-reset` as documented in the
 
 ## Production shape
 
-1. Install official `hbbs` and `hbbr`. Generate `id_ed25519` / `id_ed25519.pub`
-   with `rustdesk-utils`. Point `hbbs` at your relay (`hbbs -r rd.example.com:21117`
-   or the equivalent documented by the server package).
+1. Run official `hbbs` and `hbbr` (Compose profile `rustdesk-server`,
+   `scripts/fetch-rustdesk-server.sh --yes`, or binaries you already installed).
+   Generate `id_ed25519` / `id_ed25519.pub` with `rustdesk-utils`. Point `hbbs`
+   at your relay (`hbbs -r rd.example.com:21117` or the equivalent documented by
+   the server package).
 2. Put OpenDesk on loopback, for example `OPENDESK_LISTEN_ADDR=127.0.0.1:8080`.
 3. Terminate TLS on a reverse proxy. Forward the dashboard and official-client
    `/api` to OpenDesk. Keep `hbbs`/`hbbr` ports on the ID and relay listeners,

@@ -67,6 +67,9 @@ Build:
   `OPENDESK_SIGNED_CLIENT_DIR`. Default UI is official RustDesk downloads plus
   generated scripts.
 - Keep `hbbs`/`hbbr` as official OSS binaries. Do not vendor AGPL RustDesk.
+  `scripts/fetch-rustdesk-server.sh` may pull the official image or GitHub zip
+  when the operator agrees (TTY prompt, `--yes`, or
+  `OPENDESK_FETCH_RUSTDESK_SERVER=1`).
 
 Test:
 
@@ -82,6 +85,7 @@ Test:
 
 Validate:
 
+- `scripts/test-fetch-rustdesk-server.sh` maps the official zip name and skip path.
 - Follow `docs/install.md` on a clean machine (Compose or `cargo run`).
 - Official client can import ID, relay, API, and key from Settings.
 - Loopback bind plus reverse-proxy TLS remains the documented production

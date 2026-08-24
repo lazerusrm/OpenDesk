@@ -100,6 +100,7 @@ Status legend:
 - [ ] Upgrade procedure.
 - [x] Public self-host install guide for OpenDesk plus OSS `hbbs`/`hbbr`.
 - [x] First-run setup wizard when the database has no users (fixed username `admin`).
+- [x] Optional fetch of official unmodified `hbbs`/`hbbr` (TTY prompt or `--yes`).
 
 ## Phase 5: Access and Governance
 

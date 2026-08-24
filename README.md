@@ -20,6 +20,15 @@ Quick lab start (plain HTTP, not for the public internet):
 docker compose up --build
 ```
 
+Optional official `hbbs`/`hbbr` (AGPL, pulled from RustDesk, not this tree):
+
+```bash
+bash scripts/fetch-rustdesk-server.sh
+```
+
+That asks on a TTY. Pass `--yes` to pull `rustdesk/rustdesk-server:latest` and
+use `docker compose --profile rustdesk-server up --build`.
+
 Open `http://127.0.0.1:8080/setup`. Username is `admin`. Set the password and
 the ID, relay, API, and hbbs public key values. A client-token HMAC key is
 written next to SQLite when the env value is unset.

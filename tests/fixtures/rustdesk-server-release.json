@@ -1,0 +1,25 @@
+{
+  "tag_name": "1.1.16",
+  "assets": [
+    {
+      "name": "rustdesk-server-linux-amd64.zip",
+      "browser_download_url": "https://github.com/rustdesk/rustdesk-server/releases/download/1.1.16/rustdesk-server-linux-amd64.zip",
+      "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "name": "rustdesk-server-linux-arm64v8.zip",
+      "browser_download_url": "https://github.com/rustdesk/rustdesk-server/releases/download/1.1.16/rustdesk-server-linux-arm64v8.zip",
+      "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    {
+      "name": "rustdesk-server-linux-armv7.zip",
+      "browser_download_url": "https://github.com/rustdesk/rustdesk-server/releases/download/1.1.16/rustdesk-server-linux-armv7.zip",
+      "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "name": "rustdesk-server-linux-i386.zip",
+      "browser_download_url": "https://github.com/rustdesk/rustdesk-server/releases/download/1.1.16/rustdesk-server-linux-i386.zip",
+      "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ]
+}
