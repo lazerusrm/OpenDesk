@@ -83,7 +83,9 @@ async fn first_run_wizard_creates_admin_without_bootstrap_env() {
     assert!(html.contains("name=\"id_server\""));
     assert!(html.contains("name=\"relay_server\""));
     assert!(html.contains("name=\"api_server\""));
+    assert!(html.contains("value=\"http://127.0.0.1:8080\""));
     assert!(html.contains("name=\"public_key\""));
+    assert!(html.contains("Optional now"));
     assert!(!html.contains("name=\"username\""));
 
     let csrf = csrf_cookie

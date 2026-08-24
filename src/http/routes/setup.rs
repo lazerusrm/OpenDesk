@@ -139,7 +139,7 @@ async fn setup_page(State(state): State<AppState>, jar: CookieJar) -> Result<Res
             state.public_base_url(),
             String::new(),
             String::new(),
-            String::new(),
+            state.public_base_url(),
             String::new(),
         ))?,
     )

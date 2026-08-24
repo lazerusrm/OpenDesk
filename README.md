@@ -6,35 +6,37 @@ enrollment, deployment scripts, health probes, backups, and audit log. RustDesk
 still owns transport. OpenDesk dashboard roles do not grant or deny sessions.
 
 Use official signed RustDesk apps. This repository does not vendor RustDesk
-server or client source. Organization-signed Windows installers are optional
-and stay off unless you provision files; see [Install](docs/install.md).
+server or client source. Organization-signed Windows installers are optional;
+see [Install](docs/install.md).
 
-## Install
+## Lab install
 
-Follow **[Install OpenDesk](docs/install.md)** for Compose, cargo, production
-loopback-plus-TLS posture, and the optional signed Windows package directory.
-
-Quick lab start (plain HTTP, not for the public internet):
+Docker, same host, plain HTTP. Do not publish this on the internet. The first
+build can take several minutes.
 
 ```bash
-docker compose up --build
+git clone https://github.com/lazerusrm/OpenDesk.git
+cd OpenDesk
+bash scripts/fetch-rustdesk-server.sh --yes --start
+docker compose --profile rustdesk-server exec hbbs cat /root/id_ed25519.pub
 ```
 
-Optional official `hbbs`/`hbbr` (AGPL, pulled from RustDesk, not this tree):
+Open `http://127.0.0.1:8080/setup`. Username is `admin`.
 
-```bash
-bash scripts/fetch-rustdesk-server.sh
-```
+- Public URL and API: `http://127.0.0.1:8080`
+- ID server and relay: `127.0.0.1`
+- Paste the public key (or leave it empty and add it later under Settings)
 
-That asks on a TTY. Pass `--yes` to pull `rustdesk/rustdesk-server:latest` and
-use `docker compose --profile rustdesk-server up --build`.
+Without `--yes`, the fetch script asks whether to pull official `hbbs`/`hbbr`
+(AGPL, from RustDesk, not this tree). Default is no. Compose **without**
+`--profile rustdesk-server` starts OpenDesk only.
 
-Open `http://127.0.0.1:8080/setup`. Username is `admin`. Set the password and
-the ID, relay, API, and hbbs public key values. A client-token HMAC key is
-written next to SQLite when the env value is unset.
+A client-token HMAC key is written next to SQLite when
+`OPENDESK_CLIENT_TOKEN_HMAC_KEY` is unset. Rotating it invalidates official-client
+login tokens.
 
-`OPENDESK_CLIENT_TOKEN_HMAC_KEY` remains supported if you want to inject the
-key yourself. Rotating it invalidates every official-client login token.
+Production (loopback + TLS + public relay hostname) is in
+**[Install OpenDesk](docs/install.md)**.
 
 ## Development
 
@@ -43,9 +45,10 @@ Askama, SQLite).
 
 ```bash
 export OPENDESK_COOKIE_SECURE=false
-OPENDESK_LISTEN_ADDR=127.0.0.1:8080 cargo test
 OPENDESK_LISTEN_ADDR=127.0.0.1:8080 cargo run
 ```
+
+`cargo test` is the developer suite, not part of install.
 
 Report-only migration review uses `opendesk-migration-dry-run`. It accepts a
 sanitized JSON export and never imports or mutates state. See the

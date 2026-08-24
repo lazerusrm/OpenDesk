@@ -86,7 +86,8 @@ Test:
 Validate:
 
 - `scripts/test-fetch-rustdesk-server.sh` maps the official zip name and skip path.
-- Follow `docs/install.md` on a clean machine (Compose or `cargo run`).
+- Follow `docs/install.md` lab recipe: fetch `--yes --start`, copy
+  `id_ed25519.pub`, open `/setup` with lab field values.
 - Official client can import ID, relay, API, and key from Settings.
 - Loopback bind plus reverse-proxy TLS remains the documented production
   posture. Publishing port 8080 stays lab-only.

@@ -139,8 +139,9 @@ fi
 
 if [[ "$want" != "yes" ]]; then
   echo "skipped official hbbs/hbbr fetch"
-  echo "later: bash scripts/fetch-rustdesk-server.sh --yes"
-  echo "or: docker compose --profile rustdesk-server up --build"
+  echo "OpenDesk-only: docker compose up --build"
+  echo "OpenDesk plus official hbbs/hbbr:"
+  echo "  bash scripts/fetch-rustdesk-server.sh --yes --start"
   exit 0
 fi
 
@@ -161,11 +162,13 @@ compose_cmd() {
 fetch_docker() {
   echo "pulling $IMAGE"
   docker pull "$IMAGE"
-  echo "image ready. OpenDesk still binds separately."
-  echo "start transport with:"
+  echo "official hbbs/hbbr image is ready (AGPL, not OpenDesk)."
+  echo "start OpenDesk plus transport with one command:"
   echo "  docker compose --profile rustdesk-server up --build"
-  echo "after hbbs starts, copy id_ed25519.pub into /setup:"
+  echo "then copy the public key (after hbbs has started once):"
   echo "  docker compose --profile rustdesk-server exec hbbs cat /root/id_ed25519.pub"
+  echo "open http://127.0.0.1:8080/setup as admin."
+  echo "lab fields: Public URL and API = http://127.0.0.1:8080 ; ID and relay = 127.0.0.1"
 }
 
 fetch_github() {
@@ -173,7 +176,7 @@ fetch_github() {
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/opendesk-hbbs.XXXXXX")"
   json="$tmp/latest.json"
   echo "querying official rustdesk-server latest release"
-  curl -fsSL -H "User-Agent: OpenDesk-fetch-rustdesk-server" -o "$json" "$RELEASES_API"
+  curl -fsSL -A "OpenDesk-hbbs-fetch/1" -o "$json" "$RELEASES_API"
   zip_name="$(asset_zip)"
   mapfile -t meta < <(select_from_json "$json")
   tag="${meta[0]}"
@@ -185,7 +188,7 @@ fetch_github() {
   fi
   archive="$tmp/$zip_name"
   echo "downloading $zip_name ($tag)"
-  curl -fsSL -H "User-Agent: OpenDesk-fetch-rustdesk-server" -o "$archive" "$url"
+  curl -fsSL -A "OpenDesk-hbbs-fetch/1" -o "$archive" "$url"
   echo "$digest  $archive" | sha256sum -c -
   mkdir -p "$DEST_DIR"
   unzip -o -q "$archive" -d "$tmp/extract"
@@ -198,8 +201,11 @@ fetch_github() {
   fi
   rm -rf "$tmp"
   echo "installed $tag to $DEST_DIR"
-  echo "run hbbr, then hbbs -r <relay-host>:21117 from that directory."
-  echo "use rustdesk-utils to print the public key after the first hbbs start."
+  echo "from that directory start relay, then id server:"
+  echo "  ./hbbr"
+  echo "  ./hbbs -r 127.0.0.1:21117"
+  echo "after hbbs starts, paste $DEST_DIR/id_ed25519.pub into /setup."
+  echo "prefer Docker when you can: bash scripts/fetch-rustdesk-server.sh --yes --method docker"
 }
 
 resolved="$method"

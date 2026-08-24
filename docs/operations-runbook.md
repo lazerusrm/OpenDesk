@@ -18,12 +18,11 @@ see [Install OpenDesk](install.md).
 
 ## Official-client token key
 
-Set `OPENDESK_CLIENT_TOKEN_HMAC_KEY` to a stable random hexadecimal secret of at
-least 32 bytes before starting OpenDesk. Store it outside the repository with the
-same availability controls as other deployment secrets. OpenDesk stores only
-HMAC-SHA-256 token digests; losing or rotating this key invalidates all official-
-client login tokens and requires users to log in again. Logical backups exclude
-client access tokens.
+On first start with an empty data directory, OpenDesk writes `opendesk.hmac`
+beside SQLite when `OPENDESK_CLIENT_TOKEN_HMAC_KEY` is unset. You may set that
+env instead (hex, at least 32 bytes). Keep the file or env with other secrets.
+OpenDesk stores HMAC-SHA-256 token digests only; losing or rotating this key
+invalidates official-client login tokens. Logical backups exclude those tokens.
 
 ## Transport admission
 
