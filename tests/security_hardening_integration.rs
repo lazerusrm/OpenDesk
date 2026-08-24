@@ -195,11 +195,15 @@ fn has_clickjacking_and_nosniff(headers: &axum::http::HeaderMap) -> bool {
 }
 
 #[tokio::test]
-async fn cookie_only_backup_and_audit_exports_are_forbidden() {
+async fn cookie_only_export_downloads_are_forbidden() {
     let app = build_router(test_state().await);
     let cookie = login_and_get_session_cookie(&app).await;
     let csrf = csrf_token_from_cookie(&cookie);
-    for uri in ["/backup/export.json", "/audit/export.csv"] {
+    for uri in [
+        "/backup/export.json",
+        "/audit/export.csv",
+        "/devices/export.csv",
+    ] {
         let denied = app
             .clone()
             .oneshot(
@@ -224,6 +228,7 @@ async fn cookie_only_backup_and_audit_exports_are_forbidden() {
         .expect("utf8");
         assert!(!body.contains("schema_version"));
         assert!(!body.contains("created_at,actor_username,action"));
+        assert!(!body.contains("device_uuid,alias,rustdesk_id"));
     }
     let backup = app
         .clone()
@@ -249,6 +254,7 @@ async fn cookie_only_backup_and_audit_exports_are_forbidden() {
     .expect("utf8");
     assert!(backup_body.contains("schema_version"));
     let audit = app
+        .clone()
         .oneshot(
             Request::builder()
                 .uri(format!("/audit/export.csv?csrf_token={csrf}"))
@@ -270,6 +276,28 @@ async fn cookie_only_backup_and_audit_exports_are_forbidden() {
     )
     .expect("utf8");
     assert!(csv.contains("created_at,actor_username,action"));
+    let devices = app
+        .oneshot(
+            Request::builder()
+                .uri(format!("/devices/export.csv?csrf_token={csrf}"))
+                .header("cookie", &cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("devices");
+    assert_eq!(devices.status(), StatusCode::OK);
+    let devices_csv = String::from_utf8(
+        devices
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .expect("utf8");
+    assert!(devices_csv.contains("device_uuid,alias,rustdesk_id"));
 }
 
 #[tokio::test]

@@ -170,7 +170,7 @@ pub(super) async fn devices_list(
         nav: nav_permissions_for_role(user.parsed_role()),
         csrf_token: user.csrf_token.clone(),
         search_term: search_term.clone(),
-        export_csv_href: export_csv_href(&search_term),
+        export_csv_href: export_csv_href(&search_term, &user.csrf_token),
         archived_hide: archived_filter == "0",
         archived_only: archived_filter == "1",
         archived_all: archived_filter == "all",

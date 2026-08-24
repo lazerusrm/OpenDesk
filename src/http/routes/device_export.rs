@@ -13,7 +13,7 @@ use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::device_csv::render_devices_csv;
 use crate::domain::device_list::DeviceSearchQuery;
-use crate::http::session::{require_action, AuthenticatedUser};
+use crate::http::session::{require_action, require_csrf, AuthenticatedUser};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::device_visibility::list_visible_device_uuids_for_user;
 use crate::repository::devices::list_devices;
@@ -23,12 +23,13 @@ use crate::repository::tags::list_device_tag_names_map;
 #[derive(Deserialize)]
 struct ExportSearchQuery {
     term: Option<String>,
+    csrf_token: Option<String>,
 }
 
-pub fn export_csv_href(search_term: &str) -> String {
+pub fn export_csv_href(search_term: &str, csrf_token: &str) -> String {
     let trimmed = search_term.trim();
     if trimmed.is_empty() {
-        "/devices/export.csv".to_string()
+        format!("/devices/export.csv?csrf_token={csrf_token}")
     } else {
         let encoded = trimmed
             .chars()
@@ -38,7 +39,7 @@ pub fn export_csv_href(search_term: &str) -> String {
                 _ => format!("%{:02X}", ch as u32),
             })
             .collect::<String>();
-        format!("/devices/export.csv?term={encoded}")
+        format!("/devices/export.csv?term={encoded}&csrf_token={csrf_token}")
     }
 }
 
@@ -52,6 +53,7 @@ async fn devices_csv_export(
     Query(query): Query<ExportSearchQuery>,
 ) -> Result<Response, Response> {
     let user = require_action(&state, &jar, Action::DeviceExport).await?;
+    require_csrf(&user, query.csrf_token.as_deref().unwrap_or(""))?;
     let visible_device_uuids = list_visible_device_uuids_for_user(&state.db, user.user_uuid)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -105,4 +107,21 @@ async fn write_csv_export_audit(state: &AppState, user: &AuthenticatedUser) {
         detail: None,
     };
     let _ = insert_audit_event(&state.db, &audit).await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::export_csv_href;
+
+    #[test]
+    fn export_href_carries_csrf_and_optional_term() {
+        assert_eq!(
+            export_csv_href("", "abc"),
+            "/devices/export.csv?csrf_token=abc"
+        );
+        assert_eq!(
+            export_csv_href("lab bench", "abc"),
+            "/devices/export.csv?term=lab+bench&csrf_token=abc"
+        );
+    }
 }

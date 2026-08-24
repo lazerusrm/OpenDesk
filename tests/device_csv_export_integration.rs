@@ -2,7 +2,7 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{login_and_get_session_cookie, test_state};
+use common::{csrf_token_from_cookie, login_and_get_session_cookie, test_state};
 use http_body_util::BodyExt;
 use opendesk::build_router;
 use opendesk::domain::device_csv::DEVICE_CSV_HEADER;
@@ -92,10 +92,11 @@ async fn devices_csv_export_includes_expected_fields() {
 
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;
+    let csrf = csrf_token_from_cookie(&session_cookie);
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/devices/export.csv")
+                .uri(format!("/devices/export.csv?csrf_token={csrf}"))
                 .header("cookie", session_cookie)
                 .body(Body::empty())
                 .unwrap(),
