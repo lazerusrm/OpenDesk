@@ -13,7 +13,7 @@ use axum_extra::extract::cookie::CookieJar;
 use serde::Deserialize;
 
 use crate::app_state::AppState;
-use crate::auth::password_meets_policy;
+use crate::auth::{password_meets_policy, MINIMUM_PASSWORD_LENGTH};
 use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::role::{validate_role_value, Role};
@@ -168,7 +168,7 @@ async fn user_create_submit(
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?
             .into_response());
     }
-    if !password_meets_policy(&form.password) {
+    if form.password.len() < MINIMUM_PASSWORD_LENGTH {
         return Ok(render_users_page(
             &state,
             Some("password must be at least 8 characters".to_string()),
@@ -194,7 +194,7 @@ async fn user_create_submit(
     let created = match create_user(
         &state.db,
         form.username.trim(),
-        form.password.trim(),
+        &form.password,
         role.as_str(),
     )
     .await
