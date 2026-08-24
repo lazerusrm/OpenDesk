@@ -4,27 +4,37 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::app_state::AppState;
+use crate::domain::connection_helper::{
+    explicit_server_helper_for_device, generate_default_server_helper,
+};
 use crate::domain::device::DeviceDraft;
 use crate::domain::device_list::rustdesk_id_copy_text;
-use crate::domain::enrollment_token::EnrollmentTokenRecord;
-use crate::domain::server_config::ServerConfig;
+use crate::domain::enrollment_token::{onboard_url, EnrollmentTokenRecord};
+use crate::domain::role::Role;
+use crate::domain::server_config::{default_server_config, ServerConfig};
 use crate::http::views::{
-    DeviceFormView, EnrollmentTokenRowView, EnrollmentTokensView, LoginView, ServerConfigView,
-    SiteOptionView, TagOptionView,
+    nav_permissions_for_role, DeviceFormView, EnrollmentTokenRowView, EnrollmentTokensView,
+    LoginView, ServerConfigView, SiteOptionView, TagOptionView,
 };
 use crate::repository::enrollment_tokens::list_enrollment_tokens;
+use crate::repository::server_config::load_server_config;
 use crate::repository::sites::list_sites;
 use crate::repository::tags::list_tags;
+use crate::time_format::format_timestamp;
 
-pub fn render_login(error_message: Option<String>) -> Html<String> {
+pub fn render_login(error_message: Option<String>, notice_message: Option<String>) -> Html<String> {
     let view = LoginView {
         title: "Login".to_string(),
         show_nav: false,
+        nav: crate::http::views::NavPermissions::NONE,
+        csrf_token: String::new(),
         error_message,
+        notice_message,
     };
     Html(view.render().expect("render login"))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn render_device_form(
     state: &AppState,
     heading: &str,
@@ -35,6 +45,8 @@ pub async fn render_device_form(
     error_message: Option<String>,
     show_archive_actions: bool,
     show_unarchive_actions: bool,
+    csrf_token: &str,
+    role: Role,
 ) -> Result<Html<String>, sqlx::Error> {
     let sites = list_sites(&state.db).await?;
     let site_options = sites
@@ -54,15 +66,27 @@ pub async fn render_device_form(
             selected: selected_tag_uuids.contains(&tag.tag_uuid),
         })
         .collect();
+    let server_config = load_server_config(&state.db)
+        .await?
+        .unwrap_or_else(default_server_config);
     let view = DeviceFormView {
         title: heading.to_string(),
         show_nav: true,
+        nav: nav_permissions_for_role(role),
+        csrf_token: csrf_token.to_string(),
         heading: heading.to_string(),
         form_action: form_action.to_string(),
         device_uuid: device_uuid.to_string(),
         alias: draft.alias,
         rustdesk_id: draft.rustdesk_id.clone().unwrap_or_default(),
         show_rustdesk_id_copy: rustdesk_id_copy_text(draft.rustdesk_id.as_deref()).is_some(),
+        default_helper_copy_text: generate_default_server_helper(draft.rustdesk_id.as_deref())
+            .unwrap_or_default(),
+        explicit_helper_copy_text: explicit_server_helper_for_device(
+            draft.rustdesk_id.as_deref(),
+            &server_config,
+        )
+        .unwrap_or_default(),
         hostname: draft.hostname.unwrap_or_default(),
         owner: draft.owner.unwrap_or_default(),
         notes: draft.notes.unwrap_or_default(),
@@ -79,10 +103,14 @@ pub fn render_server_config(
     config: &ServerConfig,
     message: Option<String>,
     error_message: Option<String>,
+    csrf_token: &str,
+    role: Role,
 ) -> Html<String> {
     let view = ServerConfigView {
         title: "Server Config".to_string(),
         show_nav: true,
+        nav: nav_permissions_for_role(role),
+        csrf_token: csrf_token.to_string(),
         id_server: config.id_server.clone(),
         relay_server: config.relay_server.clone(),
         api_server: config.api_server.clone(),
@@ -96,6 +124,9 @@ pub fn render_server_config(
 pub async fn render_enrollment_tokens(
     state: &AppState,
     created_token_value: Option<String>,
+    csrf_token: &str,
+    role: Role,
+    error_message: Option<String>,
 ) -> Result<Html<String>, sqlx::Error> {
     let tokens = list_enrollment_tokens(&state.db).await?;
     let rows = tokens
@@ -106,15 +137,26 @@ pub async fn render_enrollment_tokens(
                 enrollment_token_uuid: token.enrollment_token_uuid.to_string(),
                 label: token.label,
                 status,
+                expires_display: token
+                    .expires_at
+                    .map(format_timestamp)
+                    .unwrap_or_else(|| "None".to_string()),
                 can_revoke: token.revoked_at.is_none(),
             }
         })
         .collect();
+    let created_onboard_url = created_token_value
+        .as_ref()
+        .map(|token| onboard_url(&state.public_base_url(), token));
     let view = EnrollmentTokensView {
         title: "Enrollment Tokens".to_string(),
         show_nav: true,
+        nav: nav_permissions_for_role(role),
+        csrf_token: csrf_token.to_string(),
         tokens: rows,
         created_token_value,
+        created_onboard_url,
+        error_message,
     };
     Ok(Html(view.render().expect("render enrollment tokens")))
 }

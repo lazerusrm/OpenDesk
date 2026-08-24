@@ -2,18 +2,59 @@
 
 These procedures close the remaining client research gaps with repeatable evidence. Use disposable test endpoints only.
 
+## Initial Cutover Run Order
+
+Run one complete record for each official client platform: Windows, Linux, macOS,
+Android, and iOS. Do not substitute another OS, package, architecture, or client
+version. Android and iOS are operator validation unless a separate endpoint decision
+is approved.
+
+For each platform, use this order:
+
+1. Capture the release source, exact version/package, and signature/checksum result.
+2. Capture server configuration readback and public-key fingerprint using test values.
+3. Enroll/check in only where endpoint enrollment is in scope; prove token scope and revocation.
+4. Test OpenDesk dashboard/API RBAC with permitted and denied test roles. This is not RustDesk session enforcement.
+5. Exercise LAN, WAN, NAT, and relay fallback as separate transport cases; redact topology.
+6. Repeat config readback after restart and official update; then exercise the documented rollback.
+7. Have an independent reviewer mark the record final and link artifacts under ignored `local/research/`.
+
+Create a status-only checklist without secrets or command output:
+
+```bash
+scripts/validation-evidence-record.sh --case cutover-windows --platform windows \
+  --client-version '<official-version>' --package installer \
+  --enrollment not-run --server-config not-run --access not-run \
+  --wan not-run --nat-relay not-run --update not-run --rollback not-run
+```
+
+The same command is used with `linux`, `macos`, `android`, and `ios`. Replace statuses
+only after evidence review. Never pass tokens, keys, passwords, hostnames, addresses,
+or endpoint identifiers to the recorder.
+
+The recorder validates all free-form metadata before writing it: case names and client
+versions are bounded ASCII identifiers/semantic versions, package labels are an allowlist,
+and topology/credential markers, URLs, IP-like values, whitespace, and control characters
+are rejected. Run its negative-input smoke tests before using it:
+
+```bash
+bash scripts/test-validation-evidence-record.sh
+```
+
+
 ## Evidence To Record
 
 For each run, record:
 
 - Date.
-- Tester.
-- OS and version.
+- Tester and independent reviewer.
+- OS/architecture and version.
 - RustDesk client version and package type.
 - Server version or source.
-- Exact command or script used.
-- Config values redacted to placeholders.
-- Pass/fail for each step.
+- Exact command or script used (with credentials omitted).
+- Config values redacted to placeholders and key fingerprint only.
+- Enrollment, server config, dashboard RBAC, WAN, NAT/relay, update, and rollback status.
+- Pass/fail for each step and exception owner/expiry if applicable.
 - Artifact path under ignored `local/research/`.
 
 Use `scripts/research-client-record.sh` to create the starting evidence file for a client run. On Windows or macOS, prefer the platform capture scripts:

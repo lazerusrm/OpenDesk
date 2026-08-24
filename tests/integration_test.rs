@@ -8,18 +8,104 @@ use std::os::unix::fs::PermissionsExt;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
+use common::{
+    form_with_csrf, login_and_get_session_cookie, login_and_get_session_cookie_with_origin,
+    test_state,
+};
 use http_body_util::BodyExt;
-use common::{login_and_get_session_cookie, test_state};
 use opendesk::build_router;
 use serde_json::json;
 use tokio::net::TcpListener;
 use tower::ServiceExt;
 
 #[tokio::test]
+async fn authenticated_mutation_rejects_missing_and_invalid_csrf_tokens() {
+    let state = test_state().await;
+    let app = build_router(state.clone());
+    let cookie = login_and_get_session_cookie(&app).await;
+
+    for (body, expected) in [
+        ("name=csrf-missing", StatusCode::UNPROCESSABLE_ENTITY),
+        (
+            "csrf_token=invalid&name=csrf-invalid",
+            StatusCode::FORBIDDEN,
+        ),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/sites")
+                    .header("cookie", &cookie)
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .expect("csrf response");
+        assert_eq!(response.status(), expected);
+    }
+    assert!(opendesk::repository::sites::list_sites(&state.db)
+        .await
+        .expect("sites")
+        .is_empty());
+}
+
+#[tokio::test]
+async fn disabled_user_cannot_log_in() {
+    let state = test_state().await;
+    sqlx::query("UPDATE users SET activation_state = 'disabled' WHERE username = 'admin'")
+        .execute(&state.db)
+        .await
+        .expect("disable user");
+    let app = build_router(state);
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/login")
+                .header("origin", "http://127.0.0.1:8080")
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from("username=admin&password=test-password"))
+                .unwrap(),
+        )
+        .await
+        .expect("login response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    assert!(String::from_utf8(body.to_vec())
+        .expect("utf8")
+        .contains("Invalid username or password"));
+}
+
+#[tokio::test]
+async fn login_rejects_cross_origin_submission() {
+    let app = build_router(test_state().await);
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/login")
+                .header("origin", "https://evil.example")
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from("username=admin&password=test-password"))
+                .unwrap(),
+        )
+        .await
+        .expect("login response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+#[tokio::test]
 async fn health_endpoint_returns_ok() {
     let app = build_router(test_state().await);
     let response = app
-        .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .expect("response");
     assert_eq!(response.status(), StatusCode::OK);
@@ -29,14 +115,20 @@ async fn health_endpoint_returns_ok() {
 async fn login_page_renders_opendesk_form() {
     let app = build_router(test_state().await);
     let response = app
-        .oneshot(Request::builder().uri("/login").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/login")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .expect("response");
     assert_eq!(response.status(), StatusCode::OK);
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let html = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(html.contains("OpenDesk"));
-    assert!(html.contains("Admin Login"));
+    assert!(html.contains("Sign in"));
+    assert!(html.contains("OpenDesk administration"));
 }
 
 #[tokio::test]
@@ -78,13 +170,21 @@ async fn device_update_via_handler_preserves_enrollment_metadata() {
         .expect("checkin");
     assert_eq!(checkin.status(), StatusCode::NO_CONTENT);
 
-    let device = opendesk::repository::devices::find_device_by_rustdesk_id(
+    let device = opendesk::repository::devices::find_device_by_rustdesk_id(&state.db, "554433221")
+        .await
+        .expect("lookup")
+        .expect("device");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
         &state.db,
-        "554433221",
+        admin.user_uuid,
+        &[device.device_uuid],
     )
     .await
-    .expect("lookup")
-    .expect("device");
+    .expect("grant device visibility");
 
     let session_cookie = login_and_get_session_cookie(&app).await;
     let update = app
@@ -93,23 +193,21 @@ async fn device_update_via_handler_preserves_enrollment_metadata() {
                 .method("POST")
                 .uri(format!("/devices/{}", device.device_uuid))
                 .header("content-type", "application/x-www-form-urlencoded")
-                .header("cookie", session_cookie)
-                .body(Body::from(
+                .header("cookie", &session_cookie)
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
                     "alias=Renamed+device&notes=operator+note&rustdesk_id=&hostname=&owner=",
-                ))
+                )))
                 .unwrap(),
         )
         .await
         .expect("device update");
     assert_eq!(update.status(), StatusCode::SEE_OTHER);
 
-    let updated = opendesk::repository::devices::find_device_by_uuid(
-        &state.db,
-        device.device_uuid,
-    )
-    .await
-    .expect("reload")
-    .expect("updated device");
+    let updated = opendesk::repository::devices::find_device_by_uuid(&state.db, device.device_uuid)
+        .await
+        .expect("reload")
+        .expect("updated device");
 
     assert_eq!(updated.alias, "Renamed device");
     assert_eq!(updated.os_family.as_deref(), Some("linux"));
@@ -130,11 +228,19 @@ async fn linux_script_export_executes_check_in_against_running_server() {
     )
     .await
     .expect("create token");
+    opendesk::repository::server_config::save_server_config(
+        &state.db,
+        &opendesk::domain::server_config::default_server_config(),
+        None,
+    )
+    .await
+    .expect("save server config");
 
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind listener");
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind listener");
     let addr = listener.local_addr().expect("listener address");
-    let mut state = state;
-    state.public_base_url = format!("http://{addr}");
+    state.set_public_base_url(format!("http://{addr}"));
     let app = build_router(state.clone());
     tokio::spawn(async move {
         axum::serve(listener, app)
@@ -143,16 +249,16 @@ async fn linux_script_export_executes_check_in_against_running_server() {
     });
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let session_cookie = login_and_get_session_cookie(&build_router(state.clone())).await;
-    let export_uri = format!(
-        "/deployment/linux.sh?enrollment_token_value={}",
-        created.token_value
-    );
+    let session_cookie = login_and_get_session_cookie_with_origin(
+        &build_router(state.clone()),
+        &format!("http://{addr}"),
+    )
+    .await;
     let response = build_router(state.clone())
         .oneshot(
             Request::builder()
-                .uri(export_uri)
-                .header("cookie", session_cookie)
+                .uri("/deployment/linux.sh")
+                .header("cookie", &session_cookie)
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -162,8 +268,10 @@ async fn linux_script_export_executes_check_in_against_running_server() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let script = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(script.contains("#!/usr/bin/env bash"));
-    assert!(script.contains(&created.token_value));
+    assert!(!script.contains(&created.token_value));
+    assert!(script.contains("PASTE_ENROLLMENT_TOKEN_VALUE"));
     assert!(script.contains("opendesk enrollment check-in http_status="));
+    let script = script.replace("PASTE_ENROLLMENT_TOKEN_VALUE", &created.token_value);
 
     let temp_root = std::env::temp_dir().join(format!(
         "opendesk-linux-script-test-{}",
@@ -223,13 +331,10 @@ esac
     );
     assert!(stdout.contains("opendesk enrollment check-in http_status=204"));
 
-    let device = opendesk::repository::devices::find_device_by_rustdesk_id(
-        &state.db,
-        "887766554",
-    )
-    .await
-    .expect("lookup enrolled device")
-    .expect("device created by exported script check-in");
+    let device = opendesk::repository::devices::find_device_by_rustdesk_id(&state.db, "887766554")
+        .await
+        .expect("lookup enrolled device")
+        .expect("device created by exported script check-in");
     assert_eq!(device.os_family.as_deref(), Some("linux"));
 
     let _ = fs::remove_dir_all(&temp_root);
@@ -250,6 +355,17 @@ async fn archived_device_validation_error_shows_unarchive_action() {
     opendesk::repository::devices::set_device_archived(&state.db, device.device_uuid, true)
         .await
         .expect("archive");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
 
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;
@@ -259,8 +375,11 @@ async fn archived_device_validation_error_shows_unarchive_action() {
                 .method("POST")
                 .uri(format!("/devices/{}", device.device_uuid))
                 .header("content-type", "application/x-www-form-urlencoded")
-                .header("cookie", session_cookie)
-                .body(Body::from("alias=+&rustdesk_id=&hostname=&owner=&notes="))
+                .header("cookie", &session_cookie)
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    "alias=+&rustdesk_id=&hostname=&owner=&notes=",
+                )))
                 .unwrap(),
         )
         .await
@@ -271,4 +390,3 @@ async fn archived_device_validation_error_shows_unarchive_action() {
     assert!(html.contains("Unarchive"));
     assert!(!html.contains("/archive\">\n    <button type=\"submit\">Archive</button>"));
 }
-

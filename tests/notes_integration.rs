@@ -21,6 +21,18 @@ async fn device_list_shows_notes_and_search_matches_them() {
     .await
     .expect("create device");
 
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
+
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;
 
@@ -36,7 +48,12 @@ async fn device_list_shows_notes_and_search_matches_them() {
         .await
         .expect("devices list");
     assert_eq!(list_response.status(), StatusCode::OK);
-    let body = list_response.into_body().collect().await.unwrap().to_bytes();
+    let body = list_response
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
     let html = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(html.contains("Notes Workstation"));
     assert!(html.contains("Keep firmware updated weekly"));
@@ -53,7 +70,12 @@ async fn device_list_shows_notes_and_search_matches_them() {
         .await
         .expect("search devices");
     assert_eq!(search_response.status(), StatusCode::OK);
-    let body = search_response.into_body().collect().await.unwrap().to_bytes();
+    let body = search_response
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
     let html = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(html.contains("Notes Workstation"));
     let _ = device;

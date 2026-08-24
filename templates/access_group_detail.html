@@ -1,0 +1,83 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Access group: {{ name }}</h1>
+  <p class="muted">Choose the people in this group and the devices they can see in OpenDesk.</p>
+  <p class="muted">{{ member_count_label }} · {{ device_count_label }}</p>
+  <p><a href="/access-groups">Back to access groups</a></p>
+  {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
+</section>
+<section class="card notice">
+  <p>User memberships and device visibility grant OpenDesk dashboard visibility only. They do not control RustDesk sessions.</p>
+</section>
+<section class="card">
+  <h2>Members</h2>
+  <p class="muted">User memberships are dashboard visibility, not RustDesk session control.</p>
+  <form method="post" action="/access-groups/{{ access_group_uuid }}/memberships">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <fieldset>
+      <legend>Members</legend>
+      {% if user_options.is_empty() %}
+      <p class="muted">No users available.</p>
+      {% else %}
+      <div class="card-grid">
+        {% for user in user_options %}
+        <label class="checkbox-row">
+          <input type="checkbox" name="user_uuid" value="{{ user.user_uuid }}"{% if user.selected %} checked{% endif %}>
+          {{ user.username }}
+        </label>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </fieldset>
+    <button type="submit">Save members</button>
+  </form>
+</section>
+<section class="card">
+  <h2>Device visibility</h2>
+  <p class="muted">Device grants are dashboard visibility, not RustDesk session control.</p>
+  <form method="post" action="/access-groups/{{ access_group_uuid }}/device-visibility-grants">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <fieldset>
+      <legend>Visible devices</legend>
+      {% if device_options.is_empty() %}
+      <p class="muted">No devices available to grant visibility.</p>
+      {% else %}
+      <div class="card-grid">
+        {% for device in device_options %}
+        <label class="checkbox-row">
+          <input type="checkbox" name="device_uuid" value="{{ device.device_uuid }}"{% if device.selected %} checked{% endif %}>
+          {{ device.alias }}{% if device.rustdesk_id != "" %} · {{ device.rustdesk_id }}{% endif %}
+        </label>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </fieldset>
+    <button type="submit">Save device visibility</button>
+  </form>
+</section>
+<section class="card">
+  <h2>Group access</h2>
+  <p class="muted">Members of this group can see devices granted to the selected groups. This is dashboard and official-client data scope only; it does not control RustDesk sessions.</p>
+  <p class="muted">{{ incoming_group_names_display }}</p>
+  <form method="post" action="/access-groups/{{ access_group_uuid }}/access-grants">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <fieldset>
+      <legend>Can see devices granted to</legend>
+      {% if group_options.is_empty() %}
+      <p class="muted">No other access groups available.</p>
+      {% else %}
+      <div class="card-grid">
+        {% for group in group_options %}
+        <label class="checkbox-row">
+          <input type="checkbox" name="outgoing_access_group_uuid" value="{{ group.access_group_uuid }}"{% if group.selected %} checked{% endif %}>
+          {{ group.name }}
+        </label>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </fieldset>
+    <button type="submit">Save group access</button>
+  </form>
+</section>
+{% endblock %}

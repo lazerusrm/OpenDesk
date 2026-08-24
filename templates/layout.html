@@ -3,28 +3,54 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>{{ title }} · OpenDesk</title>
   <link rel="stylesheet" href="/static/app.css">
 </head>
-<body>
-  <header class="site-header">
-    <div class="brand">OpenDesk</div>
+<body{% if !show_nav %} class="auth-page"{% endif %}>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="topbar">
+    <a class="brand" href="{% if show_nav %}/{% else %}/login{% endif %}" aria-label="OpenDesk home">
+      <span class="brand-mark" aria-hidden="true">O</span><span>OpenDesk</span>
+    </a>
     {% if show_nav %}
-    <nav>
-      <a href="/devices">Devices</a>
-      <a href="/sites">Sites</a>
-      <a href="/tags">Tags</a>
-      <a href="/settings/server-config">Server Config</a>
-      <a href="/deployment">Deployment</a>
-      <a href="/backup">Backup</a>
-      <a href="/enrollment-tokens">Enrollment Tokens</a>
-      <form method="post" action="/logout" class="inline-form">
-        <button type="submit">Logout</button>
-      </form>
-    </nav>
+    <button class="nav-toggle" type="button" aria-controls="console-nav" aria-expanded="false" data-nav-toggle>Menu</button>
+    <span class="topbar-context">Administration console</span>
     {% endif %}
   </header>
-  <main class="content">
+  {% if show_nav %}
+  <aside class="sidebar" id="console-nav">
+    <nav aria-label="Console navigation">
+      <p class="nav-label">Fleet</p>
+      {% if nav.dashboard %}<a href="/">Overview</a>{% endif %}
+      {% if nav.devices %}<a href="/devices">Devices</a>{% endif %}
+      {% if nav.sites %}<a href="/sites">Sites</a>{% endif %}
+      {% if nav.tags %}<a href="/tags">Tags</a>{% endif %}
+      {% if nav.address_books %}<a href="/address-books">Address books</a>{% endif %}
+      <p class="nav-label">Access</p>
+      {% if nav.users %}<a href="/users">Users</a>{% endif %}
+      {% if nav.access_groups %}<a href="/access-groups">Access groups</a>{% endif %}
+      {% if nav.enrollment %}
+      <a href="/onboard-setup">Onboard codes</a>
+      <a href="/enrollment-tokens">Enrollment tokens</a>
+      {% endif %}
+      <p class="nav-label">Operations</p>
+      {% if nav.deployment %}<a href="/deployment">Deployment center</a>{% endif %}
+      {% if nav.server_config %}<a href="/settings">Settings</a>{% endif %}
+      {% if nav.status %}<a href="/status">Status</a>{% endif %}
+      {% if nav.backup %}<a href="/backup">Backup</a>{% endif %}
+      {% if nav.audit %}<a href="/audit">Audit</a>{% endif %}
+    </nav>
+    <div class="sidebar-footer">
+      <a href="/account">Account</a>
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="button-secondary">Sign out</button>
+      </form>
+    </div>
+  </aside>
+  {% endif %}
+  <main class="content" id="main-content" tabindex="-1">
     {% block content %}{% endblock %}
   </main>
   <script src="/static/app.js" defer></script>

@@ -6,10 +6,44 @@ services:
     environment:
       OPENDESK_LISTEN_ADDR: "0.0.0.0:8080"
       OPENDESK_DATA_DIR: "/data"
-      OPENDESK_BOOTSTRAP_ADMIN_USERNAME: "admin"
-      OPENDESK_BOOTSTRAP_ADMIN_PASSWORD: "change-me"
+      OPENDESK_PUBLIC_BASE_URL: "${OPENDESK_PUBLIC_BASE_URL:-http://127.0.0.1:8080}"
+      OPENDESK_COOKIE_SECURE: "${OPENDESK_COOKIE_SECURE:-false}"
+      OPENDESK_CLIENT_TOKEN_HMAC_KEY: "${OPENDESK_CLIENT_TOKEN_HMAC_KEY:-}"
+      OPENDESK_TRANSPORT_INTROSPECTION_KEY: "${OPENDESK_TRANSPORT_INTROSPECTION_KEY:-}"
+      OPENDESK_RUSTDESK_DOWNLOAD_WINDOWS_URL: "${OPENDESK_RUSTDESK_DOWNLOAD_WINDOWS_URL:-}"
+      OPENDESK_RUSTDESK_DOWNLOAD_MACOS_URL: "${OPENDESK_RUSTDESK_DOWNLOAD_MACOS_URL:-}"
+      OPENDESK_RUSTDESK_DOWNLOAD_LINUX_URL: "${OPENDESK_RUSTDESK_DOWNLOAD_LINUX_URL:-}"
+      OPENDESK_RUSTDESK_DOWNLOAD_ANDROID_URL: "${OPENDESK_RUSTDESK_DOWNLOAD_ANDROID_URL:-}"
     volumes:
       - opendesk-data:/data
 
+  # Official RustDesk OSS (AGPL). Off unless profile rustdesk-server is enabled.
+  hbbs:
+    profiles: ["rustdesk-server"]
+    image: docker.io/rustdesk/rustdesk-server:latest
+    command: ["hbbs", "-r", "${OPENDESK_RELAY_HOST:-127.0.0.1}:21117"]
+    volumes:
+      - rustdesk-server-data:/root
+    ports:
+      - "21115:21115"
+      - "21116:21116"
+      - "21116:21116/udp"
+      - "21118:21118"
+    depends_on:
+      - hbbr
+    restart: unless-stopped
+
+  hbbr:
+    profiles: ["rustdesk-server"]
+    image: docker.io/rustdesk/rustdesk-server:latest
+    command: hbbr
+    volumes:
+      - rustdesk-server-data:/root
+    ports:
+      - "21117:21117"
+      - "21119:21119"
+    restart: unless-stopped
+
 volumes:
   opendesk-data:
+  rustdesk-server-data:

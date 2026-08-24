@@ -1,11 +1,18 @@
 {% extends "layout.html" %}
 {% block content %}
 <section class="card">
-  <h1>{{ heading }}</h1>
+  <div class="page-header">
+    <div>
+      <h1>{{ heading }}</h1>
+      <p class="muted">Inventory metadata for the official RustDesk client. Saving here does not start or authorize a remote session.</p>
+    </div>
+    <a class="button button-secondary" href="/devices">Back to devices</a>
+  </div>
   {% if error_message.is_some() %}
   <p class="error">{{ error_message.as_ref().unwrap() }}</p>
   {% endif %}
   <form method="post" action="{{ form_action }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="alias">Alias</label>
     <input id="alias" name="alias" value="{{ alias }}" required>
 
@@ -13,7 +20,7 @@
     <div class="input-with-copy">
       <input id="rustdesk_id" name="rustdesk_id" value="{{ rustdesk_id }}">
       {% if show_rustdesk_id_copy %}
-      <button type="button" class="copy-button" data-copy-input="rustdesk_id">Copy</button>
+      <button type="button" class="copy-button" data-copy-input="rustdesk_id">Copy ID</button>
       {% endif %}
     </div>
 
@@ -33,6 +40,9 @@
 
     <fieldset>
       <legend>Tags</legend>
+      {% if tag_options.is_empty() %}
+      <p class="muted">No tags yet. Create tags first, then assign them here.</p>
+      {% endif %}
       {% for tag in tag_options %}
       <label class="checkbox-row">
         <input type="checkbox" name="tag_uuids" value="{{ tag.tag_uuid }}" {% if tag.selected %}checked{% endif %}>
@@ -44,18 +54,49 @@
     <label for="notes">Notes</label>
     <textarea id="notes" name="notes" rows="4">{{ notes }}</textarea>
 
-    <button type="submit">Save</button>
-    <a class="button" href="/devices">Back</a>
+    <div class="form-actions">
+      <button type="submit">Save</button>
+    </div>
   </form>
-  {% if show_archive_actions %}
-  <form method="post" action="/devices/{{ device_uuid }}/archive">
-    <button type="submit">Archive</button>
-  </form>
+</section>
+{% if default_helper_copy_text != "" || explicit_helper_copy_text != "" %}
+<section class="card">
+  <h2>Connection helper</h2>
+  <p class="muted">Copy these values into the official RustDesk client. OpenDesk does not tunnel or authorize the session.</p>
+  {% if default_helper_copy_text != "" %}
+  <label for="default-helper">Default helper</label>
+  <div class="input-with-copy">
+    <input id="default-helper" value="{{ default_helper_copy_text }}" readonly>
+    <button type="button" class="copy-button" data-copy-input="default-helper">Copy</button>
+  </div>
   {% endif %}
-  {% if show_unarchive_actions %}
-  <form method="post" action="/devices/{{ device_uuid }}/unarchive">
-    <button type="submit">Unarchive</button>
-  </form>
+  {% if explicit_helper_copy_text != "" %}
+  <label for="explicit-helper">Explicit server helper</label>
+  <div class="input-with-copy">
+    <input id="explicit-helper" value="{{ explicit_helper_copy_text }}" readonly>
+    <button type="button" class="copy-button" data-copy-input="explicit-helper">Copy</button>
+  </div>
   {% endif %}
 </section>
+{% endif %}
+{% if show_archive_actions %}
+<section class="card">
+  <h2>Archive</h2>
+  <p class="muted">Archived devices stay in inventory but are hidden from the default device list.</p>
+  <form method="post" action="/devices/{{ device_uuid }}/archive">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="button-secondary">Archive device</button>
+  </form>
+</section>
+{% endif %}
+{% if show_unarchive_actions %}
+<section class="card">
+  <h2>Restore</h2>
+  <p class="muted">Return this device to the default device list.</p>
+  <form method="post" action="/devices/{{ device_uuid }}/unarchive">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Unarchive device</button>
+  </form>
+</section>
+{% endif %}
 {% endblock %}

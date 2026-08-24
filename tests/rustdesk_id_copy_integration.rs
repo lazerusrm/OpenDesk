@@ -7,10 +7,24 @@ use http_body_util::BodyExt;
 use opendesk::build_router;
 use tower::ServiceExt;
 
+async fn grant_admin_visibility(state: &opendesk::AppState, device_uuid: uuid::Uuid) {
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
+}
+
 #[tokio::test]
 async fn device_list_renders_copy_button_for_rustdesk_id() {
     let state = test_state().await;
-    opendesk::repository::devices::create_device(
+    let device = opendesk::repository::devices::create_device(
         &state.db,
         &opendesk::domain::device::DeviceDraft {
             alias: "Copy ID Workstation".to_string(),
@@ -20,6 +34,7 @@ async fn device_list_renders_copy_button_for_rustdesk_id() {
     )
     .await
     .expect("create device");
+    grant_admin_visibility(&state, device.device_uuid).await;
 
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;
@@ -44,7 +59,7 @@ async fn device_list_renders_copy_button_for_rustdesk_id() {
 #[tokio::test]
 async fn device_list_omits_copy_button_without_rustdesk_id() {
     let state = test_state().await;
-    opendesk::repository::devices::create_device(
+    let device = opendesk::repository::devices::create_device(
         &state.db,
         &opendesk::domain::device::DeviceDraft {
             alias: "No ID Workstation".to_string(),
@@ -53,6 +68,7 @@ async fn device_list_omits_copy_button_without_rustdesk_id() {
     )
     .await
     .expect("create device");
+    grant_admin_visibility(&state, device.device_uuid).await;
 
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;
@@ -87,6 +103,7 @@ async fn device_edit_renders_copy_button_for_rustdesk_id() {
     )
     .await
     .expect("create device");
+    grant_admin_visibility(&state, device.device_uuid).await;
 
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;

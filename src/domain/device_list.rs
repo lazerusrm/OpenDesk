@@ -1,8 +1,18 @@
 use std::collections::HashMap;
 
+use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 
 use super::device::Device;
+use crate::time_format::parse_timestamp;
+
+pub const RECENTLY_SEEN_WINDOW: Duration = Duration::seconds(5 * 60);
+
+pub fn recently_seen(last_checkin_at: Option<&str>, now: OffsetDateTime, window: Duration) -> bool {
+    last_checkin_at
+        .and_then(parse_timestamp)
+        .is_some_and(|seen_at| now - seen_at <= window)
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct DeviceSearchQuery {
@@ -27,7 +37,11 @@ pub fn rustdesk_id_copy_text(rustdesk_id: Option<&str>) -> Option<String> {
 }
 
 pub fn notes_list_title(notes: Option<&str>) -> String {
-    notes.map(str::trim).filter(|value| !value.is_empty()).unwrap_or("").to_string()
+    notes
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("")
+        .to_string()
 }
 
 pub fn device_matches_search(device: &Device, query: &DeviceSearchQuery) -> bool {
@@ -43,7 +57,9 @@ pub fn device_matches_search(device: &Device, query: &DeviceSearchQuery) -> bool
         device.notes.as_deref().unwrap_or(""),
         device.os_family.as_deref().unwrap_or(""),
     ];
-    fields.iter().any(|field| field.to_ascii_lowercase().contains(&term))
+    fields
+        .iter()
+        .any(|field| field.to_ascii_lowercase().contains(&term))
 }
 
 pub fn device_in_default_list(
@@ -52,8 +68,7 @@ pub fn device_in_default_list(
     site_name: Option<&str>,
     tag_names: &[&str],
 ) -> bool {
-    !device.archived
-        && device_matches_search_with_metadata(device, query, site_name, tag_names)
+    !device.archived && device_matches_search_with_metadata(device, query, site_name, tag_names)
 }
 
 pub fn devices_for_default_list<'a>(
@@ -228,5 +243,23 @@ mod tests {
             term: "123456".to_string(),
         };
         assert!(device_matches_search(&device, &query));
+    }
+
+    #[test]
+    fn recently_seen_uses_last_checkin_window() {
+        use crate::time_format::format_timestamp;
+        use time::macros::datetime;
+
+        let now = datetime!(2026-08-20 12:00:00 UTC);
+        let within = format_timestamp(datetime!(2026-08-20 11:55:00 UTC));
+        let outside = format_timestamp(datetime!(2026-08-20 11:54:59 UTC));
+        assert!(recently_seen(Some(&within), now, RECENTLY_SEEN_WINDOW));
+        assert!(!recently_seen(Some(&outside), now, RECENTLY_SEEN_WINDOW));
+        assert!(!recently_seen(None, now, RECENTLY_SEEN_WINDOW));
+        assert!(!recently_seen(
+            Some("not-a-timestamp"),
+            now,
+            RECENTLY_SEEN_WINDOW
+        ));
     }
 }

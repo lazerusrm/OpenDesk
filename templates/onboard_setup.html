@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Onboard codes</h1>
+  <p>People go to <code>/onboard</code> and type the six-digit code from your phone. They do not sign in. The computer is visible to you.</p>
+  <p class="muted">Signed in as {{ username }}. Use a separate authenticator entry, not your dashboard sign-in code.</p>
+  {% if onboard_error.is_some() %}<p class="error">{{ onboard_error.as_ref().unwrap() }}</p>{% endif %}
+  {% if onboard_notice.is_some() %}<p class="success">{{ onboard_notice.as_ref().unwrap() }}</p>{% endif %}
+</section>
+<section class="card">
+  <h2>Authenticator</h2>
+  {% if onboard_totp_enrolled %}
+  <p>Ready. Open the authenticator app, read the current six-digit code, and tell the other person.</p>
+  <form method="post" action="/onboard-setup/revoke">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="button-secondary">Revoke authenticator</button>
+  </form>
+  {% else %}
+  {% if onboard_totp_secret != "" %}
+  <p>Scan this code in your phone app, then enter one current six-digit value to confirm.</p>
+  <div class="qr-code" role="img" aria-label="Onboard authenticator QR code">{{ onboard_totp_qr_svg|safe }}</div>
+  <label for="onboard-totp-secret">Manual secret</label>
+  <div class="input-with-copy">
+    <input id="onboard-totp-secret" value="{{ onboard_totp_secret }}" readonly autocomplete="off" spellcheck="false">
+    <button type="button" class="copy-button" data-copy-input="onboard-totp-secret">Copy</button>
+  </div>
+  <form method="post" action="/onboard-setup/confirm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="onboard-totp-code">Authenticator code</label>
+    <input id="onboard-totp-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required>
+    <button type="submit">Confirm authenticator</button>
+  </form>
+  {% else %}
+  <form method="post" action="/onboard-setup/start">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="button-large">Set up authenticator</button>
+  </form>
+  {% endif %}
+  {% endif %}
+</section>
+{% endblock %}

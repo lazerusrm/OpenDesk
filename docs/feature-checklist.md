@@ -43,7 +43,7 @@ Status legend:
 - [x] Tags.
 - [x] Notes.
 - [x] RustDesk ID copy button.
-- [ ] Connection helper action.
+- [x] Connection helper action.
 - [x] CSV export.
 - [x] JSON backup export.
 - [x] JSON backup restore.
@@ -55,52 +55,70 @@ Status legend:
   - Relay server: `rd.example.com`
   - API server: blank for OSS path
   - Public key: imported from current server
-- [ ] Generate RustDesk import string if supported by current client.
-- [ ] Generate filename-based custom server download name as fallback.
+- [x] Generate RustDesk import string if supported by current client.
+- [x] Generate filename-based custom server download name as fallback.
 - [x] Generate Windows PowerShell installer/config script.
 - [x] Generate Linux installer/config script.
-- [ ] Generate macOS installer/config script if required.
-- [ ] Provide official-client download links or cached installer packages.
-- [ ] Provide a single frontend page per OS with install command/download.
-- [ ] Avoid executable renaming as the main workflow.
+- [x] Generate macOS installer/config script if required.
+- [x] Provide official-client download links or cached installer packages.
+- [x] Serve an operator-provisioned signed Windows installer from the deployment page when present.
+- [x] Provide a single frontend page per OS with install command/download.
+- [x] Avoid executable renaming as the main workflow.
 - [ ] Version generated scripts.
-- [ ] Audit generated downloads/scripts.
-- [ ] Validate whether `/api/devices/deploy` can be used by official clients without Pro.
-- [ ] Implement `/api/devices/deploy` compatibility only if validation passes.
+- [x] Audit generated downloads/scripts.
+- [~] Validate `/api/devices/deploy` on remaining Windows/macOS official clients.
+- [x] Implement `/api/devices/deploy` compatibility only if validation passes.
 
 ## Phase 3: Endpoint Self-Registration
 
 - [x] Enrollment token model.
 - [x] Enrollment token creation/rotation/revocation.
+- [x] Enrollment token optional expiry in the dashboard create form.
 - [x] Endpoint registration API.
-- [ ] Windows self-registration script.
+- [x] Windows self-registration script.
 - [x] Linux self-registration script.
-- [ ] macOS self-registration script if required.
+- [x] macOS self-registration script if required.
 - [x] Duplicate detection by RustDesk ID and hostname.
 - [x] Last check-in timestamp.
-- [ ] Endpoint metadata update.
-- [ ] Endpoint registration audit events.
+- [x] Endpoint metadata update.
+- [x] Endpoint registration audit events.
+- [x] Public `/onboard/{token}` install page without recipient login.
+- [x] Public `/onboard` six-digit authenticator unlock without recipient login.
+- [x] Onboard check-in grants visibility to the issuing operator only.
 
 ## Phase 4: Health and Operations
 
-- [ ] Check `hbbs` TCP ports.
-- [ ] Check `hbbr` TCP ports.
+- [x] Check `hbbs` TCP ports.
+- [x] Check `hbbr` TCP ports.
 - [ ] Check UDP `21116` reachability where feasible.
-- [ ] Check DNS resolution for `rd.example.com`.
+- [x] Check DNS resolution for `rd.example.com`.
 - [ ] Check public IP expectation.
-- [ ] Show current server public key fingerprint.
-- [ ] Backup scheduler.
-- [ ] Restore procedure.
+- [x] Show current server public key fingerprint.
+- [~] Backup scheduler readiness/configuration (external runner; no in-process scheduler).
+- [x] Restore procedure.
 - [ ] Log rotation.
 - [ ] Upgrade procedure.
+- [x] Public self-host install guide for OpenDesk plus OSS `hbbs`/`hbbr`.
+- [x] First-run setup wizard when the database has no users (fixed username `admin`).
+- [x] Optional fetch of official unmodified `hbbs`/`hbbr` (TTY prompt or `--yes`).
 
 ## Phase 5: Access and Governance
 
-- [ ] Multi-user admin accounts.
-- [ ] Role model: admin, operator, read-only.
-- [ ] Device visibility by site/tag.
-- [ ] Audit log UI.
-- [ ] Export audit log.
+- [x] Multi-user admin accounts.
+- [x] Role model: admin, operator, read-only.
+- [x] Canonical dashboard/API action allowlist and role predicate.
+- [x] Default-deny device visibility predicate for direct/access-group grants.
+- [x] Device visibility integration by access group/direct grant.
+- [x] Access-group to access-group visibility grants for dashboard/API and official-client data scope.
+- [x] Admin sees all devices; unassigned devices are admin-only.
+- [x] Address-book share grants in the dashboard for shared books.
+- [x] Official-client personal address book auto-create and visible-device sync.
+- [x] Official-client accessible-device list includes user and device-group names for local filters.
+- [x] Admin-only deletes; operators cannot delete inventory or address-book entries.
+- [x] Sign-in attempt throttling and failed-login audit.
+- [x] Disable-user revokes dashboard sessions and official-client tokens.
+- [x] Audit log UI.
+- [x] Export audit log.
 - [ ] Optional reverse proxy SSO.
 - [ ] Optional OIDC.
 - [ ] Optional password vault integration.

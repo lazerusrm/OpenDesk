@@ -46,9 +46,14 @@ pkill -x opendesk 2>/dev/null || true
 OPENDESK_LISTEN_ADDR=0.0.0.0:18080 \\
 OPENDESK_DATA_DIR=/opt/opendesk-dev/data \\
 OPENDESK_PUBLIC_BASE_URL=http://127.0.0.1:18080 \\
+OPENDESK_CLIENT_TOKEN_HMAC_KEY=0707070707070707070707070707070707070707070707070707070707070707 \\
 OPENDESK_BOOTSTRAP_ADMIN_PASSWORD='${dev_admin_password}' \\
 nohup ./target/release/opendesk > /tmp/opendesk.log 2>&1 &
-sleep 2
+for attempt in \$(seq 1 30); do
+  curl -fsS http://127.0.0.1:18080/health >/dev/null 2>&1 && break
+  sleep 1
+done
+curl -fsS http://127.0.0.1:18080/health >/dev/null
 COOKIE=/tmp/opendesk-cookies.txt
 rm -f "\$COOKIE"
 LOGIN_STATUS="\$(curl -fsS -c "\$COOKIE" -b "\$COOKIE" -X POST http://127.0.0.1:18080/login \\
@@ -68,7 +73,8 @@ curl -fsS -c "\$COOKIE" -b "\$COOKIE" \\
   "http://127.0.0.1:18080/deployment/linux.sh?enrollment_token_value=\${TOKEN_VALUE}" \\
   -o /tmp/opendesk-deploy.sh
 chmod +x /tmp/opendesk-deploy.sh
-head -5 /tmp/opendesk-deploy.sh
+grep -q 'custom-rendezvous-server' /tmp/opendesk-deploy.sh
+echo "remote: generated_deployment_script_downloaded=yes"
 echo "remote: executing generated deployment script"
 bash /tmp/opendesk-deploy.sh 2>&1 | tee /tmp/opendesk-deploy-run.log
 SCRIPT_EXIT=\${PIPESTATUS[0]}
@@ -76,9 +82,13 @@ echo "remote: script_exit=\${SCRIPT_EXIT}"
 cat /tmp/opendesk-deploy-run.log
 grep -q 'opendesk enrollment check-in http_status=204' /tmp/opendesk-deploy-run.log
 if command -v rustdesk >/dev/null 2>&1; then
-  rendezvous="\$(rustdesk --get-option custom-rendezvous-server 2>/dev/null || true)"
+  config_file=/root/.config/rustdesk/RustDesk2.toml
+  if ! grep -qE 'custom-rendezvous-server|rendezvous_server' "\$config_file"; then
+    echo "remote: generated server configuration was not persisted" >&2
+    exit 1
+  fi
+  echo "remote: rustdesk_rendezvous_config_persisted=yes"
   rustdesk_id="\$(rustdesk --get-id 2>/dev/null || true)"
-  echo "remote: rustdesk_rendezvous=\${rendezvous:-unset}"
   echo "remote: rustdesk_id=\${rustdesk_id:-unknown}"
   DEVICE_COUNT="\$(sqlite3 /opt/opendesk-dev/data/opendesk.sqlite "SELECT COUNT(*) FROM devices WHERE rustdesk_id='\${rustdesk_id}';" 2>/dev/null || echo 0)"
   echo "remote: enrolled_device_count=\${DEVICE_COUNT}"

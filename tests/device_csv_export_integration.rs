@@ -2,7 +2,7 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{login_and_get_session_cookie, test_state};
+use common::{csrf_token_from_cookie, login_and_get_session_cookie, test_state};
 use http_body_util::BodyExt;
 use opendesk::build_router;
 use opendesk::domain::device_csv::DEVICE_CSV_HEADER;
@@ -59,6 +59,17 @@ async fn devices_csv_export_includes_expected_fields() {
     opendesk::repository::tags::set_device_tags(&state.db, device.device_uuid, &[tag.tag_uuid])
         .await
         .expect("assign tag");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        opendesk::repository::users::find_user_by_username(&state.db, "admin")
+            .await
+            .expect("lookup admin")
+            .expect("admin")
+            .user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
     opendesk::repository::devices::create_device(
         &state.db,
         &opendesk::domain::device::DeviceDraft {
@@ -81,10 +92,11 @@ async fn devices_csv_export_includes_expected_fields() {
 
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;
+    let csrf = csrf_token_from_cookie(&session_cookie);
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/devices/export.csv")
+                .uri(format!("/devices/export.csv?csrf_token={csrf}"))
                 .header("cookie", session_cookie)
                 .body(Body::empty())
                 .unwrap(),

@@ -22,6 +22,7 @@ The requirement IDs are stable and should be referenced from implementation task
 | PR-012 | OpenDesk must preserve official RustDesk clients as the default delivery path. | Client delivery tests verify official signatures/checksums where applicable. |
 | PR-013 | OpenDesk must not require RustDesk Server Pro infrastructure at cutover. | Cutover checklist shows no required workflow calls Pro-only services. |
 | PR-014 | OpenDesk must support Android and iOS RustDesk app operator workflows. | Mobile validation proves operators can configure the official mobile apps and connect to test endpoints through the expected server. |
+| PR-015 | OpenDesk must provide a versioned, dry-run-only reconciliation report for sanitized external fleet exports before any migration write path is considered. | Parser and reconciliation tests prove strict schema rejection, sensitive-field exclusion, identity/device matching, and blocked ambiguous scope mappings. |
 
 ## Security Requirements
 

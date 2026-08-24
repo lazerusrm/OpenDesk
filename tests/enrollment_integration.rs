@@ -2,9 +2,10 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
+use common::{form_with_csrf, login_and_get_session_cookie, test_state};
 use http_body_util::BodyExt;
-use common::{login_and_get_session_cookie, test_state};
 use opendesk::build_router;
+use opendesk::repository::audit_events::list_audit_events;
 use serde_json::json;
 use tower::ServiceExt;
 
@@ -50,6 +51,12 @@ async fn enrollment_checkin_creates_device_with_valid_token() {
         .expect("lookup")
         .expect("device");
     assert!(device.last_checkin_at.is_some());
+    let events = list_audit_events(&db, 20).await.expect("audit");
+    assert!(events.iter().any(|event| {
+        event.action == "endpoint_checkin"
+            && event.outcome == "success"
+            && event.object_uuid == Some(device.device_uuid)
+    }));
 }
 
 #[tokio::test]
@@ -233,7 +240,7 @@ async fn devices_list_shows_last_checkin_column() {
     )
     .await
     .expect("create token");
-    let app = build_router(state);
+    let app = build_router(state.clone());
     app.clone()
         .oneshot(
             Request::builder()
@@ -253,6 +260,23 @@ async fn devices_list_shows_last_checkin_column() {
         )
         .await
         .expect("checkin");
+    let checkin_device = opendesk::repository::devices::list_devices(&state.db)
+        .await
+        .expect("list enrolled devices")
+        .into_iter()
+        .find(|device| device.rustdesk_id.as_deref() == Some("556677889"))
+        .expect("enrolled device");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[checkin_device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
     let session_cookie = login_and_get_session_cookie(&app).await;
     let response = app
         .oneshot(
@@ -270,4 +294,95 @@ async fn devices_list_shows_last_checkin_column() {
     assert!(html.contains("Last check-in"));
     assert!(html.contains("556677889"));
     assert!(!html.contains(">-\n"));
+}
+
+#[tokio::test]
+async fn enrollment_token_create_form_accepts_allowlisted_expiry() {
+    let state = test_state().await;
+    let app = build_router(state.clone());
+    let cookie = login_and_get_session_cookie(&app).await;
+    let page = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/enrollment-tokens")
+                .header("cookie", &cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .expect("page");
+    assert_eq!(page.status(), StatusCode::OK);
+    let page_html = String::from_utf8(
+        page.into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    assert!(page_html.contains("name=\"expires_in_days\""));
+    assert!(page_html.contains(">Expires<"));
+
+    let created = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/enrollment-tokens")
+                .header("cookie", &cookie)
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from(form_with_csrf(
+                    &cookie,
+                    "label=expiry-token&expires_in_days=7",
+                )))
+                .unwrap(),
+        )
+        .await
+        .expect("create");
+    assert_eq!(created.status(), StatusCode::OK);
+    let tokens = opendesk::repository::enrollment_tokens::list_enrollment_tokens(&state.db)
+        .await
+        .expect("tokens");
+    let created_token = tokens
+        .iter()
+        .find(|token| token.label == "expiry-token")
+        .expect("created token");
+    assert!(created_token.expires_at.is_some());
+
+    let rejected = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/enrollment-tokens")
+                .header("cookie", &cookie)
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from(form_with_csrf(
+                    &cookie,
+                    "label=bad-expiry&expires_in_days=14",
+                )))
+                .unwrap(),
+        )
+        .await
+        .expect("reject");
+    assert_eq!(rejected.status(), StatusCode::OK);
+    let rejected_html = String::from_utf8(
+        rejected
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    assert!(
+        rejected_html.contains("enrollment token expiry must be 7, 30, 90, or 365 days, or empty")
+    );
+    let tokens = opendesk::repository::enrollment_tokens::list_enrollment_tokens(&state.db)
+        .await
+        .expect("tokens after reject");
+    assert!(tokens.iter().all(|token| token.label != "bad-expiry"));
 }

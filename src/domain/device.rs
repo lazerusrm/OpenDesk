@@ -3,6 +3,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Device {
     pub device_uuid: Uuid,
     pub rustdesk_id: Option<String>,

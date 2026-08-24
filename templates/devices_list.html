@@ -2,14 +2,41 @@
 {% block content %}
 <section class="card">
   <h1>Devices</h1>
+  <p class="muted">Search, inspect, and manage enrolled systems.</p>
   <form method="get" action="/devices">
     <label for="term">Search</label>
     <input id="term" name="term" value="{{ search_term }}">
+    <label for="archived">Archived</label>
+    <select id="archived" name="archived">
+      <option value="0"{% if archived_hide %} selected{% endif %}>Hide archived</option>
+      <option value="1"{% if archived_only %} selected{% endif %}>Archived only</option>
+      <option value="all"{% if archived_all %} selected{% endif %}>All</option>
+    </select>
+    <label for="seen">Seen</label>
+    <select id="seen" name="seen">
+      <option value="any"{% if !seen_recent %} selected{% endif %}>Any</option>
+      <option value="recent"{% if seen_recent %} selected{% endif %}>Recently seen</option>
+    </select>
     <button type="submit">Search</button>
     <a class="button" href="/devices/new">New device</a>
     <a class="button" href="{{ export_csv_href }}">Export CSV</a>
   </form>
 </section>
+{% if empty_inventory %}
+<section class="card">
+  <p>No devices yet</p>
+  <p>
+    <a class="button" href="/devices/new">New device</a>
+    <a class="button" href="/enrollment-tokens">Enrollment tokens</a>
+    <a class="button" href="/deployment">Deployment</a>
+  </p>
+</section>
+{% else %}
+  {% if filter_empty %}
+<section class="card">
+  <p>No devices match this filter.</p>
+</section>
+  {% else %}
 <section class="card">
   <table>
     <thead>
@@ -21,6 +48,7 @@
         <th>RustDesk ID</th>
         <th>Hostname</th>
         <th>Last check-in</th>
+        <th>Status</th>
         <th>Archived</th>
         <th></th>
       </tr>
@@ -35,11 +63,23 @@
         <td class="rustdesk-id-cell">
           <span>{{ device.rustdesk_id_display }}</span>
           {% if device.rustdesk_id_copy_text != "" %}
-          <button type="button" class="copy-button" data-copy-text="{{ device.rustdesk_id_copy_text }}">Copy</button>
+          <button type="button" class="copy-button" data-copy-text="{{ device.rustdesk_id_copy_text }}">Copy ID</button>
+          {% endif %}
+          {% if device.default_helper_copy_text != "" %}
+          <button type="button" class="copy-button" data-copy-text="{{ device.default_helper_copy_text }}">Copy default</button>
+          {% endif %}
+          {% if device.explicit_helper_copy_text != "" %}
+          <button type="button" class="copy-button" data-copy-text="{{ device.explicit_helper_copy_text }}">Copy explicit</button>
           {% endif %}
         </td>
         <td>{{ device.hostname_display }}</td>
         <td>{{ device.last_checkin_display }}</td>
+        <td>
+          <span
+            class="pill {% if device.recently_seen %}pill-ok{% else %}pill-muted{% endif %}"
+            title="Based on enrollment check-in or client heartbeat last-seen. Not proof of an active RustDesk session."
+          >{{ device.status_display }}</span>
+        </td>
         <td>{{ device.archived_display }}</td>
         <td><a href="/devices/{{ device.device_uuid }}">View</a></td>
       </tr>
@@ -47,4 +87,6 @@
     </tbody>
   </table>
 </section>
+  {% endif %}
+{% endif %}
 {% endblock %}

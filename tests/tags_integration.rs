@@ -2,8 +2,8 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
+use common::{form_with_csrf, login_and_get_session_cookie, test_state};
 use http_body_util::BodyExt;
-use common::{login_and_get_session_cookie, test_state};
 use opendesk::build_router;
 use tower::ServiceExt;
 
@@ -21,7 +21,10 @@ async fn tag_create_and_device_assignment_persist() {
                 .uri("/tags")
                 .header("content-type", "application/x-www-form-urlencoded")
                 .header("cookie", session_cookie.clone())
-                .body(Body::from("name=Production"))
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    "name=Production",
+                )))
                 .unwrap(),
         )
         .await
@@ -44,9 +47,9 @@ async fn tag_create_and_device_assignment_persist() {
                 .uri("/devices")
                 .header("content-type", "application/x-www-form-urlencoded")
                 .header("cookie", session_cookie.clone())
-                .body(Body::from(format!(
-                    "alias=Tagged+Workstation&tag_uuids={}",
-                    tag.tag_uuid
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    &format!("alias=Tagged+Workstation&tag_uuids={}", tag.tag_uuid),
                 )))
                 .unwrap(),
         )
@@ -61,26 +64,29 @@ async fn tag_create_and_device_assignment_persist() {
         .iter()
         .find(|device| device.alias == "Tagged Workstation")
         .expect("created device");
-    let assigned = opendesk::repository::tags::list_tag_uuids_for_device(
-        &state.db,
-        device.device_uuid,
-    )
-    .await
-    .expect("list device tags");
+    let assigned =
+        opendesk::repository::tags::list_tag_uuids_for_device(&state.db, device.device_uuid)
+            .await
+            .expect("list device tags");
     assert_eq!(assigned, vec![tag.tag_uuid]);
 
     let list_response = app
         .oneshot(
             Request::builder()
                 .uri("/devices")
-                .header("cookie", session_cookie)
+                .header("cookie", &session_cookie)
                 .body(Body::empty())
                 .unwrap(),
         )
         .await
         .expect("devices list");
     assert_eq!(list_response.status(), StatusCode::OK);
-    let body = list_response.into_body().collect().await.unwrap().to_bytes();
+    let body = list_response
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
     let html = String::from_utf8(body.to_vec()).expect("utf8");
     assert!(html.contains("Production"));
     assert!(html.contains("Tagged Workstation"));
@@ -106,6 +112,18 @@ async fn device_search_matches_tag_name() {
     )
     .await
     .expect("create device");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
+
     opendesk::repository::tags::set_device_tags(&state.db, device.device_uuid, &[tag.tag_uuid])
         .await
         .expect("assign tag");
@@ -116,7 +134,7 @@ async fn device_search_matches_tag_name() {
         .oneshot(
             Request::builder()
                 .uri("/devices?term=warehouse")
-                .header("cookie", session_cookie)
+                .header("cookie", &session_cookie)
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -149,6 +167,17 @@ async fn device_update_clears_tags_when_none_selected() {
     )
     .await
     .expect("create device");
+    let admin = opendesk::repository::users::find_user_by_username(&state.db, "admin")
+        .await
+        .expect("lookup admin")
+        .expect("admin");
+    opendesk::repository::device_visibility::replace_user_device_visibility_grants(
+        &state.db,
+        admin.user_uuid,
+        &[device.device_uuid],
+    )
+    .await
+    .expect("grant device visibility");
     opendesk::repository::tags::set_device_tags(&state.db, device.device_uuid, &[tag.tag_uuid])
         .await
         .expect("assign tag");
@@ -161,19 +190,20 @@ async fn device_update_clears_tags_when_none_selected() {
                 .method("POST")
                 .uri(format!("/devices/{}", device.device_uuid))
                 .header("content-type", "application/x-www-form-urlencoded")
-                .header("cookie", session_cookie)
-                .body(Body::from("alias=Clear+Tags+Device&site_uuid="))
+                .header("cookie", &session_cookie)
+                .body(Body::from(form_with_csrf(
+                    &session_cookie,
+                    "alias=Clear+Tags+Device&site_uuid=",
+                )))
                 .unwrap(),
         )
         .await
         .expect("update device");
     assert_eq!(update.status(), StatusCode::SEE_OTHER);
 
-    let assigned = opendesk::repository::tags::list_tag_uuids_for_device(
-        &state.db,
-        device.device_uuid,
-    )
-    .await
-    .expect("list device tags");
+    let assigned =
+        opendesk::repository::tags::list_tag_uuids_for_device(&state.db, device.device_uuid)
+            .await
+            .expect("list device tags");
     assert!(assigned.is_empty());
 }

@@ -8,11 +8,10 @@ use crate::domain::tag::{normalize_tag_name, Tag, TagDraft};
 use crate::time_format::format_timestamp;
 
 pub async fn list_tags(pool: &SqlitePool) -> Result<Vec<Tag>, sqlx::Error> {
-    let rows = sqlx::query_as::<_, (String, String)>(
-        "SELECT tag_uuid, name FROM tags ORDER BY name ASC",
-    )
-    .fetch_all(pool)
-    .await?;
+    let rows =
+        sqlx::query_as::<_, (String, String)>("SELECT tag_uuid, name FROM tags ORDER BY name ASC")
+            .fetch_all(pool)
+            .await?;
     Ok(rows
         .into_iter()
         .map(|row| Tag {
@@ -26,12 +25,11 @@ pub async fn find_tag_by_uuid(
     pool: &SqlitePool,
     tag_uuid: Uuid,
 ) -> Result<Option<Tag>, sqlx::Error> {
-    let row = sqlx::query_as::<_, (String, String)>(
-        "SELECT tag_uuid, name FROM tags WHERE tag_uuid = ?",
-    )
-    .bind(tag_uuid.to_string())
-    .fetch_optional(pool)
-    .await?;
+    let row =
+        sqlx::query_as::<_, (String, String)>("SELECT tag_uuid, name FROM tags WHERE tag_uuid = ?")
+            .bind(tag_uuid.to_string())
+            .fetch_optional(pool)
+            .await?;
     Ok(row.map(|row| Tag {
         tag_uuid: Uuid::parse_str(&row.0).expect("stored uuid"),
         name: row.1,
@@ -42,15 +40,13 @@ pub async fn create_tag(pool: &SqlitePool, draft: &TagDraft) -> Result<Tag, sqlx
     let tag_uuid = Uuid::new_v4();
     let name = normalize_tag_name(&draft.name);
     let now = format_timestamp(OffsetDateTime::now_utc());
-    sqlx::query(
-        "INSERT INTO tags (tag_uuid, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-    )
-    .bind(tag_uuid.to_string())
-    .bind(&name)
-    .bind(&now)
-    .bind(&now)
-    .execute(pool)
-    .await?;
+    sqlx::query("INSERT INTO tags (tag_uuid, name, created_at, updated_at) VALUES (?, ?, ?, ?)")
+        .bind(tag_uuid.to_string())
+        .bind(&name)
+        .bind(&now)
+        .bind(&now)
+        .execute(pool)
+        .await?;
     find_tag_by_uuid(pool, tag_uuid)
         .await?
         .ok_or_else(|| sqlx::Error::RowNotFound)
@@ -95,9 +91,7 @@ pub async fn list_tags_for_device(
         .collect())
 }
 
-pub async fn list_device_tag_links(
-    pool: &SqlitePool,
-) -> Result<Vec<(Uuid, Uuid)>, sqlx::Error> {
+pub async fn list_device_tag_links(pool: &SqlitePool) -> Result<Vec<(Uuid, Uuid)>, sqlx::Error> {
     let rows = sqlx::query_as::<_, (String, String)>(
         "SELECT device_uuid, tag_uuid FROM device_tags ORDER BY device_uuid ASC",
     )

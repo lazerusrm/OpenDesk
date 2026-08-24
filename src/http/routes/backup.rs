@@ -1,6 +1,6 @@
 use askama::Template;
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::{header, StatusCode},
     response::{Html, IntoResponse, Redirect, Response},
     routing::get,
@@ -10,10 +10,11 @@ use axum_extra::extract::cookie::CookieJar;
 use serde::Deserialize;
 
 use crate::app_state::AppState;
+use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::domain::backup::{parse_backup_json, render_backup_json};
-use crate::http::session::require_user;
-use crate::http::views::BackupView;
+use crate::http::session::{require_action, require_csrf};
+use crate::http::views::{nav_permissions_for_role, BackupView};
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::backup::{export_backup_document, restore_backup_document};
 
@@ -23,19 +24,23 @@ pub fn routes() -> Router<AppState> {
         .route("/backup/export.json", get(backup_export))
 }
 
-async fn backup_page(
-    State(state): State<AppState>,
-    jar: CookieJar,
-) -> Result<Response, Response> {
-    let _user = require_user(&state, &jar).await?;
-    Ok(render_backup_page(None, None).into_response())
+async fn backup_page(State(state): State<AppState>, jar: CookieJar) -> Result<Response, Response> {
+    let user = require_action(&state, &jar, Action::BackupView).await?;
+    Ok(render_backup_page(None, None, &user.csrf_token, user.parsed_role()).into_response())
+}
+
+#[derive(Deserialize)]
+struct BackupExportQuery {
+    csrf_token: Option<String>,
 }
 
 async fn backup_export(
     State(state): State<AppState>,
     jar: CookieJar,
+    Query(query): Query<BackupExportQuery>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::BackupExport).await?;
+    require_csrf(&user, query.csrf_token.as_deref().unwrap_or(""))?;
     let document = export_backup_document(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -66,6 +71,7 @@ async fn backup_export(
 
 #[derive(Deserialize)]
 struct BackupRestoreForm {
+    csrf_token: String,
     backup_json: String,
     confirm: Option<String>,
 }
@@ -75,11 +81,14 @@ async fn backup_restore_submit(
     jar: CookieJar,
     Form(form): Form<BackupRestoreForm>,
 ) -> Result<Response, Response> {
-    let user = require_user(&state, &jar).await?;
+    let user = require_action(&state, &jar, Action::BackupRestore).await?;
+    require_csrf(&user, &form.csrf_token)?;
     if form.confirm.as_deref() != Some("yes") {
         return Ok(render_backup_page(
             None,
             Some("Restore requires confirmation.".to_string()),
+            &user.csrf_token,
+            user.parsed_role(),
         )
         .into_response());
     }
@@ -89,12 +98,20 @@ async fn backup_restore_submit(
             return Ok(render_backup_page(
                 None,
                 Some("Backup JSON is invalid.".to_string()),
+                &user.csrf_token,
+                user.parsed_role(),
             )
             .into_response());
         }
     };
     if let Err(error) = restore_backup_document(&state.db, &document).await {
-        return Ok(render_backup_page(None, Some(error.to_string())).into_response());
+        return Ok(render_backup_page(
+            None,
+            Some(error.to_string()),
+            &user.csrf_token,
+            user.parsed_role(),
+        )
+        .into_response());
     }
     let audit = AuditEventDraft {
         actor_user_uuid: Some(user.user_uuid),
@@ -109,10 +126,18 @@ async fn backup_restore_submit(
     Ok(Redirect::to("/devices").into_response())
 }
 
-fn render_backup_page(message: Option<String>, error_message: Option<String>) -> Html<String> {
+fn render_backup_page(
+    message: Option<String>,
+    error_message: Option<String>,
+    csrf_token: &str,
+    role: crate::domain::role::Role,
+) -> Html<String> {
     let view = BackupView {
         title: "Backup".to_string(),
         show_nav: true,
+        nav: nav_permissions_for_role(role),
+        csrf_token: csrf_token.to_string(),
+        export_json_href: format!("/backup/export.json?csrf_token={csrf_token}"),
         message,
         error_message,
     };

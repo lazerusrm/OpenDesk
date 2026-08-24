@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
@@ -8,23 +8,46 @@ use axum::{
 use axum_extra::extract::cookie::CookieJar;
 use serde::Deserialize;
 
+use time::OffsetDateTime;
+
 use crate::app_state::AppState;
-use crate::auth;
 use crate::domain::audit_event::AuditEventDraft;
 use crate::http::routes::render::render_login;
-use crate::http::session::{end_session, start_session};
+use crate::http::session::{end_session, require_csrf, require_present_same_origin, start_session};
+use crate::login_throttle::request_ip;
 use crate::repository::audit_events::insert_audit_event;
-use crate::repository::users::find_user_by_username;
+use crate::repository::users::{authenticate_user_password, count_users};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/", get(|| async { Redirect::to("/devices") }))
         .route("/login", get(login_page).post(login_submit))
         .route("/logout", post(logout))
 }
 
-async fn login_page() -> impl IntoResponse {
-    render_login(None)
+#[derive(Deserialize)]
+struct LoginQuery {
+    login: Option<String>,
+    notice: Option<String>,
+}
+
+async fn login_page(
+    State(state): State<AppState>,
+    Query(query): Query<LoginQuery>,
+) -> Result<Response, StatusCode> {
+    let users = count_users(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if users == 0 {
+        return Ok(Redirect::to("/setup").into_response());
+    }
+    let notice_key = query.notice.as_deref().or(query.login.as_deref());
+    let notice_message = match notice_key {
+        Some("password-updated") => {
+            Some("Password updated. Sign in with your new password.".to_string())
+        }
+        _ => None,
+    };
+    Ok(render_login(None, notice_message).into_response())
 }
 
 #[derive(Deserialize)]
@@ -33,19 +56,63 @@ struct LoginForm {
     password: String,
 }
 
+#[derive(Deserialize)]
+struct LogoutForm {
+    csrf_token: String,
+}
+
 async fn login_submit(
     State(state): State<AppState>,
     jar: CookieJar,
+    headers: axum::http::HeaderMap,
     Form(form): Form<LoginForm>,
 ) -> Result<Response, StatusCode> {
-    let user = find_user_by_username(&state.db, form.username.trim())
+    if !require_present_same_origin(&headers, &state.public_base_url()) {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    let username = form.username.trim();
+    let ip = request_ip(&headers);
+    let now = OffsetDateTime::now_utc();
+    if form.password.len() > 1024 {
+        return Ok(
+            render_login(Some("Invalid username or password".to_string()), None).into_response(),
+        );
+    }
+    if state
+        .login_throttle
+        .lock()
+        .map(|mut throttle| throttle.is_blocked(username, &ip, now))
+        .unwrap_or(false)
+    {
+        return Ok(render_login(
+            Some("Too many sign-in attempts. Try again later.".to_string()),
+            None,
+        )
+        .into_response());
+    }
+    let user = authenticate_user_password(&state.db, username, &form.password)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let Some(user) = user else {
-        return Ok(render_login(Some("Invalid username or password".to_string())).into_response());
+        if let Ok(mut throttle) = state.login_throttle.lock() {
+            throttle.record_failure(username, &ip, now);
+        }
+        let audit = AuditEventDraft {
+            actor_user_uuid: None,
+            action: "login".to_string(),
+            object_type: "session".to_string(),
+            object_uuid: None,
+            outcome: "failure".to_string(),
+            source: "web".to_string(),
+            detail: None,
+        };
+        let _ = insert_audit_event(&state.db, &audit).await;
+        return Ok(
+            render_login(Some("Invalid username or password".to_string()), None).into_response(),
+        );
     };
-    if auth::verify_password(&form.password, &user.password_hash).is_err() {
-        return Ok(render_login(Some("Invalid username or password".to_string())).into_response());
+    if let Ok(mut throttle) = state.login_throttle.lock() {
+        throttle.record_success(username, &ip);
     }
     let (jar, _) = start_session(&state, jar, user.user_uuid)
         .await
@@ -60,10 +127,16 @@ async fn login_submit(
         detail: None,
     };
     let _ = insert_audit_event(&state.db, &audit).await;
-    Ok((jar, Redirect::to("/devices")).into_response())
+    Ok((jar, Redirect::to("/")).into_response())
 }
 
-async fn logout(State(state): State<AppState>, jar: CookieJar) -> impl IntoResponse {
+async fn logout(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    Form(form): Form<LogoutForm>,
+) -> Result<impl IntoResponse, Response> {
+    let user = crate::http::session::require_user(&state, &jar).await?;
+    require_csrf(&user, &form.csrf_token)?;
     let jar = end_session(&state, jar).await;
-    (jar, Redirect::to("/login"))
+    Ok((jar, Redirect::to("/login")))
 }

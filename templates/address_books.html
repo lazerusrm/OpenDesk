@@ -1,0 +1,76 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Address books</h1>
+  <p class="muted">This page lists address books you own and books shared with you. Personal books stay owner-only. Shared books can be granted to a user or group with read, write, or admin permission for official-client access.</p>
+  {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
+  {% if can_create %}
+  <form id="new-address-book" method="post" action="/address-books">
+    <h2>New address book</h2>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="name">Name</label>
+    <input id="name" name="name" required maxlength="128">
+    <label for="book_kind">Kind</label>
+    <select id="book_kind" name="book_kind" required>
+      <option value="personal">Personal</option>
+      <option value="shared">Shared</option>
+    </select>
+    <button type="submit">Create address book</button>
+  </form>
+  {% endif %}
+</section>
+<section class="card notice">
+  <p>This web address book is OpenDesk data. Official clients use isolated /api/ab* compatibility.</p>
+</section>
+<section class="card">
+  <h2>Your address books</h2>
+  {% if books.is_empty() %}
+  <p class="muted">No address books</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Kind</th>
+        <th>Manage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for book in books %}
+      <tr>
+        <td>{{ book.name }}</td>
+        <td>{{ book.kind_display }}</td>
+        <td><a href="/address-books/{{ book.address_book_uuid }}">View entries</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+<section class="card">
+  <h2>Shared with you</h2>
+  <p class="muted">Shared books appear in the official RustDesk client address book. Sharing a book does not grant device visibility or RustDesk session access.</p>
+  {% if shared_books.is_empty() %}
+  <p class="muted">Nothing has been shared with you yet.</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Owner</th>
+        <th>Permission</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for book in shared_books %}
+      <tr>
+        <td>{{ book.name }}</td>
+        <td>{{ book.owner }}</td>
+        <td>{{ book.permission_display }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

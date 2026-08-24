@@ -113,6 +113,12 @@ The first endpoint registration mechanism should be script-based:
 
 The registration script/service must not send unattended passwords or private keys.
 
+A public `/onboard` page accepts a one-time six-digit authenticator code from
+the technician. That mints a short-lived enrollment token for the matching
+admin or operator. `/onboard/{token}` remains valid for scripted delivery. The
+page does not create recipient accounts. Successful check-in grants
+dashboard/API visibility to the token issuer only.
+
 ### Client Delivery
 
 OpenDesk should support these delivery flows:
@@ -137,9 +143,9 @@ Failure of OpenDesk should not break existing RustDesk rendezvous/relay behavior
 
 ```text
 Admin opens OpenDesk download page
-  -> chooses OS/site/tags/enrollment scope
-  -> downloads or copies generated command
-Endpoint runs command
+  -> creates an enrollment token / onboard URL
+  -> sends `/onboard/{token}` (no recipient login)
+Endpoint opens the link
   -> installs official RustDesk
   -> applies server config
   -> reads RustDesk ID/version
@@ -147,8 +153,9 @@ Endpoint runs command
 OpenDesk
   -> validates token
   -> creates/updates device
+  -> grants issuer device visibility
   -> writes audit event
-  -> shows device in address book
+  -> shows device to the issuer (admins see all)
 Operator
   -> finds device
   -> copies/opens RustDesk connection
@@ -199,8 +206,8 @@ Recommended initial production topology:
 
 ```text
 LXC or VM
-  reverse proxy
-  opendesk app
+  reverse proxy (TLS and official-client /api port)
+  opendesk app bound to loopback
   opendesk database
   backups
 
@@ -209,7 +216,7 @@ Existing or separate LXC/VM
   hbbr
 ```
 
-OpenDesk may live alongside RustDesk OSS services, but the preferred operational model is independent services with clear backups and failure boundaries.
+OpenDesk may live alongside RustDesk OSS services, but the preferred operational model is independent services with clear backups and failure boundaries. Bind the application listen address to loopback. Do not publish the application port on a LAN or WAN interface.
 
 ## Compatibility Strategy
 

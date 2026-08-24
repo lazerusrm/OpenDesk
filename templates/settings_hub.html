@@ -1,0 +1,101 @@
+{% extends "layout.html" %}
+{% block content %}
+{% if page == "hub" %}
+<section class="card">
+  <h1>Settings</h1>
+  <p>OpenDesk stores ID server, relay server, API server, and public key values used by official clients. These pages do not add license, LDAP, SMTP, OIDC, or connection-strategy enforcement.</p>
+</section>
+<div class="card-grid">
+  <article class="card download-card">
+    <h2>Key</h2>
+    <p>Public key used by official clients to verify the ID server, plus the SHA-256 fingerprint.</p>
+    <a class="button" href="/settings/key">Open Key</a>
+  </article>
+  <article class="card download-card">
+    <h2>Relay</h2>
+    <p>ID server, relay server, and optional API server host values.</p>
+    <a class="button" href="/settings/relay">Open Relay</a>
+  </article>
+  {% if nav.enrollment %}
+  <article class="card download-card">
+    <h2>Onboard codes</h2>
+    <p>Set up the phone authenticator used at <code>/onboard</code>.</p>
+    <a class="button" href="/onboard-setup">Open Onboard codes</a>
+  </article>
+  <article class="card download-card">
+    <h2>Tokens</h2>
+    <p>Create and revoke enrollment tokens for endpoint check-in.</p>
+    <a class="button" href="/enrollment-tokens">Open Tokens</a>
+  </article>
+  {% endif %}
+  {% if nav.deployment %}
+  <article class="card download-card">
+    <h2>Deployment</h2>
+    <p>Official client downloads, import strings, and generated install scripts.</p>
+    <a class="button" href="/deployment">Open Deployment</a>
+  </article>
+  {% endif %}
+  <article class="card download-card">
+    <h2>Others</h2>
+    <p>Honest notes about relay policy, session ACLs, and public server fallback.</p>
+    <a class="button" href="/settings/others">Open Others</a>
+  </article>
+</div>
+{% else if page == "key" %}
+<section class="card">
+  <h1>Key</h1>
+  <p><a href="/settings">Back to settings</a></p>
+  <p>Official clients use this public key to verify the ID server. The fingerprint is the SHA-256 digest of the trimmed key and matches the value on Status.</p>
+  {% if message.is_some() %}
+  <p class="success">{{ message.as_ref().unwrap() }}</p>
+  {% endif %}
+  {% if error_message.is_some() %}
+  <p class="error">{{ error_message.as_ref().unwrap() }}</p>
+  {% endif %}
+  <form method="post" action="/settings/key">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="public_key">Public key</label>
+    <textarea id="public_key" name="public_key" rows="4">{{ public_key }}</textarea>
+    <p class="muted">Paste the hbbs public key. Leave empty only when clients do not need a key.</p>
+    <p>Fingerprint: <code>{{ public_key_fingerprint }}</code></p>
+    <button type="submit">Save</button>
+  </form>
+</section>
+{% else if page == "relay" %}
+<section class="card">
+  <h1>Relay</h1>
+  <p><a href="/settings">Back to settings</a></p>
+  <p>These host values are written into official-client configuration and generated deployment scripts.</p>
+  {% if message.is_some() %}
+  <p class="success">{{ message.as_ref().unwrap() }}</p>
+  {% endif %}
+  {% if error_message.is_some() %}
+  <p class="error">{{ error_message.as_ref().unwrap() }}</p>
+  {% endif %}
+  <form method="post" action="/settings/relay">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="id_server">ID server</label>
+    <input id="id_server" name="id_server" value="{{ id_server }}" required>
+    <p class="muted">RustDesk ID server (hbbs) hostname or host:port.</p>
+
+    <label for="relay_server">Relay server</label>
+    <input id="relay_server" name="relay_server" value="{{ relay_server }}" required>
+    <p class="muted">RustDesk relay server (hbbr) hostname or host:port.</p>
+
+    <label for="api_server">API server</label>
+    <input id="api_server" name="api_server" value="{{ api_server }}">
+    <p class="muted">Optional API URL for official-client account features. Leave blank when unused.</p>
+    <button type="submit">Save</button>
+  </form>
+</section>
+{% else if page == "others" %}
+<section class="card">
+  <h1>Others</h1>
+  <p><a href="/settings">Back to settings</a></p>
+  <p>OpenDesk does not enforce ALWAYS_USE_RELAY or session ACLs. Dashboard roles authorize this console only and do not grant or deny RustDesk sessions.</p>
+  <p>Generated scripts can disable public server fallback where official clients support it. That is a client configuration option, not OpenDesk session enforcement.</p>
+  <p>License, LDAP, SMTP, OIDC, and connection-strategy controls are not present on these pages and are not enforced.</p>
+  <p><a class="button" href="/deployment">Open Deployment</a></p>
+</section>
+{% endif %}
+{% endblock %}

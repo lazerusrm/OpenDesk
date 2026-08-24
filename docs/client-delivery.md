@@ -99,6 +99,31 @@ Cons:
 - We own signing/trust for the wrapper.
 - Adds packaging work.
 
+When an operator provisions a signed Windows installer directory
+(`OPENDESK_SIGNED_CLIENT_DIR` with allowlisted `windows-setup.exe` /
+`windows-setup.msi`), the authenticated deployment page can serve those files.
+Authenticode signing stays an external process; OpenDesk does not sign binaries
+in-process and does not redistribute unofficial packages by default.
+
+### Public onboard links
+
+The supported recipient URL is `https://rd.example.com/onboard`. The technician
+reads a six-digit authenticator code (separate from dashboard sign-in) and the
+recipient types it. A matching code mints a 30-minute enrollment token for that
+technician, is one-time (replay-blocked), and is rate-limited like sign-in.
+
+Safety rules:
+
+- `/onboard` without a valid code or cookie does not enroll or serve installers.
+- Authenticator enrollment lives on the Account page for admin/operator roles.
+- The page does not create a user, session, or dashboard login.
+- Check-in grants device visibility to the technician who owned the code.
+  Administrators still see every device. Recipients do not see other computers.
+- Onboard HTML and scripts use `Cache-Control: no-store` and
+  `Referrer-Policy: no-referrer`.
+- Long `/onboard/{token}` links remain valid for scripted delivery.
+- Windows PowerShell and Linux/macOS commands perform install plus check-in.
+
 ### Option 4: Light RustDesk Fork
 
 Build custom clients with default server config embedded.
@@ -112,6 +137,31 @@ Cons:
 
 - We own desktop signing, packaging, upstream merges, and support.
 - Deferred until workflow proves it needs this.
+
+## Initial Cutover Scope
+
+The initial cutover validation set is fixed: official RustDesk clients on Windows,
+Linux, macOS, Android, and iOS. Desktop clients are endpoint candidates; Android and
+iOS are operator workflows unless a separate endpoint decision is approved. A result
+from one platform or package must never be used as evidence for another.
+
+For every platform, capture the exact official release, package/source, checksum or
+signature result where applicable, server configuration readback, enrollment/check-in,
+and an independent review. Use only test hosts, public-key fingerprints, and redacted
+labels in committed summaries. Raw screenshots and logs stay under ignored
+`local/research/`.
+
+The evidence package must separately record:
+
+- Enrollment lifecycle: scope, expiration/revocation, check-in, and retry behavior.
+- Server config: ID/relay/API values represented by placeholders and public-key fingerprint.
+- Access expectation: OpenDesk dashboard/API authentication and RBAC only; never session enforcement.
+- Transport: LAN, WAN, NAT traversal, and relay fallback as separate observations.
+- Update: official source/checksum and before/after client identity/config readback.
+- Rollback: last-known-good client/control-plane procedure and restoration result.
+
+`scripts/validation-evidence-record.sh` creates a status-only, redacted checklist for
+this package. It intentionally accepts no secret-bearing values or command output.
 
 ## Download Page
 
@@ -128,9 +178,11 @@ Fields:
 
 ## Passing Criteria
 
+- Every required platform has an independently reviewed record: Windows, Linux, macOS, Android, and iOS.
 - New Windows endpoint can be installed/configured without executable renaming.
 - New Linux endpoint can be installed/configured without manual RustDesk server entry.
-- Endpoint appears in our dashboard after install.
-- RustDesk client connects through `rd.example.com`.
-- Existing official client signatures remain valid.
+- Endpoint appears in our dashboard after install where endpoint enrollment is in scope.
+- RustDesk transport result is recorded for the tested path; it is not an access-enforcement claim.
+- Official client signatures/checksums remain valid.
+- Update persistence and rollback are exercised, not inferred.
 - If filename-based config is offered, it is a fallback or convenience path, not the only supported path.

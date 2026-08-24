@@ -15,6 +15,13 @@ Must cover:
 - macOS Intel and Apple Silicon packages if used.
 - Android and iOS configuration limits if mobile operator workflow matters.
 
+Initial cutover cannot infer coverage across platforms. Capture one independently reviewed
+record for official Windows, Linux, macOS, Android, and iOS clients. Android and iOS are
+operator workflows unless a separate endpoint decision is approved. Each record must
+include release source/version, redacted server config and key fingerprint, enrollment
+lifecycle where applicable, dashboard-only RBAC expectations, separate WAN/NAT/relay
+observations, and update/rollback results.
+
 Configuration methods to test:
 
 - Manual network settings.
@@ -32,7 +39,7 @@ Output:
 
 Related validation:
 
-- D-001 through D-010.
+- D-001 through D-016.
 - R-006.
 - RS-001.
 
@@ -76,7 +83,7 @@ Output:
 
 Related validation:
 
-- D-001 through D-010.
+- D-001 through D-016.
 - S-009.
 - RS-002.
 

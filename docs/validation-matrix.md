@@ -1,14 +1,23 @@
 # Validation Matrix
 
+## Evidence State
+
+This matrix distinguishes evidence already established from validation still required. `Established` means a current-repository automated test or the authorized read-only discovery baseline supports the statement; it is not a cutover signoff. `Required` means an executed evidence packet is still needed. No row is accepted unless the evidence rules below are satisfied.
+
+Established baseline: current-repository tests cover core dashboard/API workflows, enrollment, audit, backup round-trip, health probes, generated deployment flows, and dashboard/API RBAC. Authorized read-only discovery confirms populated Pro data structures and observed official `hbbs`/`hbbr` plus an admin-web runtime. It does not prove weekly usage, client parity, or production readiness.
+
+Required client scope: Windows, Linux, and macOS endpoint validation, plus Android and iOS operator workflows. Mobile is operator/configuration scope, not a claim of managed mobile endpoints. RBAC is dashboard/API-only and does not enforce RustDesk sessions.
+
 ## Environments
 
 Target test environments:
 
 - Windows 10 or 11 endpoint
 - Linux desktop endpoint
+- macOS endpoint
 - Linux server/LXC environment for control plane
-- Optional macOS endpoint
-- Optional Android/iOS operator client, configuration-only
+- Android operator client, configuration-only
+- iOS operator client, configuration-only
 
 ## Evidence Rules
 
@@ -21,7 +30,22 @@ No validation row counts as passing until evidence is recorded with:
 - Artifact path or link: screenshot, log excerpt, test output, backup/restore transcript, or signed owner decision.
 - Exception owner and expiry/review date for any `accepted-exception`.
 
-Cutover validation cannot pass from design intent alone. Each Core replacement workflow needs executed evidence for the required endpoint OSes and operator workflows.
+## Evidence Classification
+
+The row criteria below remain the acceptance contract. This classification prevents current evidence from being mistaken for cutover acceptance.
+
+| Class | Validation IDs | Meaning in this baseline |
+|---|---|---|
+| Established implementation evidence | C-001 through C-015, E-001 through E-008, MIG-001 through MIG-004, SEC-002 through SEC-005, SEC-007 through SEC-008, S-005, S-006, S-008 | Current-repository tests or controlled probes cover the stated behavior. Record environment/date/operator evidence before cutover. |
+| Established discovery, validation still required | S-001 through S-004, S-009, D-003 through D-004, R-001, R-006, RS-001 through RS-009 | Authorized read-only discovery or partial Linux/config evidence supports scope only. Execute the required endpoint, network, version, or owner decision tests. |
+| Required client/operator validation | D-001 through D-016, R-002 through R-006, RS-001 through RS-009 | Windows/Linux/macOS endpoint tests and Android/iOS operator workflows remain required; generated artifacts and source inspection do not substitute for released-client evidence. |
+| Required cutover evidence | CUT-001 through CUT-006, RS-003 through RS-009 | Pilot, parallel-run, owner inventory/decisions, network scenarios, and cutover drills remain open. |
+| Established policy boundary | SEC-007, RS-005 | Owner selected dashboard/API RBAC only. These rows must ensure no UI or documentation implies RustDesk session enforcement. |
+| Accepted research posture | RS-010 | Clean-room control-plane boundary is accepted by ADR; this is not a product or deployment signoff. |
+| Established migration safety evidence | MIG-001 through MIG-004 | Strict dry-run parser/reconciliation tests reject sensitive or ambiguous input. An authorized export, explicit mapping evidence, and any separately approved write path remain required. |
+
+No class above marks a cutover row as `pass` by itself. Each executed packet must still include status, commit/date, environment and versions, operator/reviewer, artifact path, and exception details where applicable.
+
 
 Research rows count as complete only when `docs/research-roadmap.md` contains the decision, `docs/research-status.md` marks the item `accepted`, and the local/public evidence path exists.
 
@@ -38,6 +62,9 @@ Research rows count as complete only when `docs/research-roadmap.md` contains th
 | S-007 | Restore | Restore backup into fresh instance | App starts and data matches source |
 | S-008 | Compose deployment | Deploy clean instance from documented Compose config | App starts with persistent data/config and no production secrets |
 | S-009 | Upgrade | Apply documented upgrade over populated test instance | Database/config survive and health checks pass |
+| S-010 | Server config evidence | Read back redacted ID/relay/API settings and public-key fingerprint | Values match approved test configuration without exposing secrets. |
+| S-011 | WAN transport | Connect an enrolled test endpoint and operator across a WAN path | Connection outcome and client/server versions are recorded without private topology. |
+| S-012 | NAT/relay fallback | Exercise a NAT case and relay fallback separately | Direct/relay outcome is recorded; unsupported cases are an explicit exception. |
 
 ## Control Plane Validation
 
@@ -53,6 +80,11 @@ Research rows count as complete only when `docs/research-roadmap.md` contains th
 | C-008 | Health page | Open health dashboard | Shows DNS, ports, service status, and timestamp |
 | C-009 | User administration | Create, disable, and role-assign test users | Login and permissions change according to the selected role |
 | C-010 | Deployment page | Generate deployment artifact from UI | Artifact matches selected OS/site/tags/scope and records an audit event |
+| C-011 | Official-client account API | Exercise login, current-user, rotation, expiry, binding, and logout | Opaque keyed-digest tokens obey identity, activation, expiry, rotation, and revocation rules without raw-token storage. |
+| C-012 | Scoped client synchronization | Query accessible groups, users, and peers with bearer auth | Only explicitly granted active users and non-archived devices are returned with canonical pagination. |
+| C-013 | Client address-book reads | Read personal/shared profiles, peers, and tags | Book access and device visibility are both enforced; owners without share rules retain admin access. |
+| C-014 | Client address-book mutations | Add/update/delete peers and add/rename/recolor/delete tags | Read principals are denied, write/admin principals succeed transactionally, hidden devices are denied, and non-empty password/hash fields are rejected. |
+| C-015 | Transport token admission | Authorize direct/relay requests through the internal token/device endpoint and transport fork | Internal HMAC authentication, active token state, default-deny visibility, bounded fail-closed HTTP behavior, allow/deny responses, binary build, and loopback startup pass; real official-client sessions remain required. |
 
 ## Client Delivery Validation
 
@@ -70,6 +102,10 @@ Research rows count as complete only when `docs/research-roadmap.md` contains th
 | D-010 | Official release update | Update official client after OpenDesk install | Config remains valid or update limitations are documented |
 | D-011 | Android operator app | Configure official Android app with OpenDesk-generated instructions/QR | App uses expected server config and connects to a test endpoint |
 | D-012 | iOS operator app | Configure official iOS app with OpenDesk-generated instructions | App uses expected server config and connects to a test endpoint |
+| D-013 | macOS install/config | Install current official client on each required macOS architecture and read back config | User/service context behavior and required permissions are recorded. |
+| D-014 | Client update persistence | Update each required desktop client and verify ID/config/service state | Version/checksum and before/after readback are recorded. |
+| D-015 | Client rollback | Restore the last-known-good official client/config procedure after an update test | Endpoint returns to documented working state without secrets in artifacts. |
+| D-016 | Cross-platform cutover evidence | Run the evidence recorder for Windows, Linux, macOS, Android, and iOS | One reviewed record exists per required platform; no platform is inferred from another. |
 
 ## Endpoint Registration Validation
 
@@ -82,6 +118,7 @@ Research rows count as complete only when `docs/research-roadmap.md` contains th
 | E-005 | Token revocation | Revoke token and retry registration | Registration fails with clear error |
 | E-006 | Deploy endpoint compatibility | Call `/api/devices/deploy` with RustDesk-shaped body | Returns documented response and registers/updates expected device |
 | E-007 | Deploy endpoint auth | Call `/api/devices/deploy` without bearer token | Request denied and no device is created |
+| E-008 | Enrollment lifecycle evidence | Scope, use, revoke/expire, and retry a token on each required endpoint platform | Evidence shows lifecycle without recording token material. |
 
 ## Remote Session Workflow Validation
 
@@ -137,6 +174,16 @@ Research rows count as complete only when `docs/research-roadmap.md` contains th
 | RS-009 | Network behavior | Complete R-009 research | Ports, NAT, LAN, DNS, direct/relay behavior, and relay scaling decisions are documented |
 | RS-010 | License posture | Complete R-010 research | Clean-room/fork/link/redistribution rules are recorded in an ADR |
 
+## Migration Validation
+
+| ID | Function | Test | Passing Criteria |
+|---|---|---|---|
+| MIG-001 | Import schema | Parse sanitized external export | Version 1 parses only allowlisted fields and rejects unknown fields at every nested boundary. |
+| MIG-002 | Import safety | Parse export containing credential hash, JWT, private key, or secret fields | Parse is rejected before deserialization and no report contains sensitive values. |
+| MIG-003 | Reconciliation dry run | Compare export against an OpenDesk snapshot | Report is deterministic and report-only; duplicate identity/rustdesk_id values and ambiguous snapshot matches are blocked. |
+| MIG-004 | Scope mapping | Reconcile external groups/scopes to sites | Name similarity alone never maps a scope; only explicit operator mapping evidence can produce a mapping. |
+| MIG-005 | Approved manifest boundary | Parse and validate a version-1 approved manifest and bind it to exact source/report digests | Unknown or recursively sensitive fields, missing counts/digests/approver/expiry, duplicate source dispositions, implicit matches, invalid action targets, and expired manifests are rejected; validation exposes no apply/write operation. |
+
 ## Cutover Validation
 
 | ID | Function | Test | Passing Criteria |
@@ -145,3 +192,5 @@ Research rows count as complete only when `docs/research-roadmap.md` contains th
 | CUT-002 | Pilot group | Enroll 2-5 devices | Pilot devices manageable from dashboard |
 | CUT-003 | Pro dependency review | Compare daily workflow against Pro | No blocker remains for selected workflow |
 | CUT-004 | Rollback | Disable dashboard and use old workflow | Existing RustDesk access still works |
+| CUT-005 | Evidence package | Review one redacted evidence record per required official client platform | Windows, Linux, macOS, Android, and iOS records are independently reviewed; no unsupported claim remains. |
+| CUT-006 | Update rollback | Exercise documented client/control-plane rollback after a cutover-candidate update | Last-known-good workflow restores dashboard operations and client connectivity without private topology in public evidence. |

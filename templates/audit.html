@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Audit Log</h1>
+  <p>{{ intro }}</p>
+  {% if connection_disclaimer.is_some() %}
+  <p class="muted">{{ connection_disclaimer.as_ref().unwrap() }}</p>
+  {% endif %}
+  <p class="muted">{{ list_window_notice }}</p>
+  <nav class="tabs" aria-label="Audit kinds">
+    {% for tab in tabs %}
+    {% if tab.selected %}
+    <a href="{{ tab.href }}" aria-current="page">{{ tab.label }}</a>
+    {% else %}
+    <a href="{{ tab.href }}">{{ tab.label }}</a>
+    {% endif %}
+    {% endfor %}
+  </nav>
+  <p><a href="{{ export_csv_href }}">Export CSV</a></p>
+</section>
+<section class="card">
+  {% if has_events %}
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Actor</th>
+        <th>Action</th>
+        <th>Object</th>
+        <th>Outcome</th>
+        <th>Source</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in events %}
+      <tr>
+        <td>{{ event.created_at }}</td>
+        <td>{{ event.actor_display }}</td>
+        <td>{{ event.action }}</td>
+        <td>{{ event.object_type }}</td>
+        <td>{{ event.outcome }}</td>
+        <td>{{ event.source }}</td>
+        <td class="muted" title="{{ event.detail_title }}">{{ event.detail_display }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">{{ empty_message }}</p>
+  {% endif %}
+</section>
+{% endblock %}

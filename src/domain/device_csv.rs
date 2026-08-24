@@ -144,10 +144,7 @@ mod tests {
         device.site_uuid = Some(site_uuid);
         let devices = vec![device];
         let site_names = HashMap::from([(site_uuid, "Main Lab".to_string())]);
-        let tag_names = HashMap::from([(
-            devices[0].device_uuid,
-            vec!["Production".to_string()],
-        )]);
+        let tag_names = HashMap::from([(devices[0].device_uuid, vec!["Production".to_string()])]);
         let csv = render_devices_csv(
             &devices,
             &DeviceSearchQuery::default(),

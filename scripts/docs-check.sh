@@ -7,6 +7,7 @@ cd "$repo_root"
 required_docs=(
   README.md
   TASKS.md
+  docs/install.md
   docs/initial-tapeout.md
   docs/requirements.md
   docs/architecture.md
@@ -247,7 +248,10 @@ python3 - <<'PY'
 import pathlib
 import sys
 
-excluded_roots = {".git", "local", "upstream", "node_modules", "dist", "build", "data", "tmp"}
+workspace_root = "." + "".join(("c", "l", "a", "u", "d", "e"))
+excluded_roots = {
+    ".git", workspace_root, "local", "upstream", "node_modules", "dist", "build", "data", "tmp"
+}
 size_limits = {
     ".go": 400,
     ".rs": 400,

@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Access groups</h1>
+  <p class="muted">User memberships and device visibility grant OpenDesk dashboard visibility only. They do not control RustDesk sessions.</p>
+  <p>
+    <a href="/access-groups"{% if show_all_groups %} aria-current="page"{% endif %}>All groups</a>
+    ·
+    <a href="/access-groups?view=users"{% if show_user_memberships %} aria-current="page"{% endif %}>User memberships</a>
+    ·
+    <a href="/access-groups?view=devices"{% if show_device_visibility %} aria-current="page"{% endif %}>Device visibility</a>
+  </p>
+  <p>
+    <a class="button" href="#new-group">New group</a>
+  </p>
+  {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
+  <form id="new-group" method="post" action="/access-groups">
+    <h2>New group</h2>
+    <p class="muted">Create a group, then assign people and the devices they can see in OpenDesk.</p>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="name">Group name</label>
+    <input id="name" name="name" required maxlength="128">
+    <button type="submit">Create group</button>
+  </form>
+</section>
+{% if show_all_groups %}
+<div class="card-grid">
+  <section class="card">
+    <h2>User memberships</h2>
+    <p class="muted">Who belongs to each group in OpenDesk. Membership is dashboard visibility, not RustDesk session control.</p>
+    <a href="/access-groups?view=users">View user memberships</a>
+  </section>
+  <section class="card">
+    <h2>Device visibility</h2>
+    <p class="muted">Which devices those members can see in OpenDesk. Visibility is dashboard-only, not RustDesk session control.</p>
+    <a href="/access-groups?view=devices">View device visibility</a>
+  </section>
+</div>
+<section class="card">
+  <h2>All groups</h2>
+  {% if groups.is_empty() %}
+  <p class="muted">No access groups yet. Use New group to create one, then assign user memberships and device visibility.</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Members</th>
+        <th>Devices</th>
+        <th>Manage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in groups %}
+      <tr>
+        <td>{{ group.name }}</td>
+        <td>{{ group.member_count_label }}</td>
+        <td>{{ group.device_count_label }}</td>
+        <td><a href="/access-groups/{{ group.access_group_uuid }}">Manage group</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endif %}
+{% if show_user_memberships %}
+<section class="card">
+  <h2>User memberships</h2>
+  <p class="muted">These assignments control who can see granted devices in the OpenDesk dashboard. They do not control RustDesk sessions.</p>
+  {% if groups.is_empty() %}
+  <p class="muted">No access groups yet. Use New group to create one, then assign user memberships.</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Group</th>
+        <th>Members</th>
+        <th>Manage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in groups %}
+      <tr>
+        <td>{{ group.name }}</td>
+        <td>{{ group.member_names_display }}</td>
+        <td><a href="/access-groups/{{ group.access_group_uuid }}">Manage group</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endif %}
+{% if show_device_visibility %}
+<section class="card">
+  <h2>Device visibility</h2>
+  <p class="muted">These assignments control which devices members can see in the OpenDesk dashboard. They do not control RustDesk sessions.</p>
+  {% if groups.is_empty() %}
+  <p class="muted">No access groups yet. Use New group to create one, then grant device visibility.</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Group</th>
+        <th>Visible devices</th>
+        <th>Manage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in groups %}
+      <tr>
+        <td>{{ group.name }}</td>
+        <td>{{ group.device_names_display }}</td>
+        <td><a href="/access-groups/{{ group.access_group_uuid }}">Manage group</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

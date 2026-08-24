@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Users</h1>
+  <p>Admin-only multi-user accounts. Roles: admin (full), operator (mutations), read-only (views and audit).</p>
+  {% if error_message.is_some() %}
+  <p class="error">{{ error_message.as_ref().unwrap() }}</p>
+  {% endif %}
+  <form method="post" action="/users">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="username">Username</label>
+    <input id="username" name="username" required maxlength="64" autocomplete="off">
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password">
+
+    <label for="role">Role</label>
+    <select id="role" name="role">
+      <option value="operator">operator</option>
+      <option value="read_only">read-only</option>
+      <option value="admin">admin</option>
+    </select>
+
+    <button type="submit">Create user</button>
+  </form>
+</section>
+<section class="card">
+  <h2>Accounts</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Role</th>
+        <th>State</th>
+        <th>Recovery</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td><a href="/users/{{ user.user_uuid }}">{{ user.username }}</a></td>
+        <td>{{ user.role_display }}</td>
+        <td>{{ user.activation_state }}</td>
+        <td>
+          {% if user.can_activate %}
+          <form method="post" action="/users/activate">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="user_uuid" value="{{ user.user_uuid }}">
+            <label for="activation-password-{{ user.user_uuid }}">New password</label>
+            <input id="activation-password-{{ user.user_uuid }}" name="password" type="password" required minlength="8" autocomplete="new-password">
+            <button type="submit">Set password and activate</button>
+          </form>
+          {% endif %}
+          {% if user.can_disable %}
+          <form method="post" action="/users/disable">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="user_uuid" value="{{ user.user_uuid }}">
+            <button type="submit" class="button-secondary">Disable user</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

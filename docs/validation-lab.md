@@ -7,6 +7,7 @@ This document defines the test environments required to close the remaining rese
 | Target | Purpose | Required For |
 |---|---|---|
 | Windows 11 VM or spare endpoint | Installer, service context, config persistence, deploy endpoint, operator workflow. | R-001, R-002, R-006, R-009 |
+| Linux desktop/server package test target | Official package install, service context, config persistence, update/rollback, deploy endpoint. | R-001, R-002, R-006, R-009 |
 | Windows portable test context | Filename config, duplicate filename behavior, portable elevation limits. | R-001, R-002 |
 | macOS test endpoint | DMG install, permissions, user/root config persistence, operator workflow. | R-001, R-002, R-006, R-009 |
 | Android phone | Official RustDesk app operator config and connection test. | R-008, D-011 |
@@ -25,16 +26,22 @@ This document defines the test environments required to close the remaining rese
 
 ## Minimum Evidence Per Target
 
-| Evidence | Windows | macOS | Android | iOS | Network |
-|---|---:|---:|---:|---:|---:|
-| Client version | Required | Required | Required | Required | Optional |
-| Package/source | Required | Required | Required | Required | Optional |
-| Config method | Required | Required | Required | Required | Optional |
-| Config persistence | Required | Required | Manual check | Manual check | Optional |
-| Deploy endpoint capture | Required | Required if supported | Not required | Not required | Optional |
-| Connection to test endpoint | Required | Required | Required | Required | Required |
-| Direct vs relay result | Required | Required | Required | Required | Required |
-| Screenshot/log artifact | Required | Required | Required | Required | Required |
+Every target must produce a separately reviewed record for enrollment (when in scope),
+server config/fingerprint, dashboard-only access expectations, transport, update, and
+rollback. Transport is split into LAN, WAN, NAT, and relay outcomes; do not publish
+private topology. The status-only recorder at `scripts/validation-evidence-record.sh`
+provides the common checklist.
+
+| Evidence | Windows | Linux | macOS | Android | iOS | Network |
+|---|---:|---:|---:|---:|---:|---:|
+| Client version | Required | Required | Required | Required | Required | Optional |
+| Package/source and signature/checksum | Required | Required | Required | Required | Required | Optional |
+| Config method/readback and fingerprint | Required | Required | Required | Required | Required | Optional |
+| Enrollment/check-in lifecycle | Required | Required | Required | Not endpoint scope | Not endpoint scope | Optional |
+| Dashboard RBAC only | Required | Required | Required | Required | Required | Optional |
+| Update persistence and rollback | Required | Required | Required | Required | Required | Optional |
+| LAN/WAN/NAT/relay result | Required | Required | Required | Required | Required | Required |
+| Screenshot/log artifact | Required | Required | Required | Required | Required | Required |
 
 ## Closure Mapping
 
@@ -43,3 +50,4 @@ This document defines the test environments required to close the remaining rese
 - R-006 closes when deploy endpoint behavior is validated for required desktop clients and adapter tests exist.
 - R-008 closes when Android and iOS operator workflows pass with OpenDesk-generated config/instructions.
 - R-009 closes when LAN, WAN, mobile-network, DNS, NAT/hairpin, and direct-vs-relay behavior are accepted.
+- Cutover remains blocked until one independent, redacted record exists for each required platform and all update/rollback and access-boundary checks are reviewed.

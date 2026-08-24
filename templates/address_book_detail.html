@@ -1,0 +1,181 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>Address book: {{ name }}</h1>
+  <p class="muted">Kind: {{ kind_display }}. Personal books stay owner-only. Shared books can be granted to a user or group with read, write, or admin permission for official-client access. Sharing a book does not grant device visibility or RustDesk session access.</p>
+  <p><a href="/address-books">Back to address books</a></p>
+  {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
+</section>
+<section class="card notice">
+  <p>This web address book is OpenDesk data. Official clients use isolated /api/ab* compatibility.</p>
+</section>
+{% if can_update %}
+<section class="card">
+  <h2>Add entry</h2>
+  {% if device_options.is_empty() %}
+  <p class="muted">No visible devices available to add.</p>
+  {% else %}
+  <form method="post" action="/address-books/{{ address_book_uuid }}/entries">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="device_uuid">Device</label>
+    <select id="device_uuid" name="device_uuid" required>
+      {% for device in device_options %}
+      <option value="{{ device.device_uuid }}">{{ device.alias }}{% if device.rustdesk_id != "" %} · {{ device.rustdesk_id }}{% endif %}</option>
+      {% endfor %}
+    </select>
+    <label for="alias">Alias</label>
+    <input id="alias" name="alias" required maxlength="128">
+    <label for="notes">Notes</label>
+    <textarea id="notes" name="notes" rows="4" placeholder="Optional notes"></textarea>
+    <label for="position">Position</label>
+    <input id="position" name="position" type="number" min="0" value="0" required>
+    <button type="submit">Add entry</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+<section class="card">
+  <h2>Entries</h2>
+  {% if entries.is_empty() %}
+  <p class="muted">No entries</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Alias</th>
+        <th>Device</th>
+        <th>RustDesk ID</th>
+        <th>Notes</th>
+        <th>Position</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in entries %}
+      <tr>
+        <td>
+          {% if can_update %}
+          <form id="entry-{{ entry.address_book_entry_uuid }}" method="post" action="/address-books/{{ address_book_uuid }}/entries/{{ entry.address_book_entry_uuid }}"></form>
+          <input type="hidden" form="entry-{{ entry.address_book_entry_uuid }}" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" form="entry-{{ entry.address_book_entry_uuid }}" name="device_uuid" value="{{ entry.device_uuid }}">
+          <input id="alias-{{ entry.address_book_entry_uuid }}" form="entry-{{ entry.address_book_entry_uuid }}" name="alias" value="{{ entry.alias }}" required maxlength="128" aria-label="Alias">
+          {% else %}
+          {{ entry.alias }}
+          {% endif %}
+        </td>
+        <td>{{ entry.device_alias }}</td>
+        <td class="rustdesk-id-cell">
+          <span>{{ entry.rustdesk_id_display }}</span>
+          {% if entry.rustdesk_id_copy_text != "" %}
+          <button type="button" class="copy-button" data-copy-text="{{ entry.rustdesk_id_copy_text }}">Copy ID</button>
+          {% endif %}
+        </td>
+        <td{% if !can_update %}{% if entry.notes_title != "" %} title="{{ entry.notes_title }}"{% endif %}{% endif %}>
+          {% if can_update %}
+          <textarea id="notes-{{ entry.address_book_entry_uuid }}" form="entry-{{ entry.address_book_entry_uuid }}" name="notes" rows="3" placeholder="Optional notes" aria-label="Notes">{{ entry.notes }}</textarea>
+          {% else %}
+          {{ entry.notes_display }}
+          {% endif %}
+        </td>
+        <td>
+          {% if can_update %}
+          <input id="position-{{ entry.address_book_entry_uuid }}" form="entry-{{ entry.address_book_entry_uuid }}" name="position" type="number" min="0" value="{{ entry.position }}" required aria-label="Position">
+          {% else %}
+          {{ entry.position }}
+          {% endif %}
+        </td>
+        <td>
+          {% if can_update %}
+          <button type="submit" form="entry-{{ entry.address_book_entry_uuid }}">Save entry</button>
+          {% endif %}
+          {% if can_delete %}
+          <form method="post" action="/address-books/{{ address_book_uuid }}/entries/{{ entry.address_book_entry_uuid }}/delete" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="button-secondary">Delete entry</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% if can_share %}
+<section class="card">
+  <h2>Share this address book</h2>
+  <p class="muted">Grant a user or group read, write, or admin permission for official-client access.</p>
+  {% if access_rules.is_empty() %}
+  <p class="muted">Not shared with any user or group yet.</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Principal</th>
+        <th>Type</th>
+        <th>Permission</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rule in access_rules %}
+      <tr>
+        <td>{{ rule.principal_label }}</td>
+        <td>{{ rule.principal_type_display }}</td>
+        <td>{{ rule.permission_display }}</td>
+        <td>
+          {% if can_delete %}
+          <form method="post" action="/address-books/{{ address_book_uuid }}/access-rules/{{ rule.principal_type }}/{{ rule.principal_uuid }}/delete" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="button-secondary">Remove share</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if !user_share_options.is_empty() %}
+  <form method="post" action="/address-books/{{ address_book_uuid }}/access-rules">
+    <h3>Share with a user</h3>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="principal_type" value="user">
+    <label for="user_principal_uuid">User</label>
+    <select id="user_principal_uuid" name="principal_uuid" required>
+      {% for user in user_share_options %}
+      <option value="{{ user.principal_uuid }}">{{ user.label }}</option>
+      {% endfor %}
+    </select>
+    <label for="user_permission">Permission</label>
+    <select id="user_permission" name="permission" required>
+      <option value="read">Read</option>
+      <option value="write">Write</option>
+      <option value="admin">Admin</option>
+    </select>
+    <button type="submit">Share with user</button>
+  </form>
+  {% endif %}
+  {% if !group_share_options.is_empty() %}
+  <form method="post" action="/address-books/{{ address_book_uuid }}/access-rules">
+    <h3>Share with a group</h3>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="principal_type" value="group">
+    <label for="group_principal_uuid">Group</label>
+    <select id="group_principal_uuid" name="principal_uuid" required>
+      {% for group in group_share_options %}
+      <option value="{{ group.principal_uuid }}">{{ group.label }}</option>
+      {% endfor %}
+    </select>
+    <label for="group_permission">Permission</label>
+    <select id="group_permission" name="permission" required>
+      <option value="read">Read</option>
+      <option value="write">Write</option>
+      <option value="admin">Admin</option>
+    </select>
+    <button type="submit">Share with group</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

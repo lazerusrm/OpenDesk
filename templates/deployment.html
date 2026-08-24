@@ -1,31 +1,39 @@
 {% extends "layout.html" %}
 {% block content %}
 <section class="card">
-  <h1>Deployment Artifacts</h1>
-  <p>Generated scripts use canonical server config values, the selected enrollment token, and the configured public base URL ({{ public_base_url }}).</p>
-  <form method="get" action="/deployment">
-    <label for="enrollment_token_uuid">Enrollment token</label>
-    <select id="enrollment_token_uuid" name="enrollment_token_uuid">
-      {% for token in tokens %}
-      <option value="{{ token.enrollment_token_uuid }}" {% if token.selected %}selected{% endif %}>
-        {{ token.label }} ({{ token.status }})
-      </option>
-      {% endfor %}
-    </select>
-    <label for="enrollment_token_value">Enrollment token value (shown once at creation)</label>
-    <input id="enrollment_token_value" name="enrollment_token_value" value="{{ enrollment_token_value }}">
-    <button type="submit">Generate scripts</button>
-    {% if enrollment_token_value != "" %}
-    <a class="button" href="/deployment/linux.sh?enrollment_token_value={{ enrollment_token_value }}">Download Linux script</a>
-    {% endif %}
-  </form>
+  <h1>Deployment Center</h1>
+  <p>Download official RustDesk clients and apply this installation's server configuration. OpenDesk links to upstream packages and does not redistribute binaries. Open a platform page for the official download, import string, QR code, and generated script or operator steps.</p>
 </section>
-<section class="card">
-  <h2>Linux shell script</h2>
-  <pre>{{ linux_script }}</pre>
+{% if !configured %}
+<section class="card notice">
+  <h2>Setup incomplete</h2>
+  <p>Save the ID server, relay server, API server, and public key before generating client configuration or deployment artifacts.</p>
+  {% if nav.server_config %}<a class="button" href="/settings/server-config">Configure server</a>{% endif %}
+  <p class="muted">Setup remains inside this authenticated console so server configuration is protected by existing RBAC and audit controls. There is no unauthenticated setup wizard.</p>
 </section>
+{% else %}
 <section class="card">
-  <h2>Windows PowerShell script</h2>
-  <pre>{{ windows_script }}</pre>
+  <h2>Official client configuration</h2>
+  <dl class="config-list">
+    <dt>ID server</dt><dd>{{ id_server }}</dd><dt>Relay server</dt><dd>{{ relay_server }}</dd>
+    <dt>API server</dt><dd>{{ api_server }}</dd><dt>Public key</dt><dd>{{ public_key }}</dd>
+  </dl>
+  <label for="rustdesk-config">Import string</label>
+  <div class="input-with-copy"><input id="rustdesk-config" value="{{ rustdesk_config }}" readonly><button type="button" class="copy-button" data-copy-input="rustdesk-config">Copy</button></div>
+  <p>Scan this code from the official RustDesk client's server settings.</p>
+  <div class="qr-code" role="img" aria-label="RustDesk server configuration QR code">{{ rustdesk_qr_svg|safe }}</div>
+</section>
+{% endif %}
+<section>
+  <h2>Platform pages</h2>
+  <div class="card-grid">
+    {% for download in downloads %}
+    <article class="card download-card">
+      <h3>{{ download.platform }}</h3>
+      <p>{{ download.description }}</p>
+      <a class="button" href="{{ download.page_href }}">Open {{ download.platform }} page</a>
+    </article>
+    {% endfor %}
+  </div>
 </section>
 {% endblock %}

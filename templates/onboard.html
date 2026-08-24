@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card onboard">
+  <h1>{{ heading }}</h1>
+  {% if message != "" %}<p>{{ message }}</p>{% endif %}
+  {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
+  {% if show_code_form %}
+  <form method="post" action="/onboard">
+    {% if csrf_token != "" %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endif %}
+    <label for="code">Code</label>
+    <input id="code" class="onboard-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9 ]{6,8}" required autofocus>
+    <button type="submit" class="button-large">Continue</button>
+  </form>
+  {% endif %}
+  {% if valid %}
+  {% if configured %}
+  <p class="muted">This page does not sign you in. Installing here does not give you access to other computers.</p>
+  {% if windows_setup_available %}
+  <p><a class="button button-large" href="{{ windows_setup_href }}">Download Windows installer</a></p>
+  <p class="muted">Run the downloaded installer and accept the security prompt. That is the whole Windows setup.</p>
+  {% endif %}
+  <h2>Windows PowerShell</h2>
+  <p>If a technician asked you to paste one command, use this in PowerShell as Administrator.</p>
+  <label for="windows-command">Windows command</label>
+  <div class="input-with-copy">
+    <input id="windows-command" value="{{ windows_command }}" readonly autocomplete="off" spellcheck="false">
+    <button type="button" class="copy-button" data-copy-input="windows-command">Copy</button>
+  </div>
+  <h2>Linux</h2>
+  <label for="linux-command">Linux command</label>
+  <div class="input-with-copy">
+    <input id="linux-command" value="{{ linux_command }}" readonly autocomplete="off" spellcheck="false">
+    <button type="button" class="copy-button" data-copy-input="linux-command">Copy</button>
+  </div>
+  <h2>macOS</h2>
+  <label for="macos-command">macOS command</label>
+  <div class="input-with-copy">
+    <input id="macos-command" value="{{ macos_command }}" readonly autocomplete="off" spellcheck="false">
+    <button type="button" class="copy-button" data-copy-input="macos-command">Copy</button>
+  </div>
+  {% else %}
+  <p class="notice">Remote support install is not available yet. Ask your technician to finish server setup.</p>
+  {% endif %}
+  {% endif %}
+</section>
+{% endblock %}

@@ -2,24 +2,30 @@
 {% block content %}
 <section class="card">
   <h1>Server Config</h1>
+  <p><a href="/settings">Settings</a> splits this form into <a href="/settings/key">Key</a> and <a href="/settings/relay">Relay</a> pages. Combined values stay here so existing workflows keep working.</p>
   {% if message.is_some() %}
-  <p>{{ message.as_ref().unwrap() }}</p>
+  <p class="success">{{ message.as_ref().unwrap() }}</p>
   {% endif %}
   {% if error_message.is_some() %}
   <p class="error">{{ error_message.as_ref().unwrap() }}</p>
   {% endif %}
   <form method="post" action="/settings/server-config">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="id_server">ID server</label>
     <input id="id_server" name="id_server" value="{{ id_server }}" required>
+    <p class="muted">RustDesk ID server (hbbs) hostname or host:port used by official clients.</p>
 
     <label for="relay_server">Relay server</label>
     <input id="relay_server" name="relay_server" value="{{ relay_server }}" required>
+    <p class="muted">RustDesk relay server (hbbr) hostname or host:port.</p>
 
     <label for="api_server">API server</label>
     <input id="api_server" name="api_server" value="{{ api_server }}">
+    <p class="muted">Optional API URL for official-client account features. Leave blank when unused.</p>
 
     <label for="public_key">Public key</label>
     <textarea id="public_key" name="public_key" rows="4">{{ public_key }}</textarea>
+    <p class="muted">hbbs public key that clients use to verify the ID server. The fingerprint is the SHA-256 digest of the trimmed key and is shown on <a href="/settings/key">Key</a> and <a href="/status">Status</a>.</p>
 
     <button type="submit">Save</button>
   </form>

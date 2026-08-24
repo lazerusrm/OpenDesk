@@ -1,6 +1,6 @@
 # Research Status
 
-This table is the current research completion ledger. Public rows summarize decisions; private raw evidence stays under ignored `local/research/`.
+This table is the current research completion ledger. Public rows summarize authorized read-only discovery and decisions; private raw evidence stays under ignored `local/research/`.
 
 Status values:
 
@@ -8,18 +8,20 @@ Status values:
 - `partial`: useful evidence exists, but cutover still needs more proof or owner decision.
 - `blocked`: cannot close without owner input or a required test environment.
 
-| ID | Status | Evidence | Blocking Gap |
+The authorized discovery confirms populated Pro data structures for peers, users, groups/mappings, address books/linked peers, and audit tables, plus observed official `hbbs`/`hbbr` and admin-web runtime components. It intentionally does not publish counts, private topology, or production signoff.
+
+| ID | Status | Established evidence | Still-required validation or decision |
 |---|---|---|---|
-| R-001 | Partial | Linux `.deb` package validates command-line config and service config persistence. Official docs/source support other config paths. | Validation lab evidence for Windows installer/portable, macOS, Android, iOS, and Linux GUI/operator workflow. |
-| R-002 | Partial | Linux `.deb` package validates install, service creation, ID readout, restart persistence, and same-version reinstall persistence. | Validation lab evidence for Windows/macOS silent install, service/user config, and upgrade behavior. |
-| R-003 | Partial | Pro database shows populated users, groups, device assignments, personal address books, strategies, Windows custom clients, sessions, recent console activity, and audit logs. Role mappings and third-party auth integrations were not populated in inspected evidence. | Owner signoff on weekly usage and retired workflows. |
-| R-004 | Partial | Address-book entries contain hashed secret material; plaintext storage is rejected; ADR-008 defines external secret-manager path if managed access is required. | Owner decision on passwordless/managed-password requirement. |
-| R-005 | Partial | Current settings do not require login for RustDesk access; dashboard RBAC is documented as non-enforcing for sessions. | Owner decision on lookup-only vs real session enforcement. |
-| R-006 | Partial | Linux `.deb` validates deploy request shape and response cases against a controlled dev endpoint. | Validation lab evidence for Windows/macOS deploy behavior and future adapter tests. |
-| R-007 | Partial | Audit database/log evidence proves useful connection, console, relay, and rendezvous visibility; recent console activity is present; local RustDesk source provides console action mappings; ADR-009 defines audit tiers. | Owner decision on required audit tier and validation of ingestion/labels if selected. |
-| R-008 | Partial | Official docs support Android manual/QR config and identify iOS as not remotely controllable. Mobile RustDesk operator apps are required for cutover. | Manual validation of Android and iOS operator workflows with OpenDesk-generated config/instructions. |
-| R-009 | Partial | Service ports, logs, inside-LAN TCP reachability, split public/local DNS shape, and local-resolution TCP reachability are validated. | Validation lab evidence for WAN/mobile-network/NAT/direct-vs-relay behavior from real clients. |
-| R-010 | Accepted | ADR records clean-room control plane default and fork/link/vendor rules. | None unless fork/vendor work is proposed. |
+| R-001 | partial | Linux package/config evidence and documented official-client configuration paths exist. | Execute released-client validation on Windows, Linux, and macOS endpoints, plus Android/iOS operator workflows; include Linux GUI/operator behavior. |
+| R-002 | partial | Linux package install, service creation, ID readout, restart persistence, and same-version reinstall evidence exist. | Validate Windows/macOS silent install, service/user config, upgrades, and required mobile operator setup. |
+| R-003 | partial | Read-only discovery confirms populated peer, user, group/mapping, address-book, strategy, custom-client, session, console-activity, and audit structures; role mappings and third-party auth were not established. | Owner must classify weekly use and retire/equate workflows. Map every used capability to a passing validation or recorded retirement; no signoff yet. |
+| R-004 | partial | Address-book entries contain hashed secret material; plaintext storage is rejected; ADR-008 defines an external secret-manager path if managed access is required. | Owner must decide whether passwordless/managed-password access is required, equivalent, or retired. |
+| R-005 | partial | Owner selected dashboard/API RBAC only. Documentation and implementation tests must preserve that this does not enforce RustDesk sessions. | Validate SEC-007 wording and record endpoint/network/client evidence only if session enforcement is proposed later. Resolve password-sharing and session-audit follow-ups. |
+| R-006 | partial | Linux deploy request shape and response cases are validated against a controlled endpoint. | Validate deploy behavior on Windows/macOS and complete isolated compatibility-adapter tests before any compatibility claim. |
+| R-007 | partial | Read-only audit tables/logs show connection, console, relay, rendezvous, and recent console visibility; ADR-009 defines audit tiers. | Owner must select launch-only, ingestion, or deeper audit tier; validate labels/ingestion if selected. Do not treat launch intent as session proof. |
+| R-008 | partial | Official documentation supports Android manual/QR configuration and identifies iOS as not remotely controllable; mobile apps remain operator scope. | Manually validate Android and iOS operator workflows using OpenDesk-generated instructions/configuration. |
+| R-009 | partial | Observed service/runtime evidence and controlled probes establish service reachability and baseline DNS/TCP behavior without publishing topology. | Real Windows/Linux/macOS clients must validate WAN, mobile-network, NAT, direct-vs-relay, and failure behavior. |
+| R-010 | accepted | ADR records the clean-room control-plane boundary and fork/link/vendor rules. | None unless fork/vendor work is proposed. |
 
 ## Closure Rule
 

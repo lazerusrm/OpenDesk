@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h1>{{ username }}</h1>
+  <p>Role: {{ role_display }}. State: {{ activation_state }}.</p>
+  <p class="muted">These grants control OpenDesk dashboard/API device visibility only. They do not authorize or deny a RustDesk session.</p>
+  {% if error_message.is_some() %}<p class="error">{{ error_message.as_ref().unwrap() }}</p>{% endif %}
+  {% if can_disable %}
+  <form method="post" action="/users/{{ user_uuid }}/disable">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="button-secondary">Disable user</button>
+  </form>
+  {% endif %}
+</section>
+<section class="card">
+  <h2>Direct device visibility</h2>
+  <form method="post" action="/users/{{ user_uuid }}/device-visibility-grants">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for device in device_options %}<label><input type="checkbox" name="device_uuid" value="{{ device.device_uuid }}"{% if device.selected %} checked{% endif %}> {{ device.alias }} ({{ device.rustdesk_id_display }})</label>{% endfor %}
+    <button type="submit">Save device visibility</button>
+  </form>
+</section>
+<section class="card">
+  <h2>Access groups</h2>
+  <ul>{% for group in access_groups %}<li><a href="/access-groups/{{ group.access_group_uuid }}">{{ group.name }}</a></li>{% endfor %}</ul>
+</section>
+{% endblock %}
