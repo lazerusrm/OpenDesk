@@ -186,20 +186,8 @@ async fn enrollment_checkin(
     let token_hash = hash_enrollment_token_value(&body.enrollment_token);
     let record = match find_enrollment_token_by_hash(&state.db, &token_hash).await {
         Ok(Some(record)) => record,
-        Ok(None) => {
-            write_checkin_audit(
-                &state,
-                None,
-                "failure",
-                Some(serde_json::json!({
-                    "reason": "unknown_token",
-                    "enrollment_token": body.enrollment_token,
-                    "hostname": body.hostname,
-                })),
-            )
-            .await;
-            return Err(StatusCode::UNAUTHORIZED);
-        }
+        // Unauthenticated garbage tokens must not write a durable audit row per guess.
+        Ok(None) => return Err(StatusCode::UNAUTHORIZED),
         Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
     };
     if verify_enrollment_token_value(&record, &body.enrollment_token, OffsetDateTime::now_utc())

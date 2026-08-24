@@ -319,8 +319,23 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
                 .map(|s| s.to_string())
         });
 
-    // Force a check-in failure with a known secret to prove redaction in stored detail.
-    let secret = "super-secret-enrollment-token-value-xyz";
+    // Known-but-revoked tokens still write a failure audit; unknown garbage tokens do not.
+    let created = opendesk::repository::enrollment_tokens::create_enrollment_token(
+        &db,
+        "redaction-token",
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("create token");
+    opendesk::repository::enrollment_tokens::revoke_enrollment_token(
+        &db,
+        created.record.enrollment_token_uuid,
+    )
+    .await
+    .expect("revoke");
+    let secret = created.token_value.clone();
     let fail = app
         .clone()
         .oneshot(
