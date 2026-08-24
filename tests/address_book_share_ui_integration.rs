@@ -88,10 +88,9 @@ async fn shared_book_owner_can_grant_and_revoke_user_access() {
         .await
         .expect("lookup")
         .expect("admin");
-    let book =
-        address_books::create_shared_address_book(&state.db, admin.user_uuid, "Team book")
-            .await
-            .expect("shared book");
+    let book = address_books::create_shared_address_book(&state.db, admin.user_uuid, "Team book")
+        .await
+        .expect("shared book");
     let personal =
         address_books::create_personal_address_book(&state.db, admin.user_uuid, "Favorites")
             .await

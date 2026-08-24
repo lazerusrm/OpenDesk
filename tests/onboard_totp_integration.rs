@@ -221,6 +221,51 @@ async fn totp_code_unlocks_onboard_for_issuer_only() {
     );
 }
 
+#[tokio::test]
+async fn totp_timestep_replay_survives_new_store() {
+    let dir = std::env::temp_dir().join(format!("opendesk-totp-replay-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).expect("dir");
+    let db_path = dir.join("opendesk.sqlite");
+    let url = format!("sqlite:{}?mode=rwc", db_path.display());
+    let first = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect(&url)
+        .await
+        .expect("connect");
+    sqlx::migrate!("./migrations")
+        .run(&first)
+        .await
+        .expect("migrate");
+    let user = create_user(&first, "replay-admin", "test-password", Role::ADMIN)
+        .await
+        .expect("user");
+    let now = OffsetDateTime::from_unix_timestamp(1_700_000_000).expect("ts");
+    let accepted = opendesk::repository::onboard_totp::consume_onboard_totp_timestep(
+        &first,
+        user.user_uuid,
+        42,
+        now,
+    )
+    .await
+    .expect("first");
+    assert!(accepted);
+    first.close().await;
+    let second = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect(&url)
+        .await
+        .expect("reconnect");
+    let rejected = opendesk::repository::onboard_totp::consume_onboard_totp_timestep(
+        &second,
+        user.user_uuid,
+        42,
+        now,
+    )
+    .await
+    .expect("second");
+    assert!(!rejected);
+    second.close().await;
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 fn html_token_from_cookie(cookie: &str) -> String {
     cookie
         .strip_prefix("opendesk_onboard=")

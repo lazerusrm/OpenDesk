@@ -9,6 +9,7 @@ use axum::{
 use axum_extra::extract::cookie::CookieJar;
 
 use crate::app_state::AppState;
+use crate::config::{nofollow_regular_file_exists, read_nofollow_file};
 use crate::domain::access_policy::Action;
 use crate::http::deployment_views::FirstPartyDownloadView;
 use crate::http::session::require_action;
@@ -61,9 +62,7 @@ pub(super) async fn windows_setup_file(
         .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
     let path = resolve_artifact(state.signed_client_dir.as_deref(), artifact)
         .ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
-    let bytes = tokio::fs::read(&path)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    let bytes = read_nofollow_file(&path).map_err(|_| StatusCode::NOT_FOUND.into_response())?;
     super::write_deployment_audit(
         &state,
         &user,
@@ -91,8 +90,7 @@ fn resolve_artifact(root: Option<&Path>, artifact: &Artifact) -> Option<PathBuf>
         return None;
     }
     let path = root.join(artifact.disk_name);
-    let metadata = std::fs::metadata(&path).ok()?;
-    if !metadata.is_file() {
+    if !nofollow_regular_file_exists(&path) {
         return None;
     }
     Some(path)

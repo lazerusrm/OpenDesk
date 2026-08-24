@@ -194,6 +194,7 @@ pub struct BackupView {
     pub show_nav: bool,
     pub nav: NavPermissions,
     pub csrf_token: String,
+    pub export_json_href: String,
     pub message: Option<String>,
     pub error_message: Option<String>,
 }

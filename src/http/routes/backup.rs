@@ -1,6 +1,6 @@
 use askama::Template;
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::{header, StatusCode},
     response::{Html, IntoResponse, Redirect, Response},
     routing::get,
@@ -29,11 +29,18 @@ async fn backup_page(State(state): State<AppState>, jar: CookieJar) -> Result<Re
     Ok(render_backup_page(None, None, &user.csrf_token, user.parsed_role()).into_response())
 }
 
+#[derive(Deserialize)]
+struct BackupExportQuery {
+    csrf_token: Option<String>,
+}
+
 async fn backup_export(
     State(state): State<AppState>,
     jar: CookieJar,
+    Query(query): Query<BackupExportQuery>,
 ) -> Result<Response, Response> {
     let user = require_action(&state, &jar, Action::BackupExport).await?;
+    require_csrf(&user, query.csrf_token.as_deref().unwrap_or(""))?;
     let document = export_backup_document(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
@@ -130,6 +137,7 @@ fn render_backup_page(
         show_nav: true,
         nav: nav_permissions_for_role(role),
         csrf_token: csrf_token.to_string(),
+        export_json_href: format!("/backup/export.json?csrf_token={csrf_token}"),
         message,
         error_message,
     };

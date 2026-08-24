@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::app_state::AppState;
 use crate::domain::access_policy::Action;
 use crate::domain::audit_event::AuditEventDraft;
-use crate::http::session::require_action;
+use crate::http::session::{require_action, require_csrf};
 use crate::http::views::{
     nav_permissions_for_role, AuditEventRowView, AuditKindTabView, AuditLogView,
 };
@@ -106,10 +106,13 @@ impl AuditKind {
         format!("/audit?kind={}", self.as_str())
     }
 
-    fn export_csv_href(self) -> String {
+    fn export_csv_href(self, csrf_token: &str) -> String {
         match self {
-            Self::All => "/audit/export.csv".to_string(),
-            other => format!("/audit/export.csv?kind={}", other.as_str()),
+            Self::All => format!("/audit/export.csv?csrf_token={csrf_token}"),
+            other => format!(
+                "/audit/export.csv?kind={}&csrf_token={csrf_token}",
+                other.as_str()
+            ),
         }
     }
 }
@@ -135,6 +138,7 @@ fn parse_audit_kind(value: Option<&str>) -> Result<AuditKind, ()> {
 #[derive(Debug, Deserialize)]
 struct AuditQuery {
     kind: Option<String>,
+    csrf_token: Option<String>,
 }
 
 fn audit_kind_from_query(query: &AuditQuery) -> Result<AuditKind, Response> {
@@ -217,7 +221,7 @@ async fn audit_list_page(
         csrf_token: user.csrf_token.clone(),
         events: rows,
         tabs: kind_tabs(kind),
-        export_csv_href: kind.export_csv_href(),
+        export_csv_href: kind.export_csv_href(&user.csrf_token),
         intro: kind.intro().to_string(),
         connection_disclaimer: kind.connection_disclaimer().map(str::to_string),
         empty_message: kind.empty_message().to_string(),
@@ -235,6 +239,7 @@ async fn audit_export_csv(
     Query(query): Query<AuditQuery>,
 ) -> Result<Response, Response> {
     let user = require_action(&state, &jar, Action::AuditExport).await?;
+    require_csrf(&user, query.csrf_token.as_deref().unwrap_or(""))?;
     let kind = audit_kind_from_query(&query)?;
     let events = list_audit_events(&state.db, AUDIT_LIST_LIMIT)
         .await
@@ -327,10 +332,13 @@ mod tests {
 
     #[test]
     fn export_href_omits_kind_for_all() {
-        assert_eq!(AuditKind::All.export_csv_href(), "/audit/export.csv");
         assert_eq!(
-            AuditKind::Console.export_csv_href(),
-            "/audit/export.csv?kind=console"
+            AuditKind::All.export_csv_href("abc"),
+            "/audit/export.csv?csrf_token=abc"
+        );
+        assert_eq!(
+            AuditKind::Console.export_csv_href("abc"),
+            "/audit/export.csv?kind=console&csrf_token=abc"
         );
     }
 

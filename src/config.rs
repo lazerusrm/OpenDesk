@@ -1,6 +1,6 @@
 use std::env;
 use std::fs::{self, OpenOptions};
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::net::SocketAddr;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
@@ -13,6 +13,8 @@ pub const PUBLIC_BASE_URL_FILE: &str = "opendesk.public_base_url";
 pub const SQLITE_FILE: &str = "opendesk.sqlite";
 const HMAC_KEY_BYTES: usize = 32;
 const DEFAULT_PUBLIC_BASE_URL: &str = "http://127.0.0.1:8080";
+// Linux O_NOFOLLOW (0400000). Applies only to the last path component.
+const O_NOFOLLOW: i32 = 0x20000;
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {
@@ -92,19 +94,52 @@ pub fn resolve_client_token_hmac_key(
     if let Some(encoded) = env_hex.map(str::trim).filter(|value| !value.is_empty()) {
         return decode_hmac_hex(encoded);
     }
-    let key_path = data_dir.join(HMAC_KEY_FILE);
-    if key_path.is_file() {
-        let encoded = fs::read_to_string(&key_path)?;
-        return decode_hmac_hex(encoded.trim());
-    }
-    if data_dir.join(SQLITE_FILE).is_file() {
-        return Err(ConfigError::MissingHmacForExistingDatabase);
-    }
     fs::create_dir_all(data_dir)?;
-    let mut key = vec![0u8; HMAC_KEY_BYTES];
-    rand::thread_rng().fill_bytes(&mut key);
-    persist_hmac_file(&key_path, &key)?;
-    Ok(key)
+    let key_path = data_dir.join(HMAC_KEY_FILE);
+    match read_nofollow_file(&key_path) {
+        Ok(bytes) => decode_hmac_hex(String::from_utf8_lossy(&bytes).trim()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            if data_dir.join(SQLITE_FILE).is_file() {
+                return Err(ConfigError::MissingHmacForExistingDatabase);
+            }
+            let mut key = vec![0u8; HMAC_KEY_BYTES];
+            rand::thread_rng().fill_bytes(&mut key);
+            match persist_hmac_file(&key_path, &key) {
+                Ok(()) => Ok(key),
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                    let bytes = read_nofollow_file(&key_path)?;
+                    decode_hmac_hex(String::from_utf8_lossy(&bytes).trim())
+                }
+                Err(error) => Err(error.into()),
+            }
+        }
+        Err(error) => Err(error.into()),
+    }
+}
+
+pub fn nofollow_regular_file_exists(path: &Path) -> bool {
+    open_nofollow_regular(path).is_ok()
+}
+
+pub fn read_nofollow_file(path: &Path) -> io::Result<Vec<u8>> {
+    let mut file = open_nofollow_regular(path)?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)?;
+    Ok(bytes)
+}
+
+fn open_nofollow_regular(path: &Path) -> io::Result<fs::File> {
+    let file = OpenOptions::new()
+        .read(true)
+        .custom_flags(O_NOFOLLOW)
+        .open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "not a regular file",
+        ));
+    }
+    Ok(file)
 }
 
 pub fn resolve_public_base_url(data_dir: &Path, env_value: Option<&str>) -> String {
@@ -141,15 +176,25 @@ fn decode_hmac_hex(encoded: &str) -> Result<Vec<u8>, ConfigError> {
 }
 
 fn persist_hmac_file(path: &Path, key: &[u8]) -> Result<(), io::Error> {
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .mode(0o600)
-        .open(path)?;
-    file.write_all(hex::encode(key).as_bytes())?;
-    file.write_all(b"\n")?;
-    file.sync_all()
+    let mut nonce = [0u8; 8];
+    rand::thread_rng().fill_bytes(&mut nonce);
+    let tmp = path.with_file_name(format!("{}.{}.tmp", HMAC_KEY_FILE, hex::encode(nonce)));
+    let result = (|| {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .custom_flags(O_NOFOLLOW)
+            .mode(0o600)
+            .open(&tmp)?;
+        file.write_all(hex::encode(key).as_bytes())?;
+        file.write_all(b"\n")?;
+        file.sync_all()?;
+        // hard_link fails if the destination name exists, so a complete file
+        // cannot be replaced by a concurrent first-boot write.
+        fs::hard_link(&tmp, path)
+    })();
+    let _ = fs::remove_file(&tmp);
+    result
 }
 
 fn optional_hex_key(name: &str) -> Option<Vec<u8>> {
@@ -244,6 +289,34 @@ mod tests {
             resolve_public_base_url(&dir, Some("https://other.example.com")),
             "https://other.example.com"
         );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn hmac_rejects_symlink_path() {
+        let dir = temp_dir();
+        let target = dir.join("other.hmac");
+        fs::write(&target, format!("{}\n", "ab".repeat(HMAC_KEY_BYTES))).expect("target");
+        std::os::unix::fs::symlink(&target, dir.join(HMAC_KEY_FILE)).expect("symlink");
+        assert!(resolve_client_token_hmac_key(&dir, None).is_err());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn hmac_exclusive_create_does_not_replace_a_distinct_key() {
+        let dir = temp_dir();
+        let first = std::thread::scope(|scope| {
+            let left = dir.clone();
+            let right = dir.clone();
+            let a = scope.spawn(move || resolve_client_token_hmac_key(&left, None));
+            let b = scope.spawn(move || resolve_client_token_hmac_key(&right, None));
+            let a = a.join().expect("thread").expect("left");
+            let b = b.join().expect("thread").expect("right");
+            assert_eq!(a, b);
+            a
+        });
+        let again = resolve_client_token_hmac_key(&dir, None).expect("reuse");
+        assert_eq!(first, again);
         let _ = fs::remove_dir_all(&dir);
     }
 }

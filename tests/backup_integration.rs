@@ -2,7 +2,7 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{login_and_get_session_cookie, test_state};
+use common::{csrf_token_from_cookie, login_and_get_session_cookie, test_state};
 use http_body_util::BodyExt;
 use opendesk::build_router;
 use opendesk::domain::backup::{parse_backup_json, render_backup_json, BACKUP_SCHEMA_VERSION};
@@ -207,10 +207,11 @@ async fn backup_export_json_endpoint_returns_schema_version() {
     let state = test_state().await;
     let app = build_router(state);
     let session_cookie = login_and_get_session_cookie(&app).await;
+    let csrf = csrf_token_from_cookie(&session_cookie);
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/backup/export.json")
+                .uri(format!("/backup/export.json?csrf_token={csrf}"))
                 .header("cookie", session_cookie)
                 .body(Body::empty())
                 .unwrap(),

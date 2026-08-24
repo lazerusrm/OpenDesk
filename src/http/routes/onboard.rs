@@ -10,6 +10,7 @@ use axum::{
 use time::OffsetDateTime;
 
 use crate::app_state::AppState;
+use crate::config::{nofollow_regular_file_exists, read_nofollow_file};
 use crate::deployment::onboard_linux::{render_onboard_linux_script, OnboardLinuxScriptInput};
 use crate::deployment::onboard_macos::{render_onboard_macos_script, OnboardMacosScriptInput};
 use crate::deployment::onboard_overlay::stamp_windows_setup;
@@ -133,7 +134,10 @@ enum CopyKind {
 pub(super) fn signed_windows_setup_path(state: &AppState) -> Option<std::path::PathBuf> {
     let dir = state.signed_client_dir.as_ref()?;
     let path = dir.join("windows-setup.exe");
-    path.is_file().then_some(path)
+    if !nofollow_regular_file_exists(&path) {
+        return None;
+    }
+    Some(path)
 }
 
 pub(super) async fn resolve_active_token(
@@ -305,9 +309,7 @@ async fn windows_setup_file(
     }
     let path =
         signed_windows_setup_path(&state).ok_or_else(|| StatusCode::NOT_FOUND.into_response())?;
-    let bytes = tokio::fs::read(&path)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+    let bytes = read_nofollow_file(&path).map_err(|_| StatusCode::NOT_FOUND.into_response())?;
     let checkin_url = format!(
         "{}/api/enrollments/check-in",
         state.public_base_url().trim_end_matches('/')

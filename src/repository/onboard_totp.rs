@@ -1,8 +1,10 @@
 use sqlx::SqlitePool;
-use time::OffsetDateTime;
+use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::time_format::format_timestamp;
+
+const REPLAY_TTL_SECS: i64 = 120;
 
 pub struct OnboardTotpRecord {
     pub user_uuid: Uuid,
@@ -92,4 +94,31 @@ pub async fn list_active_onboard_totp(
             })
         })
         .collect())
+}
+
+pub async fn consume_onboard_totp_timestep(
+    pool: &SqlitePool,
+    user_uuid: Uuid,
+    timestep: i64,
+    now: OffsetDateTime,
+) -> Result<bool, sqlx::Error> {
+    let cutoff = format_timestamp(now - Duration::seconds(REPLAY_TTL_SECS));
+    sqlx::query("DELETE FROM onboard_totp_replay WHERE used_at < ?")
+        .bind(&cutoff)
+        .execute(pool)
+        .await?;
+    let used_at = format_timestamp(now);
+    let result = sqlx::query(
+        "INSERT INTO onboard_totp_replay (user_uuid, timestep, used_at) VALUES (?, ?, ?)",
+    )
+    .bind(user_uuid.to_string())
+    .bind(timestep)
+    .bind(&used_at)
+    .execute(pool)
+    .await;
+    match result {
+        Ok(_) => Ok(true),
+        Err(sqlx::Error::Database(error)) if error.is_unique_violation() => Ok(false),
+        Err(error) => Err(error),
+    }
 }

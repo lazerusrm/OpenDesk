@@ -342,3 +342,24 @@ async fn signed_windows_installer_is_served_when_provisioned() {
     assert_eq!(status, StatusCode::SEE_OTHER);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[tokio::test]
+async fn signed_windows_installer_symlink_is_not_served() {
+    let dir = std::env::temp_dir().join(format!("opendesk-signed-link-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).expect("signed dir");
+    let real = dir.join("real-setup.exe");
+    std::fs::write(&real, b"signed-bytes").expect("exe");
+    std::os::unix::fs::symlink(&real, dir.join("windows-setup.exe")).expect("symlink");
+    let mut state = test_state().await;
+    state.signed_client_dir = Some(dir.clone());
+    let app = build_router(state);
+    let cookie = login_and_get_session_cookie(&app).await;
+    let (status, html, _) = request_path(&app, "/deployment/windows", Some(&cookie)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(!html.contains("Download signed Windows installer"));
+    let (status, body, _) =
+        request_path(&app, "/deployment/windows/setup.exe", Some(&cookie)).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_ne!(body, "signed-bytes");
+    let _ = std::fs::remove_dir_all(&dir);
+}

@@ -244,10 +244,7 @@ async fn access_group_detail_saves_outgoing_group_access() {
     let (status, html) = html_for(&app, &detail_path, &cookie).await;
     assert_eq!(status, StatusCode::OK);
     assert!(html.contains("Shop"));
-    assert!(!html.contains(&format!(
-        "value=\"{}\" checked",
-        outgoing.access_group_uuid
-    )));
+    assert!(!html.contains(&format!("value=\"{}\" checked", outgoing.access_group_uuid)));
     let saved = app
         .clone()
         .oneshot(
@@ -270,9 +267,6 @@ async fn access_group_detail_saves_outgoing_group_access() {
     assert_eq!(saved.status(), StatusCode::SEE_OTHER);
     let (status, html) = html_for(&app, &detail_path, &cookie).await;
     assert_eq!(status, StatusCode::OK);
-    assert!(html.contains(&format!(
-        "value=\"{}\" checked",
-        outgoing.access_group_uuid
-    )));
+    assert!(html.contains(&format!("value=\"{}\" checked", outgoing.access_group_uuid)));
     assert!(html.contains("No other groups can see devices granted to this group."));
 }

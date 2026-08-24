@@ -2,7 +2,9 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{login_and_get_session_cookie, session_cookie_from_response, test_state};
+use common::{
+    csrf_token_from_cookie, login_and_get_session_cookie, session_cookie_from_response, test_state,
+};
 use http_body_util::BodyExt;
 use opendesk::build_router;
 use opendesk::domain::audit_event::AuditEventDraft;
@@ -131,7 +133,15 @@ async fn audit_kind_tabs_filter_single_table_without_fake_alarms() {
     let (status, _) = get_with_cookie(&app, &cookie, "/audit?kind=sessions").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
 
-    let (status, csv) = get_with_cookie(&app, &cookie, "/audit/export.csv?kind=connection").await;
+    let (status, csv) = get_with_cookie(
+        &app,
+        &cookie,
+        &format!(
+            "/audit/export.csv?kind=connection&csrf_token={}",
+            csrf_token_from_cookie(&cookie)
+        ),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert!(csv.contains("client_connection_open"));
     assert!(!csv.contains("client_file_transfer"));

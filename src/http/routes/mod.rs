@@ -27,10 +27,29 @@ mod tags;
 mod transport_introspection;
 mod users;
 
+use axum::extract::Request;
+use axum::http::{header, HeaderValue};
+use axum::middleware::{self, Next};
+use axum::response::Response;
 use axum::{routing::get, Router};
 use tower_http::services::ServeDir;
 
 use crate::app_state::AppState;
+
+async fn attach_security_headers(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    let headers = response.headers_mut();
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
+    headers.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static("frame-ancestors 'none'"),
+    );
+    response
+}
 
 pub fn build_router(state: AppState) -> Router {
     Router::new()
@@ -62,5 +81,6 @@ pub fn build_router(state: AppState) -> Router {
         .merge(users::routes())
         .route("/health", get(|| async { "ok" }))
         .nest_service("/static", ServeDir::new("static"))
+        .layer(middleware::from_fn(attach_security_headers))
         .with_state(state)
 }

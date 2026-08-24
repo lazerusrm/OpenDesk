@@ -23,7 +23,7 @@ use crate::http::views::NavPermissions;
 use crate::login_throttle::request_ip;
 use crate::repository::audit_events::insert_audit_event;
 use crate::repository::enrollment_tokens::create_enrollment_token;
-use crate::repository::onboard_totp::list_active_onboard_totp;
+use crate::repository::onboard_totp::{consume_onboard_totp_timestep, list_active_onboard_totp};
 use rand::RngCore;
 
 pub fn routes() -> Router<AppState> {
@@ -179,11 +179,9 @@ async fn onboard_unlock(
             .into_response());
     }
     let (issuer, timestep) = matches.remove(0);
-    let consumed = state
-        .onboard_guard
-        .lock()
-        .map(|mut guard| guard.consume_timestep(issuer.user_uuid, timestep, now))
-        .unwrap_or(false);
+    let consumed = consume_onboard_totp_timestep(&state.db, issuer.user_uuid, timestep, now)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     if !consumed {
         record_failure(&state, &ip, now);
         write_unlock_audit(&state, Some(issuer.user_uuid), "failure").await;

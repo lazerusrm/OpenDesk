@@ -9,7 +9,7 @@
   {% if error_message.is_some() %}
   <p class="error">{{ error_message.as_ref().unwrap() }}</p>
   {% endif %}
-  <a class="button" href="/backup/export.json">Export JSON backup</a>
+  <a class="button" href="{{ export_json_href }}">Export JSON backup</a>
 </section>
 <section class="card card-danger">
   <h2>Restore JSON backup</h2>

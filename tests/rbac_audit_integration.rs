@@ -3,7 +3,8 @@ mod common;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use common::{
-    form_with_csrf, login_and_get_session_cookie, session_cookie_from_response, test_state,
+    csrf_token_from_cookie, form_with_csrf, login_and_get_session_cookie,
+    session_cookie_from_response, test_state,
 };
 use http_body_util::BodyExt;
 use opendesk::build_router;
@@ -375,7 +376,10 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
     let export = app
         .oneshot(
             Request::builder()
-                .uri("/audit/export.csv")
+                .uri(format!(
+                    "/audit/export.csv?csrf_token={}",
+                    csrf_token_from_cookie(&cookie)
+                ))
                 .header("cookie", &cookie)
                 .body(Body::empty())
                 .unwrap(),

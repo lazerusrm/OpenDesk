@@ -371,7 +371,9 @@ async fn enrollment_token_create_form_accepts_allowlisted_expiry() {
             .to_vec(),
     )
     .unwrap();
-    assert!(rejected_html.contains("enrollment token expiry must be 7, 30, 90, or 365 days, or empty"));
+    assert!(
+        rejected_html.contains("enrollment token expiry must be 7, 30, 90, or 365 days, or empty")
+    );
     let tokens = opendesk::repository::enrollment_tokens::list_enrollment_tokens(&state.db)
         .await
         .expect("tokens after reject");

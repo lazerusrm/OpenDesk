@@ -52,11 +52,7 @@ async fn client_login(app: &axum::Router, username: &str, password: &str, id: &s
         .to_string()
 }
 
-async fn post_json(
-    app: &axum::Router,
-    uri: &str,
-    token: &str,
-) -> axum::response::Response {
+async fn post_json(app: &axum::Router, uri: &str, token: &str) -> axum::response::Response {
     app.clone()
         .oneshot(
             Request::builder()
