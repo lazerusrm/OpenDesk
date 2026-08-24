@@ -290,6 +290,7 @@ pub struct AuditLogView {
     pub export_csv_href: String,
     pub intro: String,
     pub connection_disclaimer: Option<String>,
+    pub list_window_notice: String,
     pub empty_message: String,
     pub has_events: bool,
 }

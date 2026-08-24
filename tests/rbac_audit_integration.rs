@@ -383,6 +383,7 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
     let page_body = page.into_body().collect().await.unwrap().to_bytes();
     let page_html = String::from_utf8(page_body.to_vec()).expect("utf8");
     assert!(page_html.contains("Audit Log"));
+    assert!(page_html.contains("This view and CSV export show the newest 500 events."));
     assert!(
         page_html.contains("endpoint_checkin") || page_html.contains("enrollment_token_create")
     );
@@ -404,6 +405,7 @@ async fn audit_log_lists_events_and_export_redacts_tokens() {
     assert_eq!(export.status(), StatusCode::OK);
     let export_body = export.into_body().collect().await.unwrap().to_bytes();
     let csv = String::from_utf8(export_body.to_vec()).expect("utf8");
+    assert!(csv.starts_with("# Newest 500 events only; not a complete history."));
     assert!(csv.contains("created_at,actor_username,action,"));
     assert!(!csv.contains(secret));
     assert!(csv.contains("endpoint_checkin") || csv.contains("enrollment_token_create"));

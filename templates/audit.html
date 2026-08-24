@@ -6,6 +6,7 @@
   {% if connection_disclaimer.is_some() %}
   <p class="muted">{{ connection_disclaimer.as_ref().unwrap() }}</p>
   {% endif %}
+  <p class="muted">{{ list_window_notice }}</p>
   <nav class="tabs" aria-label="Audit kinds">
     {% for tab in tabs %}
     {% if tab.selected %}

@@ -24,6 +24,16 @@ const AUDIT_LIST_LIMIT: i64 = 500;
 const DETAIL_DISPLAY_CHARS: usize = 80;
 const CONNECTION_DISCLAIMER: &str = "Client connection events are reports from official clients. They are not proof that OpenDesk enforced a session.";
 
+fn audit_list_window_notice() -> String {
+    format!(
+        "This view and CSV export show the newest {AUDIT_LIST_LIMIT} events. Older events remain stored but are not listed or exported."
+    )
+}
+
+fn audit_export_window_comment() -> String {
+    format!("# Newest {AUDIT_LIST_LIMIT} events only; not a complete history.\n")
+}
+
 const AUDIT_KINDS: [AuditKind; 5] = [
     AuditKind::All,
     AuditKind::Console,
@@ -224,6 +234,7 @@ async fn audit_list_page(
         export_csv_href: kind.export_csv_href(&user.csrf_token),
         intro: kind.intro().to_string(),
         connection_disclaimer: kind.connection_disclaimer().map(str::to_string),
+        list_window_notice: audit_list_window_notice(),
         empty_message: kind.empty_message().to_string(),
         has_events,
     };
@@ -245,7 +256,11 @@ async fn audit_export_csv(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     let events = filter_events(events, kind);
-    let csv = render_audit_events_csv(&events);
+    let csv = format!(
+        "{}{}",
+        audit_export_window_comment(),
+        render_audit_events_csv(&events)
+    );
     // Detail JSON is redacted at insert time; refuse export if raw markers slipped through.
     if csv_contains_raw_secret(&csv) {
         return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
@@ -328,6 +343,15 @@ mod tests {
         assert!(AuditKind::All.matches("client_connection_open"));
         assert!(AuditKind::All.matches("client_file_transfer"));
         assert!(AuditKind::All.matches("client_session_record"));
+    }
+
+    #[test]
+    fn list_and_export_disclose_newest_event_window() {
+        assert!(audit_list_window_notice().contains("newest 500 events"));
+        assert!(audit_list_window_notice().contains("not listed or exported"));
+        let comment = audit_export_window_comment();
+        assert!(comment.starts_with("# Newest 500 events only"));
+        assert!(comment.contains("not a complete history"));
     }
 
     #[test]

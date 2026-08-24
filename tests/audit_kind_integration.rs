@@ -106,6 +106,7 @@ async fn audit_kind_tabs_filter_single_table_without_fake_alarms() {
     assert!(all.contains(
         "Client connection events are reports from official clients. They are not proof that OpenDesk enforced a session."
     ));
+    assert!(all.contains("This view and CSV export show the newest 500 events."));
 
     let (status, console) = get_with_cookie(&app, &cookie, "/audit?kind=console").await;
     assert_eq!(status, StatusCode::OK);
@@ -143,6 +144,7 @@ async fn audit_kind_tabs_filter_single_table_without_fake_alarms() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
+    assert!(csv.starts_with("# Newest 500 events only; not a complete history."));
     assert!(csv.contains("client_connection_open"));
     assert!(!csv.contains("client_file_transfer"));
 }
