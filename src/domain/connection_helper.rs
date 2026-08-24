@@ -16,12 +16,20 @@ pub fn generate_explicit_server_helper(
     port: u16,
 ) -> Option<String> {
     let rustdesk_id = rustdesk_id?.trim();
-    let id_server = host_from_server_value(&config.id_server);
+    let id_server = helper_host(&host_from_server_value(&config.id_server));
     let public_key = config.public_key.trim();
     if rustdesk_id.is_empty() || id_server.is_empty() || public_key.is_empty() {
         return None;
     }
     Some(format!("{rustdesk_id}@{id_server}:{port}?key={public_key}"))
+}
+
+fn helper_host(host: &str) -> String {
+    if host.contains(':') && !host.starts_with('[') {
+        format!("[{host}]")
+    } else {
+        host.to_string()
+    }
 }
 
 pub fn explicit_server_helper_for_device(
@@ -63,6 +71,22 @@ mod tests {
         assert_eq!(
             generate_explicit_server_helper(Some("123456789"), &config, 21117),
             Some("123456789@rd.example.com:21117?key=test-public-key".to_string())
+        );
+    }
+
+    #[test]
+    fn explicit_helper_brackets_ipv6_id_server() {
+        let mut config = default_server_config();
+        config.id_server = "[2001:db8::1]:21116".to_string();
+        config.public_key = "test-public-key".to_string();
+        assert_eq!(
+            generate_explicit_server_helper(Some("123456789"), &config, 21117),
+            Some("123456789@[2001:db8::1]:21117?key=test-public-key".to_string())
+        );
+        config.id_server = "2001:db8::1".to_string();
+        assert_eq!(
+            generate_explicit_server_helper(Some("123456789"), &config, 21117),
+            Some("123456789@[2001:db8::1]:21117?key=test-public-key".to_string())
         );
     }
 

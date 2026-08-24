@@ -17,8 +17,43 @@ pub struct HealthCheckResult {
     pub detail: String,
 }
 
+pub fn parse_server_host_port(value: &str) -> (String, Option<u16>) {
+    let value = value.trim();
+    if value.is_empty() {
+        return (String::new(), None);
+    }
+    if let Some(inner) = value.strip_prefix('[') {
+        if let Some(end) = inner.find(']') {
+            let host = inner[..end].trim().to_string();
+            let port = inner[end + 1..].strip_prefix(':').and_then(parse_tcp_port);
+            return (host, port);
+        }
+        return (value.to_string(), None);
+    }
+    if let Some((host, suffix)) = value.rsplit_once(':') {
+        if !host.contains(':') {
+            if let Some(port) = parse_tcp_port(suffix) {
+                return (host.to_string(), Some(port));
+            }
+        }
+    }
+    (value.to_string(), None)
+}
+
+fn parse_tcp_port(suffix: &str) -> Option<u16> {
+    let suffix = suffix.trim();
+    if suffix.is_empty() || !suffix.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    suffix.parse().ok()
+}
+
 pub fn host_from_server_value(value: &str) -> String {
-    value.split(':').next().unwrap_or(value).trim().to_string()
+    parse_server_host_port(value).0
+}
+
+pub fn tcp_probe_port(value: &str, default: u16) -> u16 {
+    parse_server_host_port(value).1.unwrap_or(default)
 }
 
 pub fn public_key_fingerprint(public_key: &str) -> String {
@@ -118,8 +153,16 @@ pub fn build_health_checks(config: &ServerConfig) -> Vec<HealthCheckResult> {
     vec![
         dns_resolve_check(&config.id_server),
         dns_resolve_check(&config.relay_server),
-        tcp_port_check(&config.id_server, HBBS_TCP_PORT, timeout),
-        tcp_port_check(&config.relay_server, HBBR_TCP_PORT, timeout),
+        tcp_port_check(
+            &config.id_server,
+            tcp_probe_port(&config.id_server, HBBS_TCP_PORT),
+            timeout,
+        ),
+        tcp_port_check(
+            &config.relay_server,
+            tcp_probe_port(&config.relay_server, HBBR_TCP_PORT),
+            timeout,
+        ),
     ]
 }
 
@@ -134,6 +177,38 @@ mod tests {
             host_from_server_value("rd.example.com:21116"),
             "rd.example.com"
         );
+        assert_eq!(host_from_server_value("127.0.0.1:21118"), "127.0.0.1");
+        assert_eq!(host_from_server_value("rd.example.com"), "rd.example.com");
+    }
+
+    #[test]
+    fn parse_server_host_port_keeps_unbracketed_ipv6() {
+        assert_eq!(
+            parse_server_host_port("2001:db8::1"),
+            ("2001:db8::1".to_string(), None)
+        );
+        assert_eq!(
+            parse_server_host_port("[2001:db8::1]"),
+            ("2001:db8::1".to_string(), None)
+        );
+        assert_eq!(
+            parse_server_host_port("[2001:db8::1]:21116"),
+            ("2001:db8::1".to_string(), Some(21116))
+        );
+        assert_eq!(host_from_server_value("[2001:db8::1]:21116"), "2001:db8::1");
+        assert_eq!(host_from_server_value("2001:db8::1"), "2001:db8::1");
+    }
+
+    #[test]
+    fn tcp_probe_port_honors_explicit_suffix_else_default() {
+        assert_eq!(tcp_probe_port("rd.example.com:12345", HBBS_TCP_PORT), 12345);
+        assert_eq!(
+            tcp_probe_port("rd.example.com", HBBS_TCP_PORT),
+            HBBS_TCP_PORT
+        );
+        assert_eq!(tcp_probe_port("[2001:db8::1]:21118", HBBS_TCP_PORT), 21118);
+        assert_eq!(tcp_probe_port("2001:db8::1", HBBR_TCP_PORT), HBBR_TCP_PORT);
+        assert_eq!(tcp_probe_port("rd.example.com:notaport", 21116), 21116);
     }
 
     #[test]
@@ -157,6 +232,26 @@ mod tests {
         assert!(checks
             .iter()
             .any(|check| check.target == "tcp:rd.example.com:21117"));
+    }
+
+    #[test]
+    fn build_health_checks_uses_explicit_and_ipv6_probe_targets() {
+        let mut config = default_server_config();
+        config.id_server = "rd.example.com:12345".to_string();
+        config.relay_server = "[2001:db8::1]:23456".to_string();
+        let checks = build_health_checks(&config);
+        assert!(checks
+            .iter()
+            .any(|check| check.target == "tcp:rd.example.com:12345"));
+        assert!(checks
+            .iter()
+            .any(|check| check.target == "tcp:2001:db8::1:23456"));
+        assert!(checks
+            .iter()
+            .any(|check| check.target == "dns:rd.example.com"));
+        assert!(checks.iter().any(|check| check.target == "dns:2001:db8::1"));
+        assert!(!checks.iter().any(|check| check.target.ends_with(":21116")));
+        assert!(!checks.iter().any(|check| check.target.ends_with(":21117")));
     }
 
     #[test]
