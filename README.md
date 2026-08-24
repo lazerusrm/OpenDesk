@@ -17,19 +17,15 @@ loopback-plus-TLS posture, and the optional signed Windows package directory.
 Quick lab start (plain HTTP, not for the public internet):
 
 ```bash
-export OPENDESK_CLIENT_TOKEN_HMAC_KEY="$(openssl rand -hex 32)"
-read -s OPENDESK_BOOTSTRAP_ADMIN_PASSWORD
-export OPENDESK_BOOTSTRAP_ADMIN_PASSWORD
 docker compose up --build
 ```
 
-Sign in as `admin` at `http://127.0.0.1:8080/login`, then change the password
-on Account. Set ID server, relay, API URL, and hbbs public key under Settings
-before generating client scripts.
+Open `http://127.0.0.1:8080/setup`. Username is `admin`. Set the password and
+the ID, relay, API, and hbbs public key values. A client-token HMAC key is
+written next to SQLite when the env value is unset.
 
-`OPENDESK_CLIENT_TOKEN_HMAC_KEY` must be a stable random hexadecimal value of
-at least 32 bytes. Store it as a deployment secret; rotating it invalidates
-every official-client login token.
+`OPENDESK_CLIENT_TOKEN_HMAC_KEY` remains supported if you want to inject the
+key yourself. Rotating it invalidates every official-client login token.
 
 ## Development
 
@@ -37,9 +33,6 @@ Toolchain is Rust 1.88 (`rust-toolchain.toml`). Server-rendered UI (Axum,
 Askama, SQLite).
 
 ```bash
-export OPENDESK_CLIENT_TOKEN_HMAC_KEY="$(openssl rand -hex 32)"
-read -s OPENDESK_BOOTSTRAP_ADMIN_PASSWORD
-export OPENDESK_BOOTSTRAP_ADMIN_PASSWORD
 export OPENDESK_COOKIE_SECURE=false
 OPENDESK_LISTEN_ADDR=127.0.0.1:8080 cargo test
 OPENDESK_LISTEN_ADDR=127.0.0.1:8080 cargo run

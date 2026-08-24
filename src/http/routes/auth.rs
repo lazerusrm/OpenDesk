@@ -16,7 +16,7 @@ use crate::http::routes::render::render_login;
 use crate::http::session::{end_session, require_csrf, require_present_same_origin, start_session};
 use crate::login_throttle::request_ip;
 use crate::repository::audit_events::insert_audit_event;
-use crate::repository::users::authenticate_user_password;
+use crate::repository::users::{authenticate_user_password, count_users};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -30,7 +30,16 @@ struct LoginQuery {
     notice: Option<String>,
 }
 
-async fn login_page(Query(query): Query<LoginQuery>) -> impl IntoResponse {
+async fn login_page(
+    State(state): State<AppState>,
+    Query(query): Query<LoginQuery>,
+) -> Result<Response, StatusCode> {
+    let users = count_users(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if users == 0 {
+        return Ok(Redirect::to("/setup").into_response());
+    }
     let notice_key = query.notice.as_deref().or(query.login.as_deref());
     let notice_message = match notice_key {
         Some("password-updated") => {
@@ -38,7 +47,7 @@ async fn login_page(Query(query): Query<LoginQuery>) -> impl IntoResponse {
         }
         _ => None,
     };
-    render_login(None, notice_message)
+    Ok(render_login(None, notice_message).into_response())
 }
 
 #[derive(Deserialize)]
@@ -58,7 +67,7 @@ async fn login_submit(
     headers: axum::http::HeaderMap,
     Form(form): Form<LoginForm>,
 ) -> Result<Response, StatusCode> {
-    if !require_present_same_origin(&headers, &state.public_base_url) {
+    if !require_present_same_origin(&headers, &state.public_base_url()) {
         return Err(StatusCode::FORBIDDEN);
     }
     let username = form.username.trim();

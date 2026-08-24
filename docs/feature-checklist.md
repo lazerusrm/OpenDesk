@@ -99,7 +99,7 @@ Status legend:
 - [ ] Log rotation.
 - [ ] Upgrade procedure.
 - [x] Public self-host install guide for OpenDesk plus OSS `hbbs`/`hbbr`.
-- [ ] First-run setup wizard when the database has no users (fixed username `admin`).
+- [x] First-run setup wizard when the database has no users (fixed username `admin`).
 
 ## Phase 5: Access and Governance
 

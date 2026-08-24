@@ -203,7 +203,8 @@ pub(super) async fn unlocked_page(
     record: &EnrollmentTokenRecord,
 ) -> Result<Response, Response> {
     let configured = load_config(state).await?.is_some();
-    let base = onboard_url(&state.public_base_url, token);
+    let public_base_url = state.public_base_url();
+    let base = onboard_url(&public_base_url, token);
     let windows_setup_available = signed_windows_setup_path(state).is_some();
     write_onboard_audit(state, record, "onboard_page_view").await;
     html_page(OnboardView {
@@ -242,10 +243,11 @@ async fn linux_script(
     let config = load_config(&state)
         .await?
         .ok_or_else(|| StatusCode::CONFLICT.into_response())?;
+    let public_base_url = state.public_base_url();
     let script = render_onboard_linux_script(&OnboardLinuxScriptInput {
         server_config: &config,
         enrollment_token: &token,
-        opendesk_base_url: &state.public_base_url,
+        opendesk_base_url: &public_base_url,
         linux_package_url: state.rustdesk_download_linux_url.as_deref(),
     });
     write_onboard_audit(&state, &record, "onboard_script_download").await;
@@ -260,14 +262,15 @@ async fn windows_script(
     let config = load_config(&state)
         .await?
         .ok_or_else(|| StatusCode::CONFLICT.into_response())?;
+    let public_base_url = state.public_base_url();
     let setup_url = format!(
         "{}/windows/setup.exe",
-        onboard_url(&state.public_base_url, &token)
+        onboard_url(&public_base_url, &token)
     );
     let script = render_onboard_windows_script(&OnboardWindowsScriptInput {
         server_config: &config,
         enrollment_token: &token,
-        opendesk_base_url: &state.public_base_url,
+        opendesk_base_url: &public_base_url,
         setup_url: &setup_url,
     });
     write_onboard_audit(&state, &record, "onboard_script_download").await;
@@ -282,10 +285,11 @@ async fn macos_script(
     let config = load_config(&state)
         .await?
         .ok_or_else(|| StatusCode::CONFLICT.into_response())?;
+    let public_base_url = state.public_base_url();
     let script = render_onboard_macos_script(&OnboardMacosScriptInput {
         server_config: &config,
         enrollment_token: &token,
-        opendesk_base_url: &state.public_base_url,
+        opendesk_base_url: &public_base_url,
     });
     write_onboard_audit(&state, &record, "onboard_script_download").await;
     Ok(script_response("opendesk-onboard-macos.sh", script))
@@ -306,7 +310,7 @@ async fn windows_setup_file(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
     let checkin_url = format!(
         "{}/api/enrollments/check-in",
-        state.public_base_url.trim_end_matches('/')
+        state.public_base_url().trim_end_matches('/')
     );
     let stamped = stamp_windows_setup(&bytes, &token, &checkin_url);
     write_onboard_audit(&state, &record, "onboard_artifact_download").await;

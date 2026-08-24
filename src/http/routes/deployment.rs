@@ -214,7 +214,7 @@ async fn deployment_os_page(
     let show_script = script_export.is_some();
     let show_filename_fallback = matches!(os, DeploymentOs::Windows);
     let script = if configured && show_script {
-        render_os_script(os, &config, &state.public_base_url)
+        render_os_script(os, &config, &state.public_base_url())
     } else {
         String::new()
     };
@@ -259,7 +259,7 @@ async fn deployment_os_page(
         public_key: config.public_key,
         rustdesk_config,
         rustdesk_qr_svg,
-        public_base_url: state.public_base_url.clone(),
+        public_base_url: state.public_base_url(),
         show_script,
         script_heading,
         script,
@@ -312,7 +312,7 @@ async fn export_deployment_script(
     let config = load_optional_config(&state)
         .await?
         .ok_or_else(|| StatusCode::CONFLICT.into_response())?;
-    let script = render_os_script(os, &config, &state.public_base_url);
+    let script = render_os_script(os, &config, &state.public_base_url());
     write_deployment_audit(
         &state,
         &user,

@@ -240,8 +240,7 @@ async fn linux_script_export_executes_check_in_against_running_server() {
         .await
         .expect("bind listener");
     let addr = listener.local_addr().expect("listener address");
-    let mut state = state;
-    state.public_base_url = format!("http://{addr}");
+    state.set_public_base_url(format!("http://{addr}"));
     let app = build_router(state.clone());
     tokio::spawn(async move {
         axum::serve(listener, app)

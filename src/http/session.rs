@@ -126,7 +126,7 @@ pub fn require_same_origin(headers: &HeaderMap, public_base_url: &str) -> bool {
     candidate.is_none() || candidate == expected
 }
 
-fn origin_from_url(value: &str) -> Option<String> {
+pub fn origin_from_url(value: &str) -> Option<String> {
     let value = value.trim().trim_end_matches('/');
     let scheme_end = value.find("://")?;
     let authority = value[scheme_end + 3..].split('/').next()?;

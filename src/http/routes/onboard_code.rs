@@ -111,7 +111,8 @@ async fn onboard_unlock(
     Form(form): Form<OnboardCodeForm>,
 ) -> Result<Response, Response> {
     let (jar, csrf) = ensure_csrf(jar, state.cookie_secure);
-    if !require_same_origin(&headers, &state.public_base_url) || !csrf_ok(&jar, &form.csrf_token) {
+    if !require_same_origin(&headers, &state.public_base_url()) || !csrf_ok(&jar, &form.csrf_token)
+    {
         return Ok((
             jar,
             html_form_page(code_form(

@@ -20,6 +20,7 @@ mod onboard;
 mod render;
 mod rustdesk_compat;
 mod settings;
+mod setup;
 mod sites;
 mod status;
 mod tags;
@@ -48,6 +49,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(client_sync::routes())
         .merge(devices::routes())
         .merge(settings::routes())
+        .merge(setup::routes())
         .merge(sites::routes())
         .merge(tags::routes())
         .merge(deployment::routes())

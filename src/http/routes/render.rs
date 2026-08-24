@@ -147,7 +147,7 @@ pub async fn render_enrollment_tokens(
         .collect();
     let created_onboard_url = created_token_value
         .as_ref()
-        .map(|token| onboard_url(&state.public_base_url, token));
+        .map(|token| onboard_url(&state.public_base_url(), token));
     let view = EnrollmentTokensView {
         title: "Enrollment Tokens".to_string(),
         show_nav: true,

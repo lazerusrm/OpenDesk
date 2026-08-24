@@ -4,7 +4,8 @@ use opendesk::AppState;
 use sqlx::sqlite::SqlitePoolOptions;
 use tower::ServiceExt;
 
-pub async fn test_state() -> AppState {
+#[allow(dead_code)]
+pub async fn empty_test_state() -> AppState {
     let db = SqlitePoolOptions::new()
         .connect("sqlite::memory:")
         .await
@@ -13,13 +14,15 @@ pub async fn test_state() -> AppState {
         .run(&db)
         .await
         .expect("migrate");
-    opendesk::repository::users::create_user(&db, "admin", "test-password", "admin")
-        .await
-        .expect("bootstrap user");
+    let data_dir = std::env::temp_dir().join(format!("opendesk-empty-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&data_dir).expect("data dir");
     AppState {
         db,
+        data_dir,
         cookie_secure: false,
-        public_base_url: "http://127.0.0.1:8080".to_string(),
+        public_base_url: std::sync::Arc::new(std::sync::Mutex::new(
+            "http://127.0.0.1:8080".to_string(),
+        )),
         backup_schedule: None,
         backup_destination_configured: false,
         client_token_hmac_key: vec![7; 32],
@@ -39,6 +42,14 @@ pub async fn test_state() -> AppState {
             std::collections::HashMap::new(),
         )),
     }
+}
+
+pub async fn test_state() -> AppState {
+    let state = empty_test_state().await;
+    opendesk::repository::users::create_user(&state.db, "admin", "test-password", "admin")
+        .await
+        .expect("bootstrap user");
+    state
 }
 
 pub fn session_cookie_from_response(response: &axum::http::Response<Body>) -> String {

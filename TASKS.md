@@ -3,7 +3,7 @@
 ## Immediate Next Steps
 
 - [x] Public self-host install guide (`docs/install.md`, README entry).
-- [ ] OSS self-host first-run (goal below).
+- [x] OSS self-host first-run (goal below).
 - [ ] Create Git repository and remote.
 - [x] Decide first implementation stack: Rust backend with server-rendered UI first.
 - [x] Inventory current RustDesk LXC configuration.
